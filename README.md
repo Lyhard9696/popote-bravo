@@ -1,5 +1,5 @@
 
-# Popote Bravo — V5.3
+# Popote Bravo — V5.4
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -168,3 +168,8 @@ Le membre :
 Variable optionnelle :
 
     PAYPAL_ME_URL=https://paypal.me/PopoteBellac
+
+
+## V5.4 — Icône iPhone
+
+L'insigne P3 est utilisé comme icône d'écran d'accueil iPhone et comme favicon navigateur.
