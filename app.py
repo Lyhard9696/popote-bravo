@@ -73,6 +73,20 @@ def init_db():
         status TEXT NOT NULL DEFAULT 'completed',
         FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS payment_claims (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        amount_cents INTEGER NOT NULL,
+        method TEXT NOT NULL DEFAULT 'paypal',
+        note TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        decided_at TEXT,
+        decided_by INTEGER,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(decided_by) REFERENCES users(id)
+    );
     """)
     db.commit()
 
@@ -166,6 +180,16 @@ def paypal_headers():
         "Authorization": f"Bearer {paypal_access_token()}",
         "Content-Type": "application/json",
     }
+
+
+def user_pending_claims_cents(user_id):
+    db = get_db()
+    total = db.execute(
+        "SELECT COALESCE(SUM(amount_cents), 0) AS total FROM payment_claims WHERE user_id = ? AND status = 'pending'",
+        (user_id,)
+    ).fetchone()["total"]
+    db.close()
+    return total
 
 @app.context_processor
 def inject_helpers():
@@ -292,9 +316,21 @@ def dashboard():
         ORDER BY id DESC
         LIMIT 20
     """, (user["id"],)).fetchall()
+    claims = db.execute("""
+        SELECT id, amount_cents, method, note, status, created_at
+        FROM payment_claims
+        WHERE user_id = ?
+        ORDER BY id DESC
+        LIMIT 10
+    """, (user["id"],)).fetchall()
     db.close()
     balance = user_balance_cents(user["id"])
-    return render_template("dashboard.html", products=products, history=history, balance=balance)
+    pending_claims = user_pending_claims_cents(user["id"])
+    estimated_balance = max(0, balance - pending_claims)
+    return render_template("dashboard.html", products=products, history=history,
+                           claims=claims, balance=balance,
+                           pending_claims=pending_claims,
+                           estimated_balance=estimated_balance)
 
 @app.post("/consume/<int:product_id>")
 @login_required
@@ -332,6 +368,107 @@ def consume(product_id):
         flash(f"{product['name']} ajouté à ton ardoise. Stock restant : {new_stock}.", "success")
     return redirect(url_for("dashboard"))
 
+
+
+@app.route("/declare-payment", methods=["GET", "POST"])
+@login_required
+def declare_payment():
+    user = current_user()
+    if user["is_admin"]:
+        return redirect(url_for("admin"))
+
+    official_balance = user_balance_cents(user["id"])
+    pending_total = user_pending_claims_cents(user["id"])
+    available = max(0, official_balance - pending_total)
+
+    if request.method == "POST":
+        try:
+            amount_cents = int(round(float(request.form["amount"].replace(",", ".")) * 100))
+        except (KeyError, ValueError):
+            flash("Montant invalide.", "error")
+            return redirect(url_for("declare_payment"))
+
+        note = request.form.get("note", "").strip()
+
+        if amount_cents <= 0 or amount_cents > available:
+            flash("Le montant déclaré est invalide.", "error")
+            return redirect(url_for("declare_payment"))
+
+        db = get_db()
+        db.execute("""
+            INSERT INTO payment_claims (user_id, amount_cents, method, note, status)
+            VALUES (?, ?, 'paypal', ?, 'pending')
+        """, (user["id"], amount_cents, note))
+        db.commit()
+        db.close()
+
+        flash("Paiement déclaré : en attente de validation du popotier.", "success")
+        return redirect(url_for("dashboard"))
+
+    return render_template("declare_payment.html",
+                           official_balance=official_balance,
+                           pending_total=pending_total,
+                           available=available)
+
+@app.post("/admin/payment-claims/<int:claim_id>/approve")
+@admin_required
+def approve_payment_claim(claim_id):
+    admin_user = current_user()
+    db = get_db()
+    claim = db.execute("""
+        SELECT pc.*, u.name AS user_name
+        FROM payment_claims pc JOIN users u ON u.id = pc.user_id
+        WHERE pc.id = ?
+    """, (claim_id,)).fetchone()
+
+    if not claim or claim["status"] != "pending":
+        db.close()
+        flash("Déclaration introuvable ou déjà traitée.", "error")
+        return redirect(url_for("admin"))
+
+    spent = db.execute("SELECT COALESCE(SUM(price_cents),0) total FROM consumptions WHERE user_id=?",
+                       (claim["user_id"],)).fetchone()["total"]
+    paid = db.execute("SELECT COALESCE(SUM(amount_cents),0) total FROM payments WHERE user_id=?",
+                      (claim["user_id"],)).fetchone()["total"]
+
+    if claim["amount_cents"] > spent - paid:
+        db.close()
+        flash("Le montant dépasse la dette officielle restante.", "error")
+        return redirect(url_for("admin"))
+
+    note = "PayPal déclaré par le membre, validé par le popotier"
+    if claim["note"]:
+        note += " — " + claim["note"]
+
+    db.execute("""INSERT INTO payments (user_id, amount_cents, note, method, status)
+                  VALUES (?, ?, ?, 'paypal_manual', 'completed')""",
+               (claim["user_id"], claim["amount_cents"], note))
+    db.execute("""UPDATE payment_claims
+                  SET status='approved', decided_at=CURRENT_TIMESTAMP, decided_by=?
+                  WHERE id=?""", (admin_user["id"], claim_id))
+    db.commit()
+    db.close()
+    flash(f"Paiement de {claim['amount_cents']/100:.2f} € validé pour {claim['user_name']}.", "success")
+    return redirect(url_for("admin"))
+
+@app.post("/admin/payment-claims/<int:claim_id>/reject")
+@admin_required
+def reject_payment_claim(claim_id):
+    admin_user = current_user()
+    db = get_db()
+    claim = db.execute("SELECT status FROM payment_claims WHERE id=?", (claim_id,)).fetchone()
+    if not claim or claim["status"] != "pending":
+        db.close()
+        flash("Déclaration introuvable ou déjà traitée.", "error")
+        return redirect(url_for("admin"))
+
+    db.execute("""UPDATE payment_claims
+                  SET status='rejected', decided_at=CURRENT_TIMESTAMP, decided_by=?
+                  WHERE id=?""", (admin_user["id"], claim_id))
+    db.commit()
+    db.close()
+    flash("Déclaration refusée.", "success")
+    return redirect(url_for("admin"))
 
 @app.route("/pay")
 @login_required
@@ -559,9 +696,17 @@ def admin():
         ORDER BY u.name
     """).fetchall()
     products = db.execute("SELECT * FROM products ORDER BY active DESC, name").fetchall()
+    pending_claims = db.execute("""
+        SELECT pc.*, u.name AS user_name
+        FROM payment_claims pc
+        JOIN users u ON u.id = pc.user_id
+        WHERE pc.status = 'pending'
+        ORDER BY pc.id ASC
+    """).fetchall()
     db.close()
     total_due = sum((m["spent"] - m["paid"]) for m in members)
-    return render_template("admin.html", members=members, products=products, total_due=total_due)
+    return render_template("admin.html", members=members, products=products,
+                           total_due=total_due, pending_claims=pending_claims)
 
 @app.post("/admin/products/add")
 @admin_required

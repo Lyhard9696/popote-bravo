@@ -162,3 +162,17 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+.pending-summary { display:flex; justify-content:space-between; gap:12px; margin:-10px 0 24px; border-left:5px solid var(--bravo-yellow); }
+.pending-summary span { color:#6b7280; }
+.badge { display:inline-block; padding:5px 9px; border-radius:999px; font-size:12px; font-weight:800; }
+.badge.pending { background:#fef3c7; color:#92400e; }
+.badge.approved { background:#dcfce7; color:#166534; }
+.badge.rejected { background:#fee2e2; color:#991b1b; }
+.payment-recap { display:grid; grid-template-columns:1fr auto; gap:10px 20px; padding:14px; border-radius:12px; background:#f3f4f6; margin:18px 0; }
+.claim-actions { display:flex; gap:8px; }
+.claim-actions form { margin:0; }
+.claim-actions button { margin:0; padding:9px 12px; }
+.approve-btn { background:#166534; }
+.reject-btn { background:#991b1b; }
+@media (max-width:620px) { .pending-summary,.claim-actions { flex-direction:column; } }

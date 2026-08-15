@@ -1,5 +1,5 @@
 
-# Popote Bravo — V5.1
+# Popote Bravo — V5.2
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -145,3 +145,7 @@ Le formulaire :
 - demande une confirmation ;
 - refuse de réutiliser exactement le mot de passe actuel ;
 - stocke uniquement le hash du nouveau mot de passe.
+
+
+## V5.2
+Paiements PayPal déclarés par le membre, puis validés ou refusés par le popotier.

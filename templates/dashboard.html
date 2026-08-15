@@ -7,12 +7,18 @@
     <p class="eyebrow">Bonjour {{ current_user["name"] }}</p>
     <h1>Ton ardoise</h1>
   </div>
-  <div class="balance">{{ format_eur(balance) }}</div>
+  <div class="balance">{{ format_eur(estimated_balance) }}<small>Reste estimé</small></div>
 </div>
-{% if balance > 0 %}
-  <a class="pay-cta" href="{{ url_for('pay') }}">💳 Payer mon ardoise</a>
+{% if estimated_balance > 0 %}
+  <a class="pay-cta" href="{{ url_for('declare_payment') }}">💳 Déclarer un paiement PayPal</a>
 {% endif %}
 
+{% if pending_claims > 0 %}
+<div class="card pending-summary">
+  <strong>{{ format_eur(pending_claims) }} en attente de validation</strong>
+  <span>Dette officielle : {{ format_eur(balance) }}</span>
+</div>
+{% endif %}
 <h2>Je prends une boisson</h2>
 <div class="products">
   {% for p in products %}
@@ -28,6 +34,21 @@
   {% endfor %}
 </div>
 
+<h2>Mes paiements déclarés</h2>
+<div class="card table-wrap">
+<table>
+<thead><tr><th>Montant</th><th>Statut</th><th>Date</th></tr></thead>
+<tbody>
+{% for c in claims %}
+<tr>
+<td>{{ format_eur(c["amount_cents"]) }}</td>
+<td>{% if c["status"] == "pending" %}<span class="badge pending">En attente</span>{% elif c["status"] == "approved" %}<span class="badge approved">Validé</span>{% else %}<span class="badge rejected">Refusé</span>{% endif %}</td>
+<td>{{ c["created_at"] }}</td>
+</tr>
+{% else %}<tr><td colspan="3">Aucun paiement déclaré.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
 <h2>Mes dernières consommations</h2>
 <div class="card table-wrap">
 <table>

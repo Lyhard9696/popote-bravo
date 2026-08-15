@@ -10,6 +10,26 @@
   <div class="balance">{{ format_eur(total_due) }}<small>Total dû</small></div>
 </div>
 
+<h2>Paiements déclarés à vérifier</h2>
+<div class="card table-wrap">
+<table>
+<thead><tr><th>Membre</th><th>Montant</th><th>Note</th><th>Date</th><th>Action</th></tr></thead>
+<tbody>
+{% for c in pending_claims %}
+<tr>
+<td><strong>{{ c["user_name"] }}</strong></td>
+<td>{{ format_eur(c["amount_cents"]) }}</td>
+<td>{{ c["note"] or "—" }}</td>
+<td>{{ c["created_at"] }}</td>
+<td class="claim-actions">
+<form method="post" action="{{ url_for('approve_payment_claim', claim_id=c['id']) }}"><button class="approve-btn">Valider</button></form>
+<form method="post" action="{{ url_for('reject_payment_claim', claim_id=c['id']) }}"><button class="reject-btn">Refuser</button></form>
+</td>
+</tr>
+{% else %}<tr><td colspan="5">Aucun paiement en attente.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
 <h2>Membres</h2>
 <div class="card table-wrap">
 <table>
