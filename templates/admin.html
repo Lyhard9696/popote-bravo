@@ -1,181 +1,100 @@
-
 {% extends "base.html" %}
-{% block title %}Gestion{% endblock %}
+{% block title %}Gestion — Popote Bravo{% endblock %}
 {% block content %}
-<div class="hero">
-  <div>
-    <p class="eyebrow">Administration</p>
-    <h1>Tableau du popotier</h1>
+<div class="management-hub">
+  <div class="hero">
+    <div>
+      <p class="eyebrow">Espace Popotier</p>
+      <h1>Gestion</h1>
+      <p class="muted">Les comptes et les produits sont séparés pour aller plus vite.</p>
+    </div>
+    <div class="balance">{{ format_eur(total_due) }}<small>Ardoises totales</small></div>
   </div>
-  <div class="balance">{{ format_eur(total_due) }}<small>Total dû</small></div>
-</div>
 
-<div class="stats-grid">
-  <div class="stat-card"><span>Ardoises totales</span><strong>{{ format_eur(total_due) }}</strong></div>
-  <div class="stat-card"><span>Consommations / 24 h</span><strong>{{ consumptions_24h }}</strong></div>
-  <div class="stat-card"><span>Paiements à vérifier</span><strong>{{ pending_claims_count }}</strong></div>
-  <div class="stat-card"><span>Stocks faibles</span><strong>{{ low_stock_count }}</strong></div>
-</div>
-
-<h2>Paiements déclarés à vérifier</h2>
-<div class="card table-wrap">
-<table>
-<thead><tr><th>Membre</th><th>Montant</th><th>Note</th><th>Date</th><th>Action</th></tr></thead>
-<tbody>
-{% for c in pending_claims %}
-<tr>
-<td><strong>{{ c["user_name"] }}</strong></td>
-<td>{{ format_eur(c["amount_cents"]) }}</td>
-<td>{{ c["note"] or "—" }}</td>
-<td>{{ c["created_at"] }}</td>
-<td class="claim-actions">
-<form method="post" action="{{ url_for('approve_payment_claim', claim_id=c['id']) }}"><button class="approve-btn">Valider</button></form>
-<form method="post" action="{{ url_for('reject_payment_claim', claim_id=c['id']) }}"><button class="reject-btn">Refuser</button></form>
-</td>
-</tr>
-{% else %}<tr><td colspan="5">Aucun paiement en attente.</td></tr>{% endfor %}
-</tbody>
-</table>
-</div>
-<h2>Membres</h2>
-<div class="member-admin-grid">
-{% for m in members %}
-  <div class="card member-admin-card">
-    <div class="member-admin-head">
+  <div class="management-hub-grid">
+    <a class="management-hub-card" href="{{ url_for('admin_accounts') }}">
+      <span class="hub-icon">👥</span>
       <div>
-        <strong>{{ m["name"] }}</strong>
-        <span>Reste dû : {{ format_eur(m["spent"] - m["paid"]) }}</span>
+        <strong>Gestion des comptes</strong>
+        <span>Membres, noms, mots de passe, activation et suppression</span>
       </div>
-      <a href="{{ url_for('member_detail', user_id=m['id']) }}">Détail</a>
-    </div>
+      <b>›</b>
+    </a>
 
-    <form method="post" action="{{ url_for('update_member', user_id=m['id']) }}" class="member-edit-form">
-      <label>Nom / pseudo</label>
-      <input name="name" value="{{ m['name'] }}" required>
-      <label class="check">
-        <input type="checkbox" name="active" {% if m["active"] %}checked{% endif %}>
-        Compte actif
-      </label>
-      <button type="submit">Enregistrer le membre</button>
-    </form>
+    <a class="management-hub-card" href="{{ url_for('admin_consumptions') }}">
+      <span class="hub-icon">🥤</span>
+      <div>
+        <strong>Gestion des consommations</strong>
+        <span>Boissons, barres, prix, stock et produits en vente</span>
+      </div>
+      <b>›</b>
+    </a>
 
-    <form method="post" action="{{ url_for('reset_member_password', user_id=m['id']) }}" class="member-password-form">
-      <label>Nouveau mot de passe</label>
-      <input name="new_password" type="password" minlength="8" placeholder="Minimum 8 caractères" required>
-      <button type="submit">Réinitialiser le mot de passe</button>
-    </form>
-
-    <form method="post" action="{{ url_for('delete_member', user_id=m['id']) }}"
-          class="delete-member-form"
-          onsubmit="return confirm('Supprimer définitivement ce compte et son historique ?');">
-      <input type="hidden" name="confirm_delete" value="DELETE">
-      <button type="submit" class="delete-member-btn">Supprimer le compte</button>
-    </form>
+    <a class="management-hub-card" href="{{ url_for('admin_stock') }}">
+      <span class="hub-icon">📦</span>
+      <div>
+        <strong>Stock / Courses</strong>
+        <span>Vue simple de toutes les quantités restantes</span>
+      </div>
+      <b>›</b>
+    </a>
   </div>
-{% else %}
-  <div class="card">Aucun membre inscrit.</div>
-{% endfor %}
-</div>
 
+  <div class="stats-grid">
+    <div class="stat-card"><span>Ardoises totales</span><strong>{{ format_eur(total_due) }}</strong></div>
+    <div class="stat-card"><span>Consommations / 24 h</span><strong>{{ consumptions_24h }}</strong></div>
+    <div class="stat-card"><span>Paiements à vérifier</span><strong>{{ pending_claims_count }}</strong></div>
+    <div class="stat-card"><span>Stocks faibles / ruptures</span><strong>{{ low_stock_count }}</strong></div>
+  </div>
 
-<h2>Enregistrer un paiement</h2>
-<div class="card">
-  <form method="post" action="{{ url_for('add_payment_global') }}" class="payment-grid">
-    <div>
-      <label>Membre</label>
-      <select name="user_id" required>
-        <option value="">— Choisir un membre —</option>
-        {% for m in members %}
-          <option value="{{ m['id'] }}">{{ m["name"] }} — reste dû : {{ format_eur(m["spent"] - m["paid"]) }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div>
-      <label>Montant payé (€)</label>
-      <input name="amount" placeholder="Ex. 5,00" inputmode="decimal" required>
-    </div>
-
-    <div>
-      <label>Moyen de paiement</label>
-      <select name="method" required>
-        <option value="cash">Espèces</option>
-        <option value="transfer">Virement</option>
-        <option value="paypal_manual">PayPal manuel</option>
-        <option value="other">Autre</option>
-      </select>
-    </div>
-
-    <div>
-      <label>Note (optionnel)</label>
-      <input name="note" placeholder="Ex. payé ce soir">
-    </div>
-
-    <button type="submit">Enregistrer le paiement</button>
-  </form>
-</div>
-
-<h2>Ajouter une boisson</h2>
-<div class="card">
-  <form method="post" action="{{ url_for('add_product') }}" class="inline-form">
-    <input name="name" placeholder="Ex. Coca Zero" required>
-    <input name="price" placeholder="Prix en €" inputmode="decimal" required>
-    <input name="stock" type="number" min="0" placeholder="Stock initial" required>
-    <input name="low_stock_threshold" type="number" min="0" value="5" placeholder="Alerte stock faible">
-    <button type="submit">Ajouter</button>
-  </form>
-</div>
-
-<h2>Boissons / tarifs</h2>
-<div class="products">
-{% for p in products %}
-  <div class="card edit-product">
-    <form method="post" action="{{ url_for('edit_product', product_id=p['id']) }}" class="stock-edit-form">
-      <input name="name" value="{{ p['name'] }}" required>
-      <input name="price" value="{{ '%.2f'|format(p['price_cents']/100) }}" inputmode="decimal" required>
-      <div>
-        <label>Stock actuel</label>
-        <input name="stock" type="number" min="0" value="{{ p['stock'] }}" required>
-      </div>
-      <div>
-        <label>Alerte stock faible à</label>
-        <input name="low_stock_threshold" type="number" min="0" value="{{ p['low_stock_threshold'] }}" required>
-      </div>
-      <label class="check">
-        <input type="checkbox" name="active" {% if p["active"] and p["stock"] > 0 %}checked{% endif %}>
-        Disponible
-      </label>
-      {% if p["stock"] == 0 %}
-        <div class="stock-zero">Indisponible — stock épuisé</div>
-      {% elif p["stock"] <= p["low_stock_threshold"] %}
-        <div class="stock-low">Stock faible : {{ p["stock"] }} restant{% if p["stock"] > 1 %}s{% endif %}</div>
+  <h2>Paiements déclarés à vérifier</h2>
+  <div class="card table-wrap">
+    <table>
+      <thead><tr><th>Membre</th><th>Montant</th><th>Note</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody>
+      {% for c in pending_claims %}
+        <tr>
+          <td><strong>{{ c["user_name"] }}</strong></td>
+          <td>{{ format_eur(c["amount_cents"]) }}</td>
+          <td>{{ c["note"] or "—" }}</td>
+          <td>{{ c["created_at"] }}</td>
+          <td class="claim-actions">
+            <form method="post" action="{{ url_for('approve_payment_claim', claim_id=c['id']) }}"><button class="approve-btn">Valider</button></form>
+            <form method="post" action="{{ url_for('reject_payment_claim', claim_id=c['id']) }}"><button class="reject-btn">Refuser</button></form>
+          </td>
+        </tr>
       {% else %}
-        <div class="stock-ok">Stock : {{ p["stock"] }}</div>
-      {% endif %}
-      <button type="submit">Enregistrer</button>
-    </form>
+        <tr><td colspan="5">Aucun paiement en attente.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-    <form method="post" action="{{ url_for('set_product_stock', product_id=p['id']) }}" class="set-stock-form">
+  <h2>Enregistrer un paiement</h2>
+  <div class="card">
+    <form method="post" action="{{ url_for('add_payment_global') }}" class="payment-grid">
       <div>
-        <label>Stock réel</label>
-        <input name="stock" type="number" min="0" value="{{ p['stock'] }}" required>
+        <label>Membre</label>
+        <select name="user_id" required>
+          <option value="">— Choisir un membre —</option>
+          {% for m in members %}
+            <option value="{{ m['id'] }}">{{ m["name"] }} — reste dû : {{ format_eur(m["spent"] - m["paid"]) }}</option>
+          {% endfor %}
+        </select>
       </div>
-      <button type="submit">Mettre à jour le stock</button>
-    </form>
-
-    <form method="post" action="{{ url_for('restock_product', product_id=p['id']) }}" class="restock-form">
-      <input name="quantity" type="number" min="1" placeholder="+ quantité" required>
-      <button type="submit">Ajouter au stock</button>
-    </form>
-
-    <form method="post" action="{{ url_for('delete_product', product_id=p['id']) }}"
-          class="danger-form"
-          onsubmit="return confirm('Supprimer définitivement cette boisson du catalogue ?');">
-      <button type="submit" class="delete-product-btn">Supprimer cette boisson</button>
+      <div><label>Montant payé (€)</label><input name="amount" placeholder="Ex. 5,00" inputmode="decimal" required></div>
+      <div>
+        <label>Moyen de paiement</label>
+        <select name="method" required>
+          <option value="cash">Espèces</option>
+          <option value="transfer">Virement</option>
+          <option value="paypal_manual">PayPal manuel</option>
+          <option value="other">Autre</option>
+        </select>
+      </div>
+      <div><label>Note (optionnel)</label><input name="note" placeholder="Ex. payé ce soir"></div>
+      <button type="submit">Enregistrer le paiement</button>
     </form>
   </div>
-{% else %}
-  <div class="card">Ajoute ta première boisson.</div>
-{% endfor %}
 </div>
 {% endblock %}

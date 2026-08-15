@@ -27,6 +27,8 @@
         <span>{{ current_user["name"] }}</span>
         {% if current_user["is_admin"] %}
           <a href="{{ url_for('admin') }}">Gestion</a>
+          <a href="{{ url_for('admin_accounts') }}">Comptes</a>
+          <a href="{{ url_for('admin_consumptions') }}">Consommations</a>
           <a href="{{ url_for('admin_stock') }}">Stock</a>
         {% else %}
           <a href="{{ url_for('dashboard') }}">Mon ardoise</a>

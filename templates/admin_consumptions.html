@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Gestion des consommations — Popote Bravo{% endblock %}
+{% block content %}
+<div class="management-page">
+  <div class="management-page-head">
+    <div>
+      <p class="eyebrow">Espace Popotier</p>
+      <h1>🥤 Gestion des consommations</h1>
+      <p class="muted">Boissons, barres, tarifs et stocks des produits en vente.</p>
+    </div>
+    <a class="management-return" href="{{ url_for('admin') }}">← Gestion</a>
+  </div>
+
+  <h2>Ajouter un produit</h2>
+  <div class="card">
+    <form method="post" action="{{ url_for('add_product') }}" class="product-create-grid">
+      <div><label>Nom</label><input name="name" placeholder="Ex. Coca Zero" required></div>
+      <div><label>Prix (€)</label><input name="price" placeholder="Ex. 1,50" inputmode="decimal" required></div>
+      <div><label>Stock initial</label><input name="stock" type="number" min="0" value="0" required></div>
+      <div><label>Alerte stock faible</label><input name="low_stock_threshold" type="number" min="0" value="5" required></div>
+      <button type="submit">Ajouter le produit</button>
+    </form>
+  </div>
+
+  <h2>Produits en vente</h2>
+  <div class="products">
+  {% for p in products %}
+    <div class="card edit-product product-management-card">
+      <div class="product-management-title">
+        <div>
+          <strong>{{ p["name"] }}</strong>
+          <span>{{ format_eur(p["price_cents"]) }} · {{ p["stock"] }} restant{% if p["stock"] > 1 %}s{% endif %}</span>
+        </div>
+        {% if p["stock"] == 0 %}
+          <span class="stock-status danger">Rupture</span>
+        {% elif p["stock"] <= p["low_stock_threshold"] %}
+          <span class="stock-status warning">Stock faible</span>
+        {% endif %}
+      </div>
+
+      <form method="post" action="{{ url_for('edit_product', product_id=p['id']) }}" class="stock-edit-form">
+        <label>Nom</label><input name="name" value="{{ p['name'] }}" required>
+        <label>Prix (€)</label><input name="price" value="{{ '%.2f'|format(p['price_cents']/100) }}" inputmode="decimal" required>
+        <label>Stock actuel</label><input name="stock" type="number" min="0" value="{{ p['stock'] }}" required>
+        <label>Seuil stock faible</label><input name="low_stock_threshold" type="number" min="0" value="{{ p['low_stock_threshold'] }}" required>
+        <label class="check">
+          <input type="checkbox" name="active" {% if p["active"] and p["stock"] > 0 %}checked{% endif %}>
+          Disponible
+        </label>
+        <button type="submit">Enregistrer nom / prix / seuil</button>
+      </form>
+
+      <form method="post" action="{{ url_for('set_product_stock', product_id=p['id']) }}" class="set-stock-form">
+        <div><label>Corriger le stock réel</label><input name="stock" type="number" min="0" value="{{ p['stock'] }}" required></div>
+        <button type="submit">Mettre le stock à cette valeur</button>
+      </form>
+
+      <form method="post" action="{{ url_for('restock_product', product_id=p['id']) }}" class="restock-form">
+        <input name="quantity" type="number" min="1" placeholder="+ quantité" required>
+        <button type="submit">Ajouter au stock</button>
+      </form>
+
+      <form method="post" action="{{ url_for('delete_product', product_id=p['id']) }}"
+            class="danger-form"
+            onsubmit="return confirm('Supprimer définitivement {{ p['name']|e }} du catalogue ? Les anciennes consommations resteront dans l’historique.');">
+        <button type="submit" class="delete-product-btn">Supprimer ce produit</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="card">Aucun produit dans le catalogue.</div>
+  {% endfor %}
+  </div>
+</div>
+{% endblock %}

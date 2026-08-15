@@ -808,6 +808,38 @@ def admin_delete_consumption(consumption_id):
     return redirect(url_for("member_detail", user_id=user_id))
 
 
+
+@app.route("/admin/comptes")
+@admin_required
+def admin_accounts():
+    db = get_db()
+    members = db.execute("""
+        SELECT u.id, u.name, u.active,
+               COALESCE((SELECT SUM(c.price_cents)
+                         FROM consumptions c WHERE c.user_id = u.id), 0) AS spent,
+               COALESCE((SELECT SUM(p.amount_cents)
+                         FROM payments p WHERE p.user_id = u.id), 0) AS paid
+        FROM users u
+        WHERE u.is_admin = 0
+        ORDER BY u.name COLLATE NOCASE
+    """).fetchall()
+    db.close()
+    return render_template("admin_accounts.html", members=members)
+
+
+@app.route("/admin/consommations")
+@admin_required
+def admin_consumptions():
+    db = get_db()
+    products = db.execute("""
+        SELECT *
+        FROM products
+        ORDER BY active DESC, name COLLATE NOCASE
+    """).fetchall()
+    db.close()
+    return render_template("admin_consumptions.html", products=products)
+
+
 @app.route("/admin/stock")
 @admin_required
 def admin_stock():
@@ -829,15 +861,18 @@ def admin_stock():
 @admin_required
 def admin():
     db = get_db()
+
     members = db.execute("""
         SELECT u.id, u.name, u.active,
-               COALESCE((SELECT SUM(c.price_cents) FROM consumptions c WHERE c.user_id = u.id), 0) AS spent,
-               COALESCE((SELECT SUM(p.amount_cents) FROM payments p WHERE p.user_id = u.id), 0) AS paid
+               COALESCE((SELECT SUM(c.price_cents)
+                         FROM consumptions c WHERE c.user_id = u.id), 0) AS spent,
+               COALESCE((SELECT SUM(p.amount_cents)
+                         FROM payments p WHERE p.user_id = u.id), 0) AS paid
         FROM users u
         WHERE u.is_admin = 0
-        ORDER BY u.name
+        ORDER BY u.name COLLATE NOCASE
     """).fetchall()
-    products = db.execute("SELECT * FROM products ORDER BY active DESC, name").fetchall()
+
     pending_claims = db.execute("""
         SELECT pc.*, u.name AS user_name
         FROM payment_claims pc
@@ -845,10 +880,32 @@ def admin():
         WHERE pc.status = 'pending'
         ORDER BY pc.id ASC
     """).fetchall()
+
+    consumptions_24h = db.execute("""
+        SELECT COUNT(*) AS total
+        FROM consumptions
+        WHERE created_at >= datetime('now', '-24 hours')
+    """).fetchone()["total"]
+
+    low_stock_count = db.execute("""
+        SELECT COUNT(*) AS total
+        FROM products
+        WHERE stock <= low_stock_threshold
+    """).fetchone()["total"]
+
     db.close()
+
     total_due = sum((m["spent"] - m["paid"]) for m in members)
-    return render_template("admin.html", members=members, products=products,
-                           total_due=total_due, pending_claims=pending_claims)
+
+    return render_template(
+        "admin.html",
+        members=members,
+        total_due=total_due,
+        pending_claims=pending_claims,
+        pending_claims_count=len(pending_claims),
+        consumptions_24h=consumptions_24h,
+        low_stock_count=low_stock_count,
+    )
 
 @app.post("/admin/products/add")
 @admin_required
@@ -860,11 +917,11 @@ def add_product():
         low_stock_threshold = int(request.form.get("low_stock_threshold", "5"))
     except ValueError:
         flash("Prix, stock ou seuil invalide.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_consumptions"))
 
     if not name or price_cents < 0 or stock < 0 or low_stock_threshold < 0:
         flash("Produit invalide.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_consumptions"))
 
     db = get_db()
     try:
@@ -877,7 +934,7 @@ def add_product():
     except sqlite3.IntegrityError:
         flash("Une boisson avec ce nom existe déjà.", "error")
     db.close()
-    return redirect(url_for("admin"))
+    return redirect(request.referrer or url_for("admin_consumptions"))
 
 @app.post("/admin/products/<int:product_id>/edit")
 @admin_required
@@ -888,13 +945,14 @@ def edit_product(product_id):
     try:
         price_cents = int(round(float(request.form["price"].replace(",", ".")) * 100))
         stock = int(request.form.get("stock", "0"))
+        low_stock_threshold = int(request.form.get("low_stock_threshold", "5"))
     except ValueError:
-        flash("Prix ou stock invalide.", "error")
-        return redirect(url_for("admin"))
+        flash("Prix, stock ou seuil invalide.", "error")
+        return redirect(request.referrer or url_for("admin"))
 
     if stock < 0 or low_stock_threshold < 0:
         flash("Le stock et le seuil ne peuvent pas être négatifs.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_consumptions"))
 
     active = requested_active if stock > 0 else 0
 
@@ -909,7 +967,7 @@ def edit_product(product_id):
     except sqlite3.IntegrityError:
         flash("Ce nom de produit existe déjà.", "error")
     db.close()
-    return redirect(url_for("admin"))
+    return redirect(request.referrer or url_for("admin_consumptions"))
 
 
 
@@ -920,18 +978,18 @@ def set_product_stock(product_id):
         stock = int(request.form["stock"])
     except (KeyError, ValueError):
         flash("Stock invalide.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_consumptions"))
 
     if stock < 0:
         flash("Le stock ne peut pas être négatif.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_consumptions"))
 
     db = get_db()
     product = db.execute("SELECT id, name FROM products WHERE id = ?", (product_id,)).fetchone()
     if not product:
         db.close()
         flash("Boisson introuvable.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_consumptions"))
 
     db.execute(
         "UPDATE products SET stock = ?, active = CASE WHEN ? > 0 THEN 1 ELSE 0 END WHERE id = ?",
@@ -940,7 +998,7 @@ def set_product_stock(product_id):
     db.commit()
     db.close()
     flash(f"Stock de {product['name']} mis à {stock}.", "success")
-    return redirect(url_for("admin"))
+    return redirect(request.referrer or url_for("admin_consumptions"))
 
 @app.post("/admin/products/<int:product_id>/delete")
 @admin_required
@@ -950,14 +1008,14 @@ def delete_product(product_id):
     if not product:
         db.close()
         flash("Boisson introuvable.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_consumptions"))
 
     db.execute("UPDATE consumptions SET product_id = NULL WHERE product_id = ?", (product_id,))
     db.execute("DELETE FROM products WHERE id = ?", (product_id,))
     db.commit()
     db.close()
     flash(f"{product['name']} supprimé du catalogue.", "success")
-    return redirect(url_for("admin"))
+    return redirect(request.referrer or url_for("admin_consumptions"))
 
 @app.post("/admin/products/<int:product_id>/restock")
 @admin_required
@@ -966,11 +1024,11 @@ def restock_product(product_id):
         quantity = int(request.form["quantity"])
     except (KeyError, ValueError):
         flash("Quantité invalide.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_consumptions"))
 
     if quantity <= 0:
         flash("La quantité doit être supérieure à 0.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_consumptions"))
 
     db = get_db()
     product = db.execute(
@@ -981,7 +1039,7 @@ def restock_product(product_id):
     if not product:
         db.close()
         flash("Produit introuvable.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_consumptions"))
 
     new_stock = product["stock"] + quantity
     db.execute(
@@ -992,7 +1050,7 @@ def restock_product(product_id):
     db.close()
 
     flash(f"{product['name']} réapprovisionné : +{quantity}. Nouveau stock : {new_stock}.", "success")
-    return redirect(url_for("admin"))
+    return redirect(request.referrer or url_for("admin_consumptions"))
 
 @app.post("/admin/payments/<int:user_id>")
 @admin_required
@@ -1084,7 +1142,7 @@ def add_payment_global():
 def delete_member(user_id):
     if request.form.get("confirm_delete") != "DELETE":
         flash("Suppression non confirmée.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_accounts"))
 
     db = get_db()
     user = db.execute(
@@ -1094,7 +1152,7 @@ def delete_member(user_id):
     if not user:
         db.close()
         flash("Membre introuvable.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_accounts"))
 
     db.execute("DELETE FROM payment_claims WHERE user_id = ?", (user_id,))
     db.execute("DELETE FROM payments WHERE user_id = ?", (user_id,))
@@ -1104,7 +1162,7 @@ def delete_member(user_id):
     db.close()
 
     flash(f"Compte {user['name']} supprimé définitivement.", "success")
-    return redirect(url_for("admin"))
+    return redirect(request.referrer or url_for("admin_accounts"))
 
 @app.post("/admin/members/<int:user_id>/update")
 @admin_required
@@ -1114,7 +1172,7 @@ def update_member(user_id):
 
     if len(name) < 2:
         flash("Nom trop court.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_accounts"))
 
     db = get_db()
     try:
@@ -1127,7 +1185,7 @@ def update_member(user_id):
     except sqlite3.IntegrityError:
         flash("Ce nom est déjà utilisé.", "error")
     db.close()
-    return redirect(url_for("admin"))
+    return redirect(request.referrer or url_for("admin_accounts"))
 
 @app.post("/admin/members/<int:user_id>/reset-password")
 @admin_required
@@ -1135,14 +1193,14 @@ def reset_member_password(user_id):
     new_password = request.form.get("new_password", "")
     if len(new_password) < 8:
         flash("Le nouveau mot de passe doit faire au moins 8 caractères.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_accounts"))
 
     db = get_db()
     user = db.execute("SELECT id FROM users WHERE id = ? AND is_admin = 0", (user_id,)).fetchone()
     if not user:
         db.close()
         flash("Membre introuvable.", "error")
-        return redirect(url_for("admin"))
+        return redirect(request.referrer or url_for("admin_accounts"))
 
     db.execute(
         "UPDATE users SET password_hash = ? WHERE id = ?",
@@ -1151,7 +1209,7 @@ def reset_member_password(user_id):
     db.commit()
     db.close()
     flash("Mot de passe du membre réinitialisé.", "success")
-    return redirect(url_for("admin"))
+    return redirect(request.referrer or url_for("admin_accounts"))
 
 @app.route("/admin/member/<int:user_id>")
 @admin_required

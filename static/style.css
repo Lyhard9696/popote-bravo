@@ -748,3 +748,90 @@ button:active,
     font-size: 28px;
   }
 }
+
+
+/* V6.4 — Gestion Popotier réorganisée */
+.management-hub,
+.management-page { max-width: 980px; margin: 0 auto; }
+
+.management-hub-grid { display: grid; gap: 14px; margin: 22px 0 28px; }
+
+.management-hub-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  background: white;
+  border-radius: 18px;
+  padding: 20px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 6px 24px rgba(0,0,0,.06);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.management-hub-card:active { transform: scale(.985); }
+.management-hub-card .hub-icon { font-size: 30px; }
+.management-hub-card div { display: grid; gap: 4px; }
+.management-hub-card strong { font-size: 19px; }
+.management-hub-card div span { color: #6b7280; font-size: 13px; }
+.management-hub-card b { font-size: 30px; color: #9ca3af; }
+
+.management-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.management-return {
+  white-space: nowrap;
+  text-decoration: none;
+  font-weight: 800;
+  padding: 10px 12px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.05);
+}
+
+.account-disabled {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #991b1b !important;
+  font-weight: 800;
+  font-size: 11px !important;
+}
+
+.product-create-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+.product-create-grid label { margin-top: 0; }
+.product-create-grid button { margin: 0; min-height: 48px; }
+
+.product-management-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.product-management-title > div { display: grid; gap: 3px; }
+.product-management-title strong { font-size: 20px; }
+.product-management-title div span { color: #6b7280; font-size: 13px; }
+
+@media (max-width: 900px) {
+  .product-create-grid { grid-template-columns: 1fr 1fr; }
+  .product-create-grid button { grid-column: 1 / -1; }
+}
+@media (max-width: 680px) {
+  .management-page-head { flex-direction: column; }
+  .management-return { width: 100%; text-align: center; }
+  .management-hub-card { padding: 17px; }
+  .management-hub-card strong { font-size: 17px; }
+  .product-create-grid { grid-template-columns: 1fr; }
+  .product-create-grid button { grid-column: auto; }
+}

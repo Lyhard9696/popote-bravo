@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.3.1
+# Popote Bravo — V6.4
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -226,3 +226,13 @@ Correctif mobile :
 - Les ruptures apparaissent en rouge.
 - Les stocks sous leur seuil apparaissent en jaune.
 - Tri automatique : ruptures et stocks faibles en premier, pratique pour faire les courses.
+
+
+## V6.4 — Gestion Popotier réorganisée
+
+- Gestion devient un menu central.
+- Gestion des comptes : membres, activation, nom, mot de passe, fiche et suppression.
+- Gestion des consommations : produits, prix, stock, seuils, ajout et suppression.
+- Stock / Courses reste une page séparée.
+- Le tableau principal conserve les paiements à vérifier et l'enregistrement manuel des paiements.
+- Correction de la modification du seuil de stock faible dans les fiches produits.

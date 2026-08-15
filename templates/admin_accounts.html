@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Gestion des comptes — Popote Bravo{% endblock %}
+{% block content %}
+<div class="management-page">
+  <div class="management-page-head">
+    <div>
+      <p class="eyebrow">Espace Popotier</p>
+      <h1>👥 Gestion des comptes</h1>
+      <p class="muted">Tout ce qui concerne les utilisateurs est regroupé ici.</p>
+    </div>
+    <a class="management-return" href="{{ url_for('admin') }}">← Gestion</a>
+  </div>
+
+  <div class="member-admin-grid">
+  {% for m in members %}
+    <div class="card member-admin-card">
+      <div class="member-admin-head">
+        <div>
+          <strong>{{ m["name"] }}</strong>
+          <span>Reste dû : {{ format_eur(m["spent"] - m["paid"]) }}</span>
+          {% if not m["active"] %}<span class="account-disabled">Compte désactivé</span>{% endif %}
+        </div>
+        <a href="{{ url_for('member_detail', user_id=m['id']) }}">Voir la fiche</a>
+      </div>
+
+      <form method="post" action="{{ url_for('update_member', user_id=m['id']) }}" class="member-edit-form">
+        <label>Nom / pseudo</label>
+        <input name="name" value="{{ m['name'] }}" required>
+        <label class="check">
+          <input type="checkbox" name="active" {% if m["active"] %}checked{% endif %}>
+          Compte actif
+        </label>
+        <button type="submit">Enregistrer le compte</button>
+      </form>
+
+      <form method="post" action="{{ url_for('reset_member_password', user_id=m['id']) }}" class="member-password-form">
+        <label>Nouveau mot de passe</label>
+        <input name="new_password" type="password" minlength="8" placeholder="Minimum 8 caractères" required>
+        <button type="submit">Réinitialiser le mot de passe</button>
+      </form>
+
+      <form method="post" action="{{ url_for('delete_member', user_id=m['id']) }}"
+            class="delete-member-form"
+            onsubmit="return confirm('Supprimer définitivement le compte de {{ m['name']|e }} et son historique ?');">
+        <input type="hidden" name="confirm_delete" value="DELETE">
+        <button type="submit" class="delete-member-btn">Supprimer le compte</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="card">Aucun membre inscrit.</div>
+  {% endfor %}
+  </div>
+</div>
+{% endblock %}
