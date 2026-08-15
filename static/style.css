@@ -601,3 +601,26 @@ button:active,
     padding-top: max(env(safe-area-inset-top), 6px);
   }
 }
+
+
+.profile-actions {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.logout-mobile-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #991b1b;
+  color: white;
+  font-weight: 800;
+}
+
+.logout-mobile-btn:active {
+  transform: scale(.98);
+}
