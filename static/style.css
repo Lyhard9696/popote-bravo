@@ -1149,3 +1149,62 @@ button:active,
   .ticket-cancel-btn { width: 100%; }
   .ticket-items { margin-left: 0; }
 }
+
+
+/* V6.6.1 — bouton PayPal restauré */
+.paypal-home-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 54px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  text-decoration: none;
+  background: #ffc439;
+  color: #111;
+  font-weight: 850;
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+}
+
+.paypal-home-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.paypal-home-logo {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #003087;
+  color: #fff;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 20px;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.paypal-home-button b {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 11px;
+}
+
+.paypal-home-button:active {
+  transform: scale(.985);
+}
+
+@media (max-width: 520px) {
+  .paypal-home-button {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

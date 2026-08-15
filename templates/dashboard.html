@@ -60,10 +60,13 @@
   {% endif %}
 
   <div class="quick-payment">
-    <a class="button-link payment-button-with-badge" href="{{ url_for('declare_payment') }}">
-      <span>Payer / déclarer un paiement</span>
+    <a class="paypal-home-button payment-button-with-badge" href="{{ url_for('declare_payment') }}">
+      <span class="paypal-home-main">
+        <span class="paypal-home-logo" aria-hidden="true">P</span>
+        <span>Payer / déclarer un paiement</span>
+      </span>
       {% if pending_claim_count %}
-        <b>• {{ pending_claim_count }} en attente</b>
+        <b>{{ pending_claim_count }} en attente</b>
       {% endif %}
     </a>
   </div>

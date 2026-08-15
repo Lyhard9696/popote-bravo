@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.6
+# Popote Bravo — V6.6.1
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -263,3 +263,11 @@ Correctif mobile :
 - Recherche instantanée dans les comptes et les produits.
 - Confirmation renforcée par saisie de SUPPRIMER pour les suppressions définitives.
 - Confirmation renforcée pour un ajustement de stock de 10 unités ou plus.
+
+
+## V6.6.1 — Bouton PayPal
+
+- Restauration du bouton jaune PayPal sur l'accueil membre.
+- Ajout d'un pictogramme PayPal stylisé.
+- Le badge du nombre de paiements en attente reste visible.
+- Aucun changement fonctionnel sur les paiements.
