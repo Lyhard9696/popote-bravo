@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.1
+# Popote Bravo — V6.2
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -192,3 +192,13 @@ L'insigne P3 est utilisé comme icône d'écran d'accueil iPhone et comme favico
 - Les paiements n'ont aucun effet sur le classement.
 - QR Code amélioré avec partage natif du téléphone.
 - Bouton de copie du lien en solution de secours.
+
+
+## V6.2 — Expérience mobile
+
+- Barre de navigation fixe en bas sur téléphone.
+- Zones tactiles plus grandes pour usage à une main.
+- Gestion des safe areas iPhone / écran d'accueil.
+- En-tête compact et écran membre plus visuel.
+- Animations discrètes sur boutons, cartes et messages de confirmation.
+- Aucun changement dans la logique des ardoises, paiements ou stocks.

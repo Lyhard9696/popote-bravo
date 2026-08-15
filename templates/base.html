@@ -3,7 +3,7 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}Popote Bravo{% endblock %}</title>
   <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
@@ -16,11 +16,14 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<header>
+<header class="topbar">
   <div class="wrap nav">
-    <strong class="brand"><img src="{{ url_for('static', filename='insigne-bravo.jpeg') }}" alt=""> POPOTE BRAVO</strong>
+    <a class="brand" href="{{ url_for('admin' if current_user and current_user['is_admin'] else 'dashboard') if current_user else url_for('login') }}">
+      <img src="{{ url_for('static', filename='insigne-bravo.jpeg') }}" alt="">
+      <span>POPOTE BRAVO</span>
+    </a>
     {% if current_user %}
-      <div>
+      <div class="desktop-nav">
         <span>{{ current_user["name"] }}</span>
         {% if current_user["is_admin"] %}
           <a href="{{ url_for('admin') }}">Gestion</a>
@@ -35,7 +38,7 @@
     {% endif %}
   </div>
 </header>
-<main class="wrap">
+<main class="wrap app-main">
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
@@ -45,5 +48,44 @@
   {% endwith %}
   {% block content %}{% endblock %}
 </main>
+
+{% if current_user %}
+<nav class="mobile-tabbar" aria-label="Navigation principale">
+  {% if current_user["is_admin"] %}
+    <a href="{{ url_for('admin') }}" class="{% if request.endpoint == 'admin' %}active{% endif %}">
+      <span class="tab-icon">⌂</span><span>Gestion</span>
+    </a>
+  {% else %}
+    <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+      <span class="tab-icon">⌂</span><span>Ardoise</span>
+    </a>
+  {% endif %}
+  <a href="{{ url_for('classement') }}" class="{% if request.endpoint == 'classement' %}active{% endif %}">
+    <span class="tab-icon">🏆</span><span>Classement</span>
+  </a>
+  <a href="{{ url_for('qr_page') }}" class="{% if request.endpoint in ['qr_page','qr_image'] %}active{% endif %}">
+    <span class="tab-icon">▦</span><span>QR</span>
+  </a>
+  <a href="{{ url_for('change_password') }}" class="{% if request.endpoint == 'change_password' %}active{% endif %}">
+    <span class="tab-icon">●</span><span>Profil</span>
+  </a>
+</nav>
+{% endif %}
+
+<script>
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  button.classList.add("tap-feedback");
+  setTimeout(() => button.classList.remove("tap-feedback"), 180);
+});
+
+const flashes = document.querySelectorAll(".flash");
+flashes.forEach((flash) => {
+  flash.classList.add("flash-enter");
+  setTimeout(() => flash.classList.add("flash-visible"), 40);
+});
+</script>
+
 </body>
 </html>

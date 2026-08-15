@@ -2,9 +2,19 @@
 {% extends "base.html" %}
 {% block title %}Mon ardoise{% endblock %}
 {% block content %}
+<div class="mobile-welcome">
+  <div class="mobile-welcome-icon">
+    <img src="{{ url_for('static', filename='insigne-bravo.jpeg') }}" alt="">
+  </div>
+  <div>
+    <span>POPOTE BRAVO · P3</span>
+    <strong>Bonjour {{ current_user["name"] }}</strong>
+  </div>
+</div>
+
 <div class="hero">
   <div>
-    <p class="eyebrow">Bonjour {{ current_user["name"] }}</p>
+    <p class="eyebrow">Aujourd’hui</p>
     <h1>Ton ardoise</h1>
   </div>
   <div class="balance">{{ format_eur(estimated_balance) }}<small>Reste estimé</small></div>

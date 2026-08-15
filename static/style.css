@@ -351,3 +351,253 @@ select {
   min-height: 22px;
   text-align: center;
 }
+
+
+/* V6.2 — expérience mobile façon application */
+html {
+  min-height: 100%;
+  background: #f3f4f6;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  min-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
+  overscroll-behavior-y: none;
+}
+button, a, input, select {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  transition: transform .14s ease, opacity .14s ease, box-shadow .14s ease;
+}
+button:active,
+.tap-feedback {
+  transform: scale(.97);
+}
+.card,
+.product-card,
+.stat-card,
+.podium-card,
+.qr-card {
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.product-card:active,
+.podium-card:active {
+  transform: scale(.985);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding-top: env(safe-area-inset-top);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.brand {
+  text-decoration: none;
+}
+.brand span {
+  font-weight: 850;
+}
+.app-main {
+  animation: appFadeIn .24s ease-out;
+}
+@keyframes appFadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mobile-welcome {
+  display: none;
+}
+
+.flash-enter {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity .22s ease, transform .22s ease;
+}
+.flash-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobile-tabbar {
+  display: none;
+}
+
+@media (max-width: 680px) {
+  body {
+    background: #f3f4f6;
+  }
+
+  .topbar {
+    background: rgba(17,17,17,.94);
+  }
+
+  .nav {
+    min-height: 58px;
+    padding: 8px 0;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .nav .brand img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .desktop-nav {
+    display: none !important;
+  }
+
+  .brand span {
+    font-size: 14px;
+    letter-spacing: .06em;
+  }
+
+  .app-main {
+    padding-top: 18px;
+    padding-bottom: calc(104px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-welcome {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 14px;
+    background: #111;
+    color: white;
+    border-radius: 18px;
+    box-shadow: 0 8px 26px rgba(0,0,0,.12);
+  }
+
+  .mobile-welcome-icon img {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    object-fit: cover;
+  }
+
+  .mobile-welcome div:last-child {
+    display: grid;
+    gap: 3px;
+  }
+
+  .mobile-welcome span {
+    font-size: 11px;
+    letter-spacing: .08em;
+    color: #f6c515;
+    font-weight: 800;
+  }
+
+  .mobile-welcome strong {
+    font-size: 18px;
+  }
+
+  .hero {
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .hero h1 {
+    font-size: 34px;
+  }
+
+  .balance {
+    border-radius: 16px;
+    font-size: 28px;
+    padding: 16px;
+  }
+
+  .products {
+    gap: 10px;
+  }
+
+  .product-card {
+    min-height: 84px;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .product-card button {
+    min-width: 105px;
+    min-height: 48px;
+  }
+
+  h2 {
+    margin-top: 26px;
+    font-size: 20px;
+  }
+
+  .card {
+    border-radius: 16px;
+  }
+
+  .mobile-tabbar {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    padding: 7px;
+    border-radius: 20px;
+    background: rgba(17,17,17,.94);
+    box-shadow: 0 12px 34px rgba(0,0,0,.30);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .mobile-tabbar a {
+    min-width: 0;
+    text-decoration: none;
+    color: rgba(255,255,255,.65);
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 7px 2px;
+    border-radius: 14px;
+    font-size: 10px;
+    font-weight: 700;
+    transition: background .16s ease, color .16s ease, transform .16s ease;
+  }
+
+  .mobile-tabbar a:active {
+    transform: scale(.94);
+  }
+
+  .mobile-tabbar a.active {
+    background: #f6c515;
+    color: #111;
+  }
+
+  .tab-icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .qr-card img {
+    width: min(320px, 82vw);
+  }
+
+  .pay-cta,
+  .share-popote-btn {
+    min-height: 52px;
+    display: grid;
+    place-items: center;
+  }
+
+  input, select {
+    min-height: 48px;
+  }
+}
+
+@media (display-mode: standalone) and (max-width: 680px) {
+  .topbar {
+    padding-top: max(env(safe-area-inset-top), 6px);
+  }
+}
