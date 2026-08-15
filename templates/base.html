@@ -19,6 +19,7 @@
         {% else %}
           <a href="{{ url_for('dashboard') }}">Mon ardoise</a>
         {% endif %}
+        <a href="{{ url_for('change_password') }}">Mot de passe</a>
         <a href="{{ url_for('logout') }}">Déconnexion</a>
       </div>
     {% endif %}

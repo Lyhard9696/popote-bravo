@@ -234,6 +234,46 @@ def login():
         return redirect(url_for("admin" if user["is_admin"] else "dashboard"))
     return render_template("login.html")
 
+
+@app.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    user = current_user()
+
+    if request.method == "POST":
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if not check_password_hash(user["password_hash"], current_password):
+            flash("Le mot de passe actuel est incorrect.", "error")
+            return render_template("change_password.html")
+
+        if len(new_password) < 8:
+            flash("Le nouveau mot de passe doit faire au moins 8 caractères.", "error")
+            return render_template("change_password.html")
+
+        if new_password != confirm_password:
+            flash("Les deux nouveaux mots de passe ne correspondent pas.", "error")
+            return render_template("change_password.html")
+
+        if check_password_hash(user["password_hash"], new_password):
+            flash("Le nouveau mot de passe doit être différent de l'ancien.", "error")
+            return render_template("change_password.html")
+
+        db = get_db()
+        db.execute(
+            "UPDATE users SET password_hash = ? WHERE id = ?",
+            (generate_password_hash(new_password), user["id"])
+        )
+        db.commit()
+        db.close()
+
+        flash("Mot de passe modifié avec succès.", "success")
+        return redirect(url_for("admin" if user["is_admin"] else "dashboard"))
+
+    return render_template("change_password.html")
+
 @app.route("/logout")
 def logout():
     session.clear()

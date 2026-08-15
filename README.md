@@ -1,5 +1,5 @@
 
-# Popote Bravo — V5 Render
+# Popote Bravo — V5.1
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -133,3 +133,15 @@ Variables :
 Pour conserver SQLite sur Render, attacher un disque persistant au service et le monter sur `/var/data`.
 
 Route de contrôle : `/health`
+
+
+## V5.1 — Changement de mot de passe
+
+Chaque utilisateur connecté peut modifier son mot de passe depuis le menu « Mot de passe ».
+
+Le formulaire :
+- vérifie le mot de passe actuel ;
+- exige au moins 8 caractères ;
+- demande une confirmation ;
+- refuse de réutiliser exactement le mot de passe actuel ;
+- stocke uniquement le hash du nouveau mot de passe.
