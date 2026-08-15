@@ -208,6 +208,26 @@ def inject_helpers():
     }
 
 
+
+@app.route("/classement")
+@login_required
+def classement():
+    db = get_db()
+    ranking = db.execute("""
+        SELECT u.id, u.name, COALESCE(SUM(c.price_cents), 0) AS total_cents
+        FROM consumptions c
+        JOIN users u ON u.id = c.user_id
+        WHERE u.is_admin = 0
+          AND strftime('%Y-%m', c.created_at) = strftime('%Y-%m', 'now')
+        GROUP BY u.id, u.name
+        HAVING SUM(c.price_cents) > 0
+        ORDER BY total_cents DESC, u.name COLLATE NOCASE
+        LIMIT 3
+    """).fetchall()
+    month_label = datetime.now().strftime("%m/%Y")
+    db.close()
+    return render_template("classement.html", ranking=ranking, month_label=month_label)
+
 @app.route("/qr")
 def qr_page():
     return render_template("qr.html", app_url=request.host_url.rstrip("/"))

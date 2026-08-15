@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Classement — Popote Bravo{% endblock %}
+{% block content %}
+<div class="ranking-page">
+  <p class="eyebrow">Ce mois-ci · {{ month_label }}</p>
+  <h1>🏆 Classement</h1>
+  <p class="muted">Top 3 selon le montant total consommé ce mois-ci. Les paiements ne changent pas le classement.</p>
+
+  <div class="podium-list">
+  {% set medals = ["🥇", "🥈", "🥉"] %}
+  {% for member in ranking %}
+    <div class="podium-card podium-{{ loop.index }}">
+      <span class="podium-medal">{{ medals[loop.index0] }}</span>
+      <div class="podium-name">{{ member["name"] }}</div>
+      <strong>{{ format_eur(member["total_cents"]) }}</strong>
+    </div>
+  {% else %}
+    <div class="card">Aucune consommation enregistrée ce mois-ci.</div>
+  {% endfor %}
+  </div>
+</div>
+{% endblock %}

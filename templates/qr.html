@@ -4,14 +4,53 @@
 <div class="qr-page">
   <p class="eyebrow">Accès rapide</p>
   <h1>Scanner Popote Bravo</h1>
-  <p class="qr-intro">Montre simplement cet écran à un autre membre pour qu’il scanne le QR code avec son téléphone.</p>
+  <p class="qr-intro">Montre cet écran à quelqu’un : il scanne le QR code et arrive directement sur Popote Bravo.</p>
 
   <div class="qr-card">
     <img src="{{ url_for('qr_image') }}" alt="QR code Popote Bravo">
     <strong>POPOTE BRAVO</strong>
-    <span>{{ app_url }}</span>
+    <span id="share-url">{{ app_url }}</span>
   </div>
 
-  <p class="muted">Le QR code ouvre directement la page d’accueil de Popote Bravo.</p>
+  <button type="button" id="share-popote" class="share-popote-btn">📤 Partager Popote Bravo</button>
+  <button type="button" id="copy-popote" class="secondary">Copier le lien</button>
+  <p id="share-feedback" class="muted"></p>
 </div>
+
+<script>
+const shareUrl = {{ app_url|tojson }};
+const shareButton = document.getElementById("share-popote");
+const copyButton = document.getElementById("copy-popote");
+const feedback = document.getElementById("share-feedback");
+
+shareButton.addEventListener("click", async () => {
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "Popote Bravo",
+        text: "Accès à Popote Bravo",
+        url: shareUrl
+      });
+    } catch (err) {
+      if (err.name !== "AbortError") feedback.textContent = "Le partage n’a pas pu être ouvert.";
+    }
+  } else {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      feedback.textContent = "Lien copié !";
+    } catch (err) {
+      feedback.textContent = shareUrl;
+    }
+  }
+});
+
+copyButton.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    feedback.textContent = "Lien copié !";
+  } catch (err) {
+    feedback.textContent = shareUrl;
+  }
+});
+</script>
 {% endblock %}
