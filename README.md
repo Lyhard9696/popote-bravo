@@ -1,5 +1,5 @@
 
-# Popote Bravo — V4
+# Popote Bravo — V5 Render
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -116,3 +116,20 @@ Le popotier peut enregistrer un paiement directement depuis le tableau de bord :
 - alerte de stock faible à 5 unités ou moins ;
 - réapprovisionnement rapide avec un bouton dédié ;
 - possibilité de corriger manuellement le stock depuis l'administration.
+
+
+## V5 — Mise en ligne sur Render
+
+Lancement production :
+
+    gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 60
+
+Variables :
+
+    APP_ENV=production
+    SECRET_KEY=<générée côté Render>
+    DATA_DIR=/var/data
+
+Pour conserver SQLite sur Render, attacher un disque persistant au service et le monter sur `/var/data`.
+
+Route de contrôle : `/health`

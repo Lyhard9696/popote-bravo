@@ -9,10 +9,15 @@ import os
 import requests
 
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "popote.db"
+DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR)))
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = DATA_DIR / "popote.db"
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "CHANGE-MOI-AVANT-MISE-EN-LIGNE")
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.getenv("APP_ENV", "").lower() == "production"
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
 PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
 PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox").lower()
@@ -170,6 +175,16 @@ def inject_helpers():
         "paypal_client_id": PAYPAL_CLIENT_ID,
         "paypal_mode": PAYPAL_MODE,
     }
+
+@app.route("/health")
+def health():
+    try:
+        db = get_db()
+        db.execute("SELECT 1").fetchone()
+        db.close()
+        return {"status": "ok"}, 200
+    except Exception:
+        return {"status": "error"}, 500
 
 @app.route("/")
 def index():
@@ -711,6 +726,7 @@ def member_detail(user_id):
         balance=user_balance_cents(user_id)
     )
 
+init_db()
+
 if __name__ == "__main__":
-    init_db()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=os.getenv("APP_ENV") != "production")
