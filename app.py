@@ -1,12 +1,14 @@
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
 import sqlite3
 from pathlib import Path
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from datetime import datetime
+from io import BytesIO
 import os
 import requests
+import qrcode
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR)))
@@ -47,6 +49,7 @@ def init_db():
         name TEXT NOT NULL UNIQUE,
         price_cents INTEGER NOT NULL,
         stock INTEGER NOT NULL DEFAULT 0,
+        low_stock_threshold INTEGER NOT NULL DEFAULT 5,
         active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -95,6 +98,9 @@ def init_db():
     product_cols = {row["name"] for row in db.execute("PRAGMA table_info(products)").fetchall()}
     if "stock" not in product_cols:
         db.execute("ALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0")
+        db.commit()
+    if "low_stock_threshold" not in product_cols:
+        db.execute("ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER NOT NULL DEFAULT 5")
         db.commit()
 
     cols = {row["name"] for row in db.execute("PRAGMA table_info(payments)").fetchall()}
@@ -200,6 +206,28 @@ def inject_helpers():
         "paypal_client_id": PAYPAL_CLIENT_ID,
         "paypal_mode": PAYPAL_MODE,
     }
+
+
+@app.route("/qr")
+def qr_page():
+    return render_template("qr.html", app_url=request.host_url.rstrip("/"))
+
+@app.route("/qr.png")
+def qr_image():
+    target = request.host_url.rstrip("/") + "/"
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(target)
+    qr.make(fit=True)
+    image = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    buffer.seek(0)
+    return send_file(buffer, mimetype="image/png", max_age=300)
 
 @app.route("/health")
 def health():
@@ -311,7 +339,8 @@ def dashboard():
     db = get_db()
     products = db.execute("SELECT * FROM products WHERE active = 1 AND stock > 0 ORDER BY name").fetchall()
     history = db.execute("""
-        SELECT product_name, price_cents, created_at
+        SELECT id, product_name, price_cents, created_at,
+               CASE WHEN created_at >= datetime('now', '-30 seconds') THEN 1 ELSE 0 END AS can_undo
         FROM consumptions
         WHERE user_id = ?
         ORDER BY id DESC
@@ -697,6 +726,67 @@ def paypal_webhook():
 
     return "", 200
 
+
+@app.post("/consumptions/<int:consumption_id>/undo")
+@login_required
+def undo_consumption(consumption_id):
+    user = current_user()
+    if user["is_admin"]:
+        return redirect(url_for("admin"))
+
+    db = get_db()
+    consumption = db.execute("""
+        SELECT * FROM consumptions
+        WHERE id = ? AND user_id = ?
+          AND created_at >= datetime('now', '-30 seconds')
+    """, (consumption_id, user["id"])).fetchone()
+
+    if not consumption:
+        db.close()
+        flash("Le délai d'annulation est dépassé ou cette consommation n'existe plus.", "error")
+        return redirect(url_for("dashboard"))
+
+    if consumption["product_id"]:
+        product = db.execute("SELECT stock FROM products WHERE id = ?", (consumption["product_id"],)).fetchone()
+        if product:
+            new_stock = product["stock"] + 1
+            db.execute(
+                "UPDATE products SET stock = ?, active = 1 WHERE id = ?",
+                (new_stock, consumption["product_id"])
+            )
+
+    db.execute("DELETE FROM consumptions WHERE id = ?", (consumption_id,))
+    db.commit()
+    db.close()
+    flash("Consommation annulée et stock restauré.", "success")
+    return redirect(url_for("dashboard"))
+
+@app.post("/admin/consumptions/<int:consumption_id>/delete")
+@admin_required
+def admin_delete_consumption(consumption_id):
+    db = get_db()
+    consumption = db.execute("SELECT * FROM consumptions WHERE id = ?", (consumption_id,)).fetchone()
+    if not consumption:
+        db.close()
+        flash("Consommation introuvable.", "error")
+        return redirect(url_for("admin"))
+
+    user_id = consumption["user_id"]
+    if consumption["product_id"]:
+        product = db.execute("SELECT stock FROM products WHERE id = ?", (consumption["product_id"],)).fetchone()
+        if product:
+            new_stock = product["stock"] + 1
+            db.execute(
+                "UPDATE products SET stock = ?, active = 1 WHERE id = ?",
+                (new_stock, consumption["product_id"])
+            )
+
+    db.execute("DELETE FROM consumptions WHERE id = ?", (consumption_id,))
+    db.commit()
+    db.close()
+    flash("Consommation supprimée et stock restauré.", "success")
+    return redirect(url_for("member_detail", user_id=user_id))
+
 @app.route("/admin")
 @admin_required
 def admin():
@@ -729,19 +819,20 @@ def add_product():
     try:
         price_cents = int(round(float(request.form["price"].replace(",", ".")) * 100))
         stock = int(request.form.get("stock", "0"))
+        low_stock_threshold = int(request.form.get("low_stock_threshold", "5"))
     except ValueError:
-        flash("Prix ou stock invalide.", "error")
+        flash("Prix, stock ou seuil invalide.", "error")
         return redirect(url_for("admin"))
 
-    if not name or price_cents < 0 or stock < 0:
+    if not name or price_cents < 0 or stock < 0 or low_stock_threshold < 0:
         flash("Produit invalide.", "error")
         return redirect(url_for("admin"))
 
     db = get_db()
     try:
         db.execute(
-            "INSERT INTO products (name, price_cents, stock, active) VALUES (?, ?, ?, ?)",
-            (name, price_cents, stock, 1 if stock > 0 else 0)
+            "INSERT INTO products (name, price_cents, stock, low_stock_threshold, active) VALUES (?, ?, ?, ?, ?)",
+            (name, price_cents, stock, low_stock_threshold, 1 if stock > 0 else 0)
         )
         db.commit()
         flash("Boisson ajoutée.", "success")
@@ -763,8 +854,8 @@ def edit_product(product_id):
         flash("Prix ou stock invalide.", "error")
         return redirect(url_for("admin"))
 
-    if stock < 0:
-        flash("Le stock ne peut pas être négatif.", "error")
+    if stock < 0 or low_stock_threshold < 0:
+        flash("Le stock et le seuil ne peuvent pas être négatifs.", "error")
         return redirect(url_for("admin"))
 
     active = requested_active if stock > 0 else 0
@@ -772,8 +863,8 @@ def edit_product(product_id):
     db = get_db()
     try:
         db.execute(
-            "UPDATE products SET name = ?, price_cents = ?, stock = ?, active = ? WHERE id = ?",
-            (name, price_cents, stock, active, product_id)
+            "UPDATE products SET name = ?, price_cents = ?, stock = ?, low_stock_threshold = ?, active = ? WHERE id = ?",
+            (name, price_cents, stock, low_stock_threshold, active, product_id)
         )
         db.commit()
         flash("Produit mis à jour.", "success")
@@ -899,6 +990,54 @@ def add_payment_global():
     db.close()
 
     flash(f"Paiement de {amount_cents/100:.2f} € enregistré pour {user['name']}.", "success")
+    return redirect(url_for("admin"))
+
+
+@app.post("/admin/members/<int:user_id>/update")
+@admin_required
+def update_member(user_id):
+    name = request.form.get("name", "").strip()
+    active = 1 if request.form.get("active") == "on" else 0
+
+    if len(name) < 2:
+        flash("Nom trop court.", "error")
+        return redirect(url_for("admin"))
+
+    db = get_db()
+    try:
+        db.execute(
+            "UPDATE users SET name = ?, active = ? WHERE id = ? AND is_admin = 0",
+            (name, active, user_id)
+        )
+        db.commit()
+        flash("Membre mis à jour.", "success")
+    except sqlite3.IntegrityError:
+        flash("Ce nom est déjà utilisé.", "error")
+    db.close()
+    return redirect(url_for("admin"))
+
+@app.post("/admin/members/<int:user_id>/reset-password")
+@admin_required
+def reset_member_password(user_id):
+    new_password = request.form.get("new_password", "")
+    if len(new_password) < 8:
+        flash("Le nouveau mot de passe doit faire au moins 8 caractères.", "error")
+        return redirect(url_for("admin"))
+
+    db = get_db()
+    user = db.execute("SELECT id FROM users WHERE id = ? AND is_admin = 0", (user_id,)).fetchone()
+    if not user:
+        db.close()
+        flash("Membre introuvable.", "error")
+        return redirect(url_for("admin"))
+
+    db.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (generate_password_hash(new_password), user_id)
+    )
+    db.commit()
+    db.close()
+    flash("Mot de passe du membre réinitialisé.", "success")
     return redirect(url_for("admin"))
 
 @app.route("/admin/member/<int:user_id>")

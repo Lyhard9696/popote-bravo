@@ -52,16 +52,23 @@
 <h2>Mes dernières consommations</h2>
 <div class="card table-wrap">
 <table>
-  <thead><tr><th>Boisson</th><th>Prix</th><th>Date</th></tr></thead>
+  <thead><tr><th>Boisson</th><th>Prix</th><th>Date</th><th></th></tr></thead>
   <tbody>
     {% for c in history %}
       <tr>
         <td>{{ c["product_name"] }}</td>
         <td>{{ format_eur(c["price_cents"]) }}</td>
         <td>{{ c["created_at"] }}</td>
+        <td>
+          {% if c["can_undo"] %}
+          <form method="post" action="{{ url_for('undo_consumption', consumption_id=c['id']) }}">
+            <button type="submit" class="undo-btn">Annuler</button>
+          </form>
+          {% endif %}
+        </td>
       </tr>
     {% else %}
-      <tr><td colspan="3">Rien pour l'instant.</td></tr>
+      <tr><td colspan="4">Rien pour l'instant.</td></tr>
     {% endfor %}
   </tbody>
 </table>

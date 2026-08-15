@@ -22,11 +22,20 @@
 <h2>Consommations</h2>
 <div class="card table-wrap">
 <table>
-<thead><tr><th>Produit</th><th>Prix au moment de la prise</th><th>Date</th></tr></thead>
+<thead><tr><th>Produit</th><th>Prix au moment de la prise</th><th>Date</th><th></th></tr></thead>
 <tbody>
 {% for c in consumptions %}
-<tr><td>{{ c["product_name"] }}</td><td>{{ format_eur(c["price_cents"]) }}</td><td>{{ c["created_at"] }}</td></tr>
-{% else %}<tr><td colspan="3">Aucune consommation.</td></tr>{% endfor %}
+<tr>
+<td>{{ c["product_name"] }}</td>
+<td>{{ format_eur(c["price_cents"]) }}</td>
+<td>{{ c["created_at"] }}</td>
+<td>
+  <form method="post" action="{{ url_for('admin_delete_consumption', consumption_id=c['id']) }}">
+    <button type="submit" class="delete-btn">Supprimer</button>
+  </form>
+</td>
+</tr>
+{% else %}<tr><td colspan="4">Aucune consommation.</td></tr>{% endfor %}
 </tbody>
 </table>
 </div>

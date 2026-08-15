@@ -1,5 +1,5 @@
 
-# Popote Bravo — V5.4
+# Popote Bravo — V6
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -173,3 +173,13 @@ Variable optionnelle :
 ## V5.4 — Icône iPhone
 
 L'insigne P3 est utilisé comme icône d'écran d'accueil iPhone et comme favicon navigateur.
+
+
+## V6
+
+- Annulation d'une consommation pendant 30 secondes côté membre.
+- Suppression/correction d'une consommation par le popotier avec restauration du stock.
+- Seuil de stock faible personnalisable pour chaque produit.
+- Gestion des membres : renommer, activer/désactiver, réinitialiser le mot de passe.
+- Tableau de bord popotier : ardoises totales, consommations sur 24 h, paiements à vérifier, stocks faibles.
+- Page QR Code accessible depuis le menu et scannable directement depuis l'écran d'un téléphone.
