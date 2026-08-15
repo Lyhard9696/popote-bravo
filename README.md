@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.5
+# Popote Bravo — V6.6
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -245,3 +245,21 @@ Correctif mobile :
 - Le stock ne peut jamais descendre sous zéro.
 - Suivi visuel des paiements déclarés : en attente, validé ou refusé.
 - Classement enrichi : Top 3 public + position personnelle et montant consommé dans le mois.
+
+
+## V6.6 — Panier & Notifications
+
+- Panier multi-produits : plusieurs boissons/barres en une seule validation.
+- Compteur fixe du panier avec nombre d'articles et total en euros.
+- État « Enregistrement… » pendant l'envoi pour éviter les doubles validations.
+- Ticket après commande, regroupé par produit, annulable pendant 30 secondes.
+- Historique regroupé par commande : ex. 8 × Coca — total de la commande.
+- Produits en rupture conservés visibles et grisés.
+- Retour visuel renforcé après une commande réussie.
+- Badge de paiements en attente sur l'accueil.
+- Centre de notifications interne.
+- Notifications membre lors d'un paiement validé ou refusé.
+- Notifications Popotier lors d'un stock faible ou d'une rupture.
+- Recherche instantanée dans les comptes et les produits.
+- Confirmation renforcée par saisie de SUPPRIMER pour les suppressions définitives.
+- Confirmation renforcée pour un ajustement de stock de 10 unités ou plus.

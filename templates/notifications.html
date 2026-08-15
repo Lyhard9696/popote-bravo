@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Notifications — Popote Bravo{% endblock %}
+{% block content %}
+<div class="notifications-page">
+  <div class="management-page-head">
+    <div>
+      <p class="eyebrow">Popote Bravo</p>
+      <h1>🔔 Notifications</h1>
+      <p class="muted">Paiements, stocks et informations importantes.</p>
+    </div>
+    {% if notifications %}
+    <form method="post" action="{{ url_for('clear_notifications') }}">
+      <button type="submit" class="secondary">Tout effacer</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="notification-list">
+  {% for n in notifications %}
+    <a class="card notification-row notification-{{ n['kind'] }}"
+       href="{{ n['link'] or '#' }}">
+      <div>
+        <strong>{{ n["title"] }}</strong>
+        <span>{{ n["message"] }}</span>
+      </div>
+      <small>{{ n["created_at"] }}</small>
+    </a>
+  {% else %}
+    <div class="card muted">Aucune notification.</div>
+  {% endfor %}
+  </div>
+</div>
+{% endblock %}

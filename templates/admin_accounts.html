@@ -11,9 +11,13 @@
     <a class="management-return" href="{{ url_for('admin') }}">← Gestion</a>
   </div>
 
-  <div class="member-admin-grid">
+  <div class="search-box">
+    <input id="account-search" type="search" placeholder="🔎 Rechercher un compte…" autocomplete="off">
+  </div>
+
+  <div class="member-admin-grid" id="account-list">
   {% for m in members %}
-    <div class="card member-admin-card">
+    <div class="card member-admin-card searchable-account" data-search="{{ m['name']|lower }}">
       <div class="member-admin-head">
         <div>
           <strong>{{ m["name"] }}</strong>
@@ -41,8 +45,8 @@
 
       <form method="post" action="{{ url_for('delete_member', user_id=m['id']) }}"
             class="delete-member-form"
-            onsubmit="return confirm('Supprimer définitivement le compte de {{ m['name']|e }} et son historique ?');">
-        <input type="hidden" name="confirm_delete" value="DELETE">
+            onsubmit="return confirmAccountDeletion(this, '{{ m['name']|e }}');">
+        <input type="hidden" name="confirm_delete" value="">
         <button type="submit" class="delete-member-btn">Supprimer le compte</button>
       </form>
     </div>
@@ -52,3 +56,22 @@
   </div>
 </div>
 {% endblock %}
+
+<script>
+document.getElementById('account-search').addEventListener('input', function() {
+  const term = this.value.trim().toLowerCase();
+  document.querySelectorAll('.searchable-account').forEach((card) => {
+    card.hidden = !card.dataset.search.includes(term);
+  });
+});
+
+function confirmAccountDeletion(form, name) {
+  const answer = prompt(
+    'SUPPRESSION DÉFINITIVE\n\nCompte : ' + name +
+    '\nHistorique et paiements seront supprimés.\n\nTape SUPPRIMER pour confirmer.'
+  );
+  if (answer !== 'SUPPRIMER') return false;
+  form.querySelector('[name="confirm_delete"]').value = 'SUPPRIMER';
+  return true;
+}
+</script>

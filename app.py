@@ -9,6 +9,7 @@ from io import BytesIO
 import os
 import requests
 import qrcode
+import uuid
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR)))
@@ -60,6 +61,7 @@ def init_db():
         product_id INTEGER,
         product_name TEXT NOT NULL,
         price_cents INTEGER NOT NULL,
+        order_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id),
         FOREIGN KEY(product_id) REFERENCES products(id)
@@ -91,10 +93,28 @@ def init_db():
         FOREIGN KEY(user_id) REFERENCES users(id),
         FOREIGN KEY(decided_by) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        kind TEXT NOT NULL DEFAULT 'info',
+        link TEXT,
+        dedupe_key TEXT,
+        is_read INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
     """)
     db.commit()
 
     # Petites migrations pour une base créée avec la V1.
+    consumption_cols = {row["name"] for row in db.execute("PRAGMA table_info(consumptions)").fetchall()}
+    if "order_id" not in consumption_cols:
+        db.execute("ALTER TABLE consumptions ADD COLUMN order_id TEXT")
+        db.commit()
+
     product_cols = {row["name"] for row in db.execute("PRAGMA table_info(products)").fetchall()}
     if "stock" not in product_cols:
         db.execute("ALTER TABLE products ADD COLUMN stock INTEGER NOT NULL DEFAULT 0")
@@ -167,6 +187,28 @@ def user_balance_cents(user_id):
     return spent - paid
 
 
+
+def add_notification(db, user_id, title, message, kind="info", link=None, dedupe_key=None):
+    if dedupe_key:
+        existing = db.execute(
+            "SELECT id FROM notifications WHERE user_id = ? AND dedupe_key = ? AND is_read = 0 LIMIT 1",
+            (user_id, dedupe_key)
+        ).fetchone()
+        if existing:
+            return
+    db.execute("""
+        INSERT INTO notifications (user_id, title, message, kind, link, dedupe_key)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user_id, title, message, kind, link, dedupe_key))
+
+
+def notify_admins(db, title, message, kind="warning", link="/admin/stock", dedupe_key=None):
+    admins = db.execute("SELECT id FROM users WHERE is_admin = 1 AND active = 1").fetchall()
+    for admin in admins:
+        key = f"{dedupe_key}:{admin['id']}" if dedupe_key else None
+        add_notification(db, admin["id"], title, message, kind, link, key)
+
+
 def paypal_configured():
     return bool(PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET)
 
@@ -200,13 +242,55 @@ def user_pending_claims_cents(user_id):
 
 @app.context_processor
 def inject_helpers():
+    user = current_user()
+    unread_notifications = 0
+    if user:
+        db = get_db()
+        unread_notifications = db.execute(
+            "SELECT COUNT(*) AS total FROM notifications WHERE user_id = ? AND is_read = 0",
+            (user["id"],)
+        ).fetchone()["total"]
+        db.close()
+
     return {
-        "current_user": current_user(),
+        "current_user": user,
         "format_eur": lambda cents: f"{cents/100:.2f} €".replace(".", ","),
         "paypal_client_id": PAYPAL_CLIENT_ID,
         "paypal_mode": PAYPAL_MODE,
+        "unread_notifications": unread_notifications,
     }
 
+
+
+
+@app.route("/notifications")
+@login_required
+def notifications():
+    user = current_user()
+    db = get_db()
+    items = db.execute("""
+        SELECT *
+        FROM notifications
+        WHERE user_id = ?
+        ORDER BY id DESC
+        LIMIT 80
+    """, (user["id"],)).fetchall()
+    db.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (user["id"],))
+    db.commit()
+    db.close()
+    return render_template("notifications.html", notifications=items)
+
+
+@app.post("/notifications/clear")
+@login_required
+def clear_notifications():
+    user = current_user()
+    db = get_db()
+    db.execute("DELETE FROM notifications WHERE user_id = ?", (user["id"],))
+    db.commit()
+    db.close()
+    flash("Notifications effacées.", "success")
+    return redirect(url_for("notifications"))
 
 
 @app.route("/classement")
@@ -376,25 +460,67 @@ def logout():
 def dashboard():
     user = current_user()
     db = get_db()
-    products = db.execute(
-        "SELECT * FROM products WHERE active = 1 AND stock > 0 ORDER BY name"
-    ).fetchall()
 
-    history = db.execute("""
-        SELECT id, product_name, price_cents, created_at,
-               CASE WHEN created_at >= datetime('now', '-30 seconds') THEN 1 ELSE 0 END AS can_undo
+    # On conserve les ruptures visibles. Un produit désactivé manuellement avec du stock
+    # reste masqué ; un produit à stock 0 reste visible en "Rupture".
+    products = db.execute("""
+        SELECT *
+        FROM products
+        WHERE active = 1 OR stock = 0
+        ORDER BY CASE WHEN stock = 0 THEN 1 ELSE 0 END, name COLLATE NOCASE
+    """).fetchall()
+
+    raw_history = db.execute("""
+        SELECT id, product_id, product_name, price_cents, order_id, created_at
         FROM consumptions
         WHERE user_id = ?
         ORDER BY id DESC
-        LIMIT 20
+        LIMIT 120
     """, (user["id"],)).fetchall()
+
+    # Regroupement par commande. Pour les anciennes consommations sans order_id,
+    # les lignes enregistrées à la même seconde sont regroupées.
+    grouped = []
+    groups = {}
+    order_sequence = []
+    for row in raw_history:
+        key = row["order_id"] or f"legacy:{row['created_at']}"
+        if key not in groups:
+            groups[key] = {
+                "order_id": row["order_id"],
+                "created_at": row["created_at"],
+                "items": {},
+                "total_cents": 0,
+                "can_cancel": False,
+            }
+            order_sequence.append(key)
+
+        item = groups[key]["items"].setdefault(
+            row["product_name"],
+            {"name": row["product_name"], "quantity": 0, "total_cents": 0}
+        )
+        item["quantity"] += 1
+        item["total_cents"] += row["price_cents"]
+        groups[key]["total_cents"] += row["price_cents"]
+
+    for key in order_sequence[:20]:
+        group = groups[key]
+        group["items"] = list(group["items"].values())
+        if group["order_id"]:
+            can_cancel = db.execute("""
+                SELECT CASE WHEN MIN(created_at) >= datetime('now', '-30 seconds') THEN 1 ELSE 0 END AS ok
+                FROM consumptions
+                WHERE user_id = ? AND order_id = ?
+            """, (user["id"], group["order_id"])).fetchone()["ok"]
+            group["can_cancel"] = bool(can_cancel)
+        grouped.append(group)
 
     claims = db.execute("""
         SELECT id, amount_cents, method, note, status, created_at
         FROM payment_claims
         WHERE user_id = ?
         ORDER BY id DESC
-        LIMIT 10
+        LIMIT 20
     """, (user["id"],)).fetchall()
 
     month_spent = db.execute("""
@@ -403,6 +529,37 @@ def dashboard():
         WHERE user_id = ?
           AND strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')
     """, (user["id"],)).fetchone()["total"]
+
+    pending_claim_count = db.execute("""
+        SELECT COUNT(*) AS total
+        FROM payment_claims
+        WHERE user_id = ? AND status = 'pending'
+    """, (user["id"],)).fetchone()["total"]
+
+    last_order = None
+    last_order_id = session.pop("last_order_id", None)
+    if last_order_id:
+        rows = db.execute("""
+            SELECT product_name, COUNT(*) AS quantity,
+                   SUM(price_cents) AS total_cents,
+                   MIN(created_at) AS created_at
+            FROM consumptions
+            WHERE user_id = ? AND order_id = ?
+            GROUP BY product_name
+            ORDER BY product_name COLLATE NOCASE
+        """, (user["id"], last_order_id)).fetchall()
+        if rows:
+            total = sum(r["total_cents"] for r in rows)
+            can_cancel = db.execute("""
+                SELECT CASE WHEN MIN(created_at) >= datetime('now', '-30 seconds') THEN 1 ELSE 0 END AS ok
+                FROM consumptions WHERE user_id = ? AND order_id = ?
+            """, (user["id"], last_order_id)).fetchone()["ok"]
+            last_order = {
+                "order_id": last_order_id,
+                "items": rows,
+                "total_cents": total,
+                "can_cancel": bool(can_cancel),
+            }
 
     db.close()
 
@@ -413,19 +570,20 @@ def dashboard():
     return render_template(
         "dashboard.html",
         products=products,
-        history=history,
+        history_groups=grouped,
         claims=claims,
         balance=balance,
         pending_claims=pending_claims,
+        pending_claim_count=pending_claim_count,
         estimated_balance=estimated_balance,
         month_spent=month_spent,
+        last_order=last_order,
     )
 
 @app.post("/consume/<int:product_id>")
 @login_required
 def consume(product_id):
     user = current_user()
-
     try:
         quantity = int(request.form.get("quantity", "1"))
     except ValueError:
@@ -441,40 +599,194 @@ def consume(product_id):
         (product_id,)
     ).fetchone()
 
-    if not product:
+    if not product or quantity > product["stock"]:
+        available = product["stock"] if product else 0
         db.close()
-        flash("Ce produit est indisponible.", "error")
+        flash(f"Stock insuffisant : {available} disponible(s).", "error")
         return redirect(url_for("dashboard"))
 
-    if quantity > product["stock"]:
-        available = product["stock"]
-        db.close()
-        flash(f"Stock insuffisant : il ne reste que {available} × {product['name']}.", "error")
-        return redirect(url_for("dashboard"))
-
+    order_id = uuid.uuid4().hex
     for _ in range(quantity):
         db.execute("""
-            INSERT INTO consumptions (user_id, product_id, product_name, price_cents)
-            VALUES (?, ?, ?, ?)
-        """, (user["id"], product["id"], product["name"], product["price_cents"]))
+            INSERT INTO consumptions (user_id, product_id, product_name, price_cents, order_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, (user["id"], product["id"], product["name"], product["price_cents"], order_id))
 
     new_stock = product["stock"] - quantity
     db.execute(
         "UPDATE products SET stock = ?, active = CASE WHEN ? <= 0 THEN 0 ELSE active END WHERE id = ?",
         (new_stock, new_stock, product["id"])
     )
+
+    if new_stock <= product["low_stock_threshold"]:
+        title = "Rupture de stock" if new_stock == 0 else "Stock faible"
+        notify_admins(
+            db, title,
+            f"{product['name']} : {new_stock} restant(s).",
+            "danger" if new_stock == 0 else "warning",
+            "/admin/stock",
+            f"stock:{product['id']}:{'zero' if new_stock == 0 else 'low'}"
+        )
+
     db.commit()
     db.close()
 
     total_cents = product["price_cents"] * quantity
-    total_eur = f"{total_cents / 100:.2f}".replace(".", ",")
-
-    if quantity == 1:
-        flash(f"{product['name']} ajouté à ton ardoise.", "success")
-    else:
-        flash(f"{quantity} × {product['name']} ajoutés — {total_eur} €.", "success")
-
+    session["last_order_id"] = order_id
+    flash(
+        f"✓ {quantity} × {product['name']} ajouté{'s' if quantity > 1 else ''} — "
+        f"{total_cents / 100:.2f} €".replace(".", ","),
+        "success"
+    )
     return redirect(url_for("dashboard"))
+
+
+@app.post("/cart/checkout")
+@login_required
+def cart_checkout():
+    user = current_user()
+    if user["is_admin"]:
+        return redirect(url_for("admin"))
+
+    requested = {}
+    for key, value in request.form.items():
+        if not key.startswith("qty_"):
+            continue
+        try:
+            product_id = int(key.split("_", 1)[1])
+            quantity = int(value)
+        except (ValueError, IndexError):
+            continue
+        if quantity > 0:
+            requested[product_id] = quantity
+
+    if not requested:
+        flash("Ton panier est vide.", "error")
+        return redirect(url_for("dashboard"))
+
+    db = get_db()
+    placeholders = ",".join("?" for _ in requested)
+    products = db.execute(
+        f"SELECT * FROM products WHERE id IN ({placeholders})",
+        tuple(requested.keys())
+    ).fetchall()
+    product_map = {p["id"]: p for p in products}
+
+    # Validation complète AVANT d'écrire quoi que ce soit.
+    for product_id, quantity in requested.items():
+        product = product_map.get(product_id)
+        if not product or not product["active"] or product["stock"] <= 0:
+            db.close()
+            flash("Un produit du panier n'est plus disponible.", "error")
+            return redirect(url_for("dashboard"))
+        if quantity > product["stock"]:
+            db.close()
+            flash(
+                f"Stock insuffisant pour {product['name']} : "
+                f"{product['stock']} disponible(s).",
+                "error"
+            )
+            return redirect(url_for("dashboard"))
+
+    order_id = uuid.uuid4().hex
+    total_cents = 0
+    total_articles = 0
+    summary = []
+
+    for product_id, quantity in requested.items():
+        product = product_map[product_id]
+        for _ in range(quantity):
+            db.execute("""
+                INSERT INTO consumptions
+                    (user_id, product_id, product_name, price_cents, order_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                user["id"], product["id"], product["name"],
+                product["price_cents"], order_id
+            ))
+
+        new_stock = product["stock"] - quantity
+        db.execute(
+            "UPDATE products SET stock = ?, active = CASE WHEN ? <= 0 THEN 0 ELSE active END WHERE id = ?",
+            (new_stock, new_stock, product["id"])
+        )
+
+        if new_stock <= product["low_stock_threshold"]:
+            title = "Rupture de stock" if new_stock == 0 else "Stock faible"
+            notify_admins(
+                db, title,
+                f"{product['name']} : {new_stock} restant(s).",
+                "danger" if new_stock == 0 else "warning",
+                "/admin/stock",
+                f"stock:{product['id']}:{'zero' if new_stock == 0 else 'low'}"
+            )
+
+        line_total = product["price_cents"] * quantity
+        total_cents += line_total
+        total_articles += quantity
+        summary.append(f"{quantity} × {product['name']}")
+
+    db.commit()
+    db.close()
+
+    session["last_order_id"] = order_id
+    total_txt = f"{total_cents / 100:.2f}".replace(".", ",")
+    flash(
+        f"✓ {total_articles} article(s) ajouté(s) — {total_txt} €",
+        "success"
+    )
+    return redirect(url_for("dashboard"))
+
+
+@app.post("/orders/<order_id>/cancel")
+@login_required
+def cancel_order(order_id):
+    user = current_user()
+    db = get_db()
+
+    rows = db.execute("""
+        SELECT product_id, product_name, COUNT(*) AS quantity
+        FROM consumptions
+        WHERE user_id = ? AND order_id = ?
+          AND created_at >= datetime('now', '-30 seconds')
+        GROUP BY product_id, product_name
+    """, (user["id"], order_id)).fetchall()
+
+    total_rows = db.execute("""
+        SELECT COUNT(*) AS total
+        FROM consumptions
+        WHERE user_id = ? AND order_id = ?
+    """, (user["id"], order_id)).fetchone()["total"]
+
+    eligible_rows = sum(r["quantity"] for r in rows)
+
+    if total_rows == 0 or eligible_rows != total_rows:
+        db.close()
+        flash("Le délai de 30 secondes pour annuler cette commande est dépassé.", "error")
+        return redirect(url_for("dashboard"))
+
+    for row in rows:
+        if row["product_id"] is not None:
+            product = db.execute(
+                "SELECT id, stock FROM products WHERE id = ?",
+                (row["product_id"],)
+            ).fetchone()
+            if product:
+                db.execute(
+                    "UPDATE products SET stock = stock + ?, active = 1 WHERE id = ?",
+                    (row["quantity"], row["product_id"])
+                )
+
+    db.execute(
+        "DELETE FROM consumptions WHERE user_id = ? AND order_id = ?",
+        (user["id"], order_id)
+    )
+    db.commit()
+    db.close()
+
+    flash("Commande annulée et stock restauré.", "success")
+    return redirect(url_for("dashboard"))
+
 
 @app.route("/declare-payment", methods=["GET", "POST"])
 @login_required
@@ -565,6 +877,14 @@ def approve_payment_claim(claim_id):
     db.execute("""UPDATE payment_claims
                   SET status='approved', decided_at=CURRENT_TIMESTAMP, decided_by=?
                   WHERE id=?""", (admin_user["id"], claim_id))
+    add_notification(
+        db,
+        claim["user_id"],
+        "Paiement validé",
+        f"Ton paiement de {claim['amount_cents']/100:.2f} € a été validé par le popotier.".replace(".", ","),
+        "success",
+        "/dashboard"
+    )
     db.commit()
     db.close()
     flash(f"Paiement de {claim['amount_cents']/100:.2f} € validé pour {claim['user_name']}.", "success")
@@ -575,7 +895,10 @@ def approve_payment_claim(claim_id):
 def reject_payment_claim(claim_id):
     admin_user = current_user()
     db = get_db()
-    claim = db.execute("SELECT status FROM payment_claims WHERE id=?", (claim_id,)).fetchone()
+    claim = db.execute(
+        "SELECT user_id, amount_cents, status FROM payment_claims WHERE id=?",
+        (claim_id,)
+    ).fetchone()
     if not claim or claim["status"] != "pending":
         db.close()
         flash("Déclaration introuvable ou déjà traitée.", "error")
@@ -584,6 +907,14 @@ def reject_payment_claim(claim_id):
     db.execute("""UPDATE payment_claims
                   SET status='rejected', decided_at=CURRENT_TIMESTAMP, decided_by=?
                   WHERE id=?""", (admin_user["id"], claim_id))
+    add_notification(
+        db,
+        claim["user_id"],
+        "Paiement refusé",
+        f"Ta déclaration de {claim['amount_cents']/100:.2f} € a été refusée. Vérifie le paiement avec le popotier.".replace(".", ","),
+        "danger",
+        "/dashboard"
+    )
     db.commit()
     db.close()
     flash("Déclaration refusée.", "success")
@@ -1041,10 +1372,15 @@ def set_product_stock(product_id):
         return redirect(request.referrer or url_for("admin_consumptions"))
 
     db = get_db()
-    product = db.execute("SELECT id, name FROM products WHERE id = ?", (product_id,)).fetchone()
+    product = db.execute("SELECT id, name, stock FROM products WHERE id = ?", (product_id,)).fetchone()
     if not product:
         db.close()
         flash("Boisson introuvable.", "error")
+        return redirect(request.referrer or url_for("admin_consumptions"))
+
+    if abs(stock - product["stock"]) >= 10 and request.form.get("confirm_large") != "CONFIRMER":
+        db.close()
+        flash("Ce gros ajustement de stock demande une confirmation renforcée.", "error")
         return redirect(request.referrer or url_for("admin_consumptions"))
 
     db.execute(
@@ -1059,6 +1395,10 @@ def set_product_stock(product_id):
 @app.post("/admin/products/<int:product_id>/delete")
 @admin_required
 def delete_product(product_id):
+    if request.form.get("confirm_delete") != "SUPPRIMER":
+        flash("Suppression non confirmée.", "error")
+        return redirect(request.referrer or url_for("admin_consumptions"))
+
     db = get_db()
     product = db.execute("SELECT id, name FROM products WHERE id = ?", (product_id,)).fetchone()
     if not product:
@@ -1196,7 +1536,7 @@ def add_payment_global():
 @app.post("/admin/members/<int:user_id>/delete")
 @admin_required
 def delete_member(user_id):
-    if request.form.get("confirm_delete") != "DELETE":
+    if request.form.get("confirm_delete") != "SUPPRIMER":
         flash("Suppression non confirmée.", "error")
         return redirect(request.referrer or url_for("admin_accounts"))
 

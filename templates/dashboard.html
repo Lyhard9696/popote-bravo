@@ -6,7 +6,7 @@
     <div>
       <p class="eyebrow">Mon compte</p>
       <h1>{{ current_user["name"] }}</h1>
-      <p class="muted">Ajoute tes consommations et suis ton ardoise.</p>
+      <p class="muted">Prépare ton panier puis ajoute tout en une seule fois.</p>
     </div>
   </div>
 
@@ -25,6 +25,33 @@
     </div>
   </div>
 
+  {% if last_order %}
+  <div class="order-ticket success-ticket">
+    <div class="ticket-head">
+      <div>
+        <span class="ticket-check">✓</span>
+        <div>
+          <strong>Commande ajoutée</strong>
+          <span>{{ format_eur(last_order["total_cents"]) }}</span>
+        </div>
+      </div>
+      {% if last_order["can_cancel"] %}
+      <form method="post" action="{{ url_for('cancel_order', order_id=last_order['order_id']) }}">
+        <button type="submit" class="ticket-cancel-btn">Annuler la commande</button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="ticket-items">
+      {% for item in last_order["items"] %}
+        <span>{{ item["quantity"] }} × {{ item["product_name"] }} — {{ format_eur(item["total_cents"]) }}</span>
+      {% endfor %}
+    </div>
+    {% if last_order["can_cancel"] %}
+      <small>Annulation disponible pendant 30 secondes.</small>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% if pending_claims %}
   <div class="payment-followup-banner">
     <strong>⏳ {{ format_eur(pending_claims) }} en attente de validation</strong>
@@ -33,42 +60,64 @@
   {% endif %}
 
   <div class="quick-payment">
-    <a class="button-link" href="{{ url_for('declare_payment') }}">Payer / déclarer un paiement</a>
+    <a class="button-link payment-button-with-badge" href="{{ url_for('declare_payment') }}">
+      <span>Payer / déclarer un paiement</span>
+      {% if pending_claim_count %}
+        <b>• {{ pending_claim_count }} en attente</b>
+      {% endif %}
+    </a>
   </div>
 
-  <div class="section-heading">
-    <div>
-      <h2>Ajouter une consommation</h2>
-      <p class="muted">Pour plusieurs articles identiques, choisis directement la quantité.</p>
-    </div>
-  </div>
-
-  <div class="products member-products">
-  {% for p in products %}
-    <div class="card member-product-card">
-      <div class="member-product-info">
-        <strong>{{ p["name"] }}</strong>
-        <span>{{ format_eur(p["price_cents"]) }} · {{ p["stock"] }} en stock</span>
+  <form method="post" action="{{ url_for('cart_checkout') }}" id="cart-form">
+    <div class="section-heading">
+      <div>
+        <h2>Consommations</h2>
+        <p class="muted">Choisis plusieurs produits, puis valide tout le panier en une fois.</p>
       </div>
-      <form method="post" action="{{ url_for('consume', product_id=p['id']) }}"
-            class="quantity-consume-form"
-            onsubmit="return confirmQuantity(this, '{{ p['name']|e }}', {{ p['price_cents'] }});">
-        <div class="quantity-picker">
+    </div>
+
+    <div class="products member-products">
+    {% for p in products %}
+      <div class="card member-product-card {% if p['stock'] == 0 %}product-out{% endif %}"
+           data-price="{{ p['price_cents'] }}" data-name="{{ p['name']|e }}">
+        <div class="member-product-info">
+          <strong>{{ p["name"] }}</strong>
+          {% if p["stock"] == 0 %}
+            <span class="rupture-label">Rupture</span>
+          {% else %}
+            <span>{{ format_eur(p["price_cents"]) }} · {{ p["stock"] }} en stock</span>
+          {% endif %}
+        </div>
+
+        {% if p["stock"] > 0 and p["active"] %}
+        <div class="quantity-picker cart-picker">
           <button type="button" class="qty-minus" aria-label="Retirer une unité">−</button>
-          <input class="qty-input" name="quantity" type="number" min="1" max="{{ p['stock'] }}" value="1" inputmode="numeric">
+          <input class="qty-input cart-qty"
+                 name="qty_{{ p['id'] }}"
+                 type="number"
+                 min="0"
+                 max="{{ p['stock'] }}"
+                 value="0"
+                 inputmode="numeric">
           <button type="button" class="qty-plus" aria-label="Ajouter une unité">+</button>
         </div>
-        <button type="submit" class="consume-multi-btn">
-          Ajouter <span class="qty-label">1</span>
-        </button>
-      </form>
+        {% else %}
+        <div class="out-of-stock-action">Indisponible</div>
+        {% endif %}
+      </div>
+    {% endfor %}
     </div>
-  {% else %}
-    <div class="card">Aucun produit disponible pour le moment.</div>
-  {% endfor %}
-  </div>
 
-  <h2>Mes paiements déclarés</h2>
+    <div class="cart-bar" id="cart-bar">
+      <div>
+        <strong>Panier · <span id="cart-count">0</span> article(s)</strong>
+        <span id="cart-total">0,00 €</span>
+      </div>
+      <button type="submit" id="cart-submit" disabled>Ajouter à mon ardoise</button>
+    </div>
+  </form>
+
+  <h2>Mes paiements</h2>
   <div class="payment-status-list">
   {% for c in claims %}
     <div class="card payment-status-row">
@@ -89,18 +138,24 @@
   {% endfor %}
   </div>
 
-  <h2>Dernières consommations</h2>
+  <h2>Historique</h2>
   <div class="history-list">
-  {% for h in history %}
-    <div class="card history-row">
-      <div>
-        <strong>{{ h["product_name"] }}</strong>
-        <span>{{ h["created_at"] }}</span>
+  {% for order in history_groups %}
+    <div class="card grouped-history-row">
+      <div class="grouped-order-head">
+        <div>
+          <strong>
+            {% for item in order["items"] %}
+              {{ item["quantity"] }} × {{ item["name"] }}{% if not loop.last %} + {% endif %}
+            {% endfor %}
+          </strong>
+          <span>{{ order["created_at"] }}</span>
+        </div>
+        <strong>{{ format_eur(order["total_cents"]) }}</strong>
       </div>
-      <strong>{{ format_eur(h["price_cents"]) }}</strong>
-      {% if h["can_undo"] %}
-        <form method="post" action="{{ url_for('undo_consumption', consumption_id=h['id']) }}">
-          <button class="undo-btn" type="submit">Annuler</button>
+      {% if order["can_cancel"] %}
+        <form method="post" action="{{ url_for('cancel_order', order_id=order['order_id']) }}">
+          <button type="submit" class="undo-btn">Annuler cette commande</button>
         </form>
       {% endif %}
     </div>
@@ -111,31 +166,62 @@
 </div>
 
 <script>
-document.querySelectorAll('.quantity-consume-form').forEach(function(form) {
-  const input = form.querySelector('.qty-input');
-  const label = form.querySelector('.qty-label');
-  const minus = form.querySelector('.qty-minus');
-  const plus = form.querySelector('.qty-plus');
+const cartForm = document.getElementById('cart-form');
+const cartBar = document.getElementById('cart-bar');
+const cartCount = document.getElementById('cart-count');
+const cartTotal = document.getElementById('cart-total');
+const cartSubmit = document.getElementById('cart-submit');
 
-  function sync() {
-    let value = parseInt(input.value || '1', 10);
-    const max = parseInt(input.max || '1', 10);
-    if (value < 1) value = 1;
-    if (value > max) value = max;
-    input.value = value;
-    label.textContent = value;
-  }
-  minus.addEventListener('click', function() { input.value = Math.max(1, parseInt(input.value || '1', 10) - 1); sync(); });
-  plus.addEventListener('click', function() { input.value = Math.min(parseInt(input.max, 10), parseInt(input.value || '1', 10) + 1); sync(); });
-  input.addEventListener('input', sync);
-  sync();
+function refreshCart() {
+  let count = 0;
+  let totalCents = 0;
+
+  document.querySelectorAll('.member-product-card').forEach((card) => {
+    const input = card.querySelector('.cart-qty');
+    if (!input) return;
+    let qty = parseInt(input.value || '0', 10);
+    const max = parseInt(input.max || '0', 10);
+    if (qty < 0) qty = 0;
+    if (qty > max) qty = max;
+    input.value = qty;
+
+    count += qty;
+    totalCents += qty * parseInt(card.dataset.price || '0', 10);
+    card.classList.toggle('selected-product', qty > 0);
+  });
+
+  cartCount.textContent = count;
+  cartTotal.textContent = (totalCents / 100).toFixed(2).replace('.', ',') + ' €';
+  cartSubmit.disabled = count === 0;
+  cartBar.classList.toggle('cart-active', count > 0);
+}
+
+document.querySelectorAll('.member-product-card').forEach((card) => {
+  const input = card.querySelector('.cart-qty');
+  if (!input) return;
+
+  const minus = card.querySelector('.qty-minus');
+  const plus = card.querySelector('.qty-plus');
+
+  minus.addEventListener('click', () => {
+    input.value = Math.max(0, parseInt(input.value || '0', 10) - 1);
+    refreshCart();
+  });
+
+  plus.addEventListener('click', () => {
+    input.value = Math.min(parseInt(input.max, 10), parseInt(input.value || '0', 10) + 1);
+    refreshCart();
+  });
+
+  input.addEventListener('input', refreshCart);
 });
 
-function confirmQuantity(form, productName, priceCents) {
-  const quantity = parseInt(form.querySelector('.qty-input').value || '1', 10);
-  if (quantity <= 1) return true;
-  const total = (quantity * priceCents / 100).toFixed(2).replace('.', ',');
-  return confirm('Ajouter ' + quantity + ' × ' + productName + ' pour ' + total + ' € ?');
-}
+cartForm.addEventListener('submit', () => {
+  cartSubmit.disabled = true;
+  cartSubmit.textContent = 'Enregistrement…';
+  cartBar.classList.add('saving');
+});
+
+refreshCart();
 </script>
 {% endblock %}
