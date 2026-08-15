@@ -1,0 +1,16 @@
+
+{% extends "base.html" %}
+{% block title %}Connexion{% endblock %}
+{% block content %}
+<div class="card narrow">
+  <h1>Connexion</h1>
+  <form method="post">
+    <label>Nom / pseudo</label>
+    <input name="name" required autocomplete="username">
+    <label>Mot de passe</label>
+    <input name="password" type="password" required autocomplete="current-password">
+    <button type="submit">Se connecter</button>
+  </form>
+  <p class="muted">Pas encore de compte ? <a href="{{ url_for('register') }}">Créer un compte</a></p>
+</div>
+{% endblock %}

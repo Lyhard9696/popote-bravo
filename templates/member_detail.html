@@ -1,0 +1,50 @@
+
+{% extends "base.html" %}
+{% block title %}{{ member["name"] }}{% endblock %}
+{% block content %}
+<div class="hero">
+  <div>
+    <p class="eyebrow">Membre</p>
+    <h1>{{ member["name"] }}</h1>
+  </div>
+  <div class="balance">{{ format_eur(balance) }}<small>Reste dû</small></div>
+</div>
+
+<h2>Enregistrer un paiement</h2>
+<div class="card">
+  <form method="post" action="{{ url_for('add_payment', user_id=member['id']) }}" class="inline-form">
+    <input name="amount" placeholder="Montant en €" inputmode="decimal" required>
+    <input name="note" placeholder="Note (optionnel)">
+    <button type="submit">Paiement reçu</button>
+  </form>
+</div>
+
+<h2>Consommations</h2>
+<div class="card table-wrap">
+<table>
+<thead><tr><th>Produit</th><th>Prix au moment de la prise</th><th>Date</th></tr></thead>
+<tbody>
+{% for c in consumptions %}
+<tr><td>{{ c["product_name"] }}</td><td>{{ format_eur(c["price_cents"]) }}</td><td>{{ c["created_at"] }}</td></tr>
+{% else %}<tr><td colspan="3">Aucune consommation.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+
+<h2>Paiements</h2>
+<div class="card table-wrap">
+<table>
+<thead><tr><th>Montant</th><th>Méthode</th><th>Note</th><th>Date</th></tr></thead>
+<tbody>
+{% for p in payments %}
+<tr><td>{{ format_eur(p["amount_cents"]) }}</td><td>{% if p["method"] == "paypal" %}PayPal
+{% elif p["method"] == "cash" %}Espèces
+{% elif p["method"] == "transfer" %}Virement
+{% elif p["method"] == "paypal_manual" %}PayPal manuel
+{% elif p["method"] == "other" %}Autre
+{% else %}Manuel{% endif %}</td><td>{{ p["note"] or "—" }}</td><td>{{ p["created_at"] }}</td></tr>
+{% else %}<tr><td colspan="4">Aucun paiement.</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}

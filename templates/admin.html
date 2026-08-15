@@ -1,0 +1,115 @@
+
+{% extends "base.html" %}
+{% block title %}Gestion{% endblock %}
+{% block content %}
+<div class="hero">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1>Tableau du popotier</h1>
+  </div>
+  <div class="balance">{{ format_eur(total_due) }}<small>Total dû</small></div>
+</div>
+
+<h2>Membres</h2>
+<div class="card table-wrap">
+<table>
+  <thead><tr><th>Membre</th><th>Dépensé</th><th>Payé</th><th>Reste dû</th><th></th></tr></thead>
+  <tbody>
+  {% for m in members %}
+    <tr>
+      <td>{{ m["name"] }}</td>
+      <td>{{ format_eur(m["spent"]) }}</td>
+      <td>{{ format_eur(m["paid"]) }}</td>
+      <td><strong>{{ format_eur(m["spent"] - m["paid"]) }}</strong></td>
+      <td><a href="{{ url_for('member_detail', user_id=m['id']) }}">Détail</a></td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5">Aucun membre inscrit.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+
+<h2>Enregistrer un paiement</h2>
+<div class="card">
+  <form method="post" action="{{ url_for('add_payment_global') }}" class="payment-grid">
+    <div>
+      <label>Membre</label>
+      <select name="user_id" required>
+        <option value="">— Choisir un membre —</option>
+        {% for m in members %}
+          <option value="{{ m['id'] }}">{{ m["name"] }} — reste dû : {{ format_eur(m["spent"] - m["paid"]) }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label>Montant payé (€)</label>
+      <input name="amount" placeholder="Ex. 5,00" inputmode="decimal" required>
+    </div>
+
+    <div>
+      <label>Moyen de paiement</label>
+      <select name="method" required>
+        <option value="cash">Espèces</option>
+        <option value="transfer">Virement</option>
+        <option value="paypal_manual">PayPal manuel</option>
+        <option value="other">Autre</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Note (optionnel)</label>
+      <input name="note" placeholder="Ex. payé ce soir">
+    </div>
+
+    <button type="submit">Enregistrer le paiement</button>
+  </form>
+</div>
+
+<h2>Ajouter une boisson</h2>
+<div class="card">
+  <form method="post" action="{{ url_for('add_product') }}" class="inline-form">
+    <input name="name" placeholder="Ex. Coca Zero" required>
+    <input name="price" placeholder="Prix en €" inputmode="decimal" required>
+    <input name="stock" type="number" min="0" placeholder="Stock initial" required>
+    <button type="submit">Ajouter</button>
+  </form>
+</div>
+
+<h2>Boissons / tarifs</h2>
+<div class="products">
+{% for p in products %}
+  <div class="card edit-product">
+    <form method="post" action="{{ url_for('edit_product', product_id=p['id']) }}" class="stock-edit-form">
+      <input name="name" value="{{ p['name'] }}" required>
+      <input name="price" value="{{ '%.2f'|format(p['price_cents']/100) }}" inputmode="decimal" required>
+      <div>
+        <label>Stock actuel</label>
+        <input name="stock" type="number" min="0" value="{{ p['stock'] }}" required>
+      </div>
+      <label class="check">
+        <input type="checkbox" name="active" {% if p["active"] and p["stock"] > 0 %}checked{% endif %}>
+        Disponible
+      </label>
+      {% if p["stock"] == 0 %}
+        <div class="stock-zero">Indisponible — stock épuisé</div>
+      {% elif p["stock"] <= 5 %}
+        <div class="stock-low">Stock faible : {{ p["stock"] }} restant{% if p["stock"] > 1 %}s{% endif %}</div>
+      {% else %}
+        <div class="stock-ok">Stock : {{ p["stock"] }}</div>
+      {% endif %}
+      <button type="submit">Enregistrer</button>
+    </form>
+
+    <form method="post" action="{{ url_for('restock_product', product_id=p['id']) }}" class="restock-form">
+      <input name="quantity" type="number" min="1" placeholder="+ quantité" required>
+      <button type="submit">Réapprovisionner</button>
+    </form>
+  </div>
+{% else %}
+  <div class="card">Ajoute ta première boisson.</div>
+{% endfor %}
+</div>
+{% endblock %}

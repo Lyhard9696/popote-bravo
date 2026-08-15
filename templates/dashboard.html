@@ -1,0 +1,48 @@
+
+{% extends "base.html" %}
+{% block title %}Mon ardoise{% endblock %}
+{% block content %}
+<div class="hero">
+  <div>
+    <p class="eyebrow">Bonjour {{ current_user["name"] }}</p>
+    <h1>Ton ardoise</h1>
+  </div>
+  <div class="balance">{{ format_eur(balance) }}</div>
+</div>
+{% if balance > 0 %}
+  <a class="pay-cta" href="{{ url_for('pay') }}">💳 Payer mon ardoise</a>
+{% endif %}
+
+<h2>Je prends une boisson</h2>
+<div class="products">
+  {% for p in products %}
+    <form method="post" action="{{ url_for('consume', product_id=p['id']) }}" class="product-card">
+      <div>
+        <strong>{{ p["name"] }}</strong>
+        <span>{{ format_eur(p["price_cents"]) }} · {{ p["stock"] }} restant{% if p["stock"] > 1 %}s{% endif %}</span>
+      </div>
+      <button type="submit">+ Ajouter</button>
+    </form>
+  {% else %}
+    <div class="card">Aucune boisson disponible pour le moment.</div>
+  {% endfor %}
+</div>
+
+<h2>Mes dernières consommations</h2>
+<div class="card table-wrap">
+<table>
+  <thead><tr><th>Boisson</th><th>Prix</th><th>Date</th></tr></thead>
+  <tbody>
+    {% for c in history %}
+      <tr>
+        <td>{{ c["product_name"] }}</td>
+        <td>{{ format_eur(c["price_cents"]) }}</td>
+        <td>{{ c["created_at"] }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="3">Rien pour l'instant.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

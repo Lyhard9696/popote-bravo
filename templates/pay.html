@@ -1,0 +1,89 @@
+
+{% extends "base.html" %}
+{% block title %}Payer mon ardoise{% endblock %}
+{% block content %}
+<div class="hero">
+  <div>
+    <p class="eyebrow">Règlement</p>
+    <h1>Payer mon ardoise</h1>
+  </div>
+  <div class="balance">{{ format_eur(balance) }}<small>Reste dû</small></div>
+</div>
+
+<div class="card narrow-pay">
+  {% if balance <= 0 %}
+    <h2>Tout est réglé ✅</h2>
+    <p class="muted">Tu n'as rien à payer pour le moment.</p>
+  {% elif not paypal_ready %}
+    <h2>PayPal pas encore activé</h2>
+    <p>La fonction est prête, mais le compte PayPal de la popote doit encore être connecté par le gestionnaire.</p>
+    <p class="muted">Mode prévu : {{ paypal_mode }}.</p>
+  {% else %}
+    <h2>Choisis le montant</h2>
+    <label>Montant à payer (€)</label>
+    <input id="amount" type="number" min="0.01" max="{{ '%.2f'|format(balance/100) }}"
+           step="0.01" value="{{ '%.2f'|format(balance/100) }}">
+    <button type="button" class="secondary" id="all-btn">Tout payer ({{ format_eur(balance) }})</button>
+    <div id="paypal-button-container"></div>
+    <p id="paypal-message" class="muted"></p>
+  {% endif %}
+</div>
+
+{% if paypal_ready and balance > 0 %}
+<script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=EUR&intent=capture"></script>
+<script>
+const maxCents = {{ balance }};
+const amountInput = document.getElementById("amount");
+const message = document.getElementById("paypal-message");
+
+document.getElementById("all-btn").addEventListener("click", () => {
+  amountInput.value = (maxCents / 100).toFixed(2);
+});
+
+paypal.Buttons({
+  style: { layout: "vertical", shape: "rect", label: "paypal" },
+
+  createOrder: async () => {
+    const amountCents = Math.round(Number(amountInput.value) * 100);
+    if (!Number.isFinite(amountCents) || amountCents <= 0 || amountCents > maxCents) {
+      message.textContent = "Choisis un montant compris entre 0,01 € et ton ardoise.";
+      throw new Error("Montant invalide");
+    }
+    const response = await fetch("/api/paypal/orders", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({amount_cents: amountCents})
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      message.textContent = data.error || "Impossible de créer le paiement.";
+      throw new Error(data.error);
+    }
+    return data.id;
+  },
+
+  onApprove: async (data) => {
+    message.textContent = "Confirmation du paiement…";
+    const response = await fetch(`/api/paypal/orders/${data.orderID}/capture`, {
+      method: "POST"
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      message.textContent = result.error || "Le paiement n'a pas pu être confirmé.";
+      return;
+    }
+    message.textContent = "Paiement confirmé ✅";
+    window.location.href = "/dashboard";
+  },
+
+  onCancel: () => {
+    message.textContent = "Paiement annulé. Ton ardoise n'a pas été modifiée.";
+  },
+
+  onError: () => {
+    message.textContent = "Une erreur PayPal est survenue. Ton ardoise n'a pas été modifiée.";
+  }
+}).render("#paypal-button-container");
+</script>
+{% endif %}
+{% endblock %}
