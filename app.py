@@ -212,8 +212,10 @@ def inject_helpers():
 @app.route("/classement")
 @login_required
 def classement():
+    user = current_user()
     db = get_db()
-    ranking = db.execute("""
+
+    full_ranking = db.execute("""
         SELECT u.id, u.name, COALESCE(SUM(c.price_cents), 0) AS total_cents
         FROM consumptions c
         JOIN users u ON u.id = c.user_id
@@ -222,11 +224,28 @@ def classement():
         GROUP BY u.id, u.name
         HAVING SUM(c.price_cents) > 0
         ORDER BY total_cents DESC, u.name COLLATE NOCASE
-        LIMIT 3
     """).fetchall()
+
+    ranking = full_ranking[:3]
+    my_position = None
+    my_total_cents = 0
+
+    for position, row in enumerate(full_ranking, start=1):
+        if row["id"] == user["id"]:
+            my_position = position
+            my_total_cents = row["total_cents"]
+            break
+
     month_label = datetime.now().strftime("%m/%Y")
     db.close()
-    return render_template("classement.html", ranking=ranking, month_label=month_label)
+
+    return render_template(
+        "classement.html",
+        ranking=ranking,
+        month_label=month_label,
+        my_position=my_position,
+        my_total_cents=my_total_cents,
+    )
 
 @app.route("/qr")
 def qr_page():
@@ -357,7 +376,10 @@ def logout():
 def dashboard():
     user = current_user()
     db = get_db()
-    products = db.execute("SELECT * FROM products WHERE active = 1 AND stock > 0 ORDER BY name").fetchall()
+    products = db.execute(
+        "SELECT * FROM products WHERE active = 1 AND stock > 0 ORDER BY name"
+    ).fetchall()
+
     history = db.execute("""
         SELECT id, product_name, price_cents, created_at,
                CASE WHEN created_at >= datetime('now', '-30 seconds') THEN 1 ELSE 0 END AS can_undo
@@ -366,6 +388,7 @@ def dashboard():
         ORDER BY id DESC
         LIMIT 20
     """, (user["id"],)).fetchall()
+
     claims = db.execute("""
         SELECT id, amount_cents, method, note, status, created_at
         FROM payment_claims
@@ -373,22 +396,46 @@ def dashboard():
         ORDER BY id DESC
         LIMIT 10
     """, (user["id"],)).fetchall()
+
+    month_spent = db.execute("""
+        SELECT COALESCE(SUM(price_cents), 0) AS total
+        FROM consumptions
+        WHERE user_id = ?
+          AND strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')
+    """, (user["id"],)).fetchone()["total"]
+
     db.close()
+
     balance = user_balance_cents(user["id"])
     pending_claims = user_pending_claims_cents(user["id"])
     estimated_balance = max(0, balance - pending_claims)
-    return render_template("dashboard.html", products=products, history=history,
-                           claims=claims, balance=balance,
-                           pending_claims=pending_claims,
-                           estimated_balance=estimated_balance)
+
+    return render_template(
+        "dashboard.html",
+        products=products,
+        history=history,
+        claims=claims,
+        balance=balance,
+        pending_claims=pending_claims,
+        estimated_balance=estimated_balance,
+        month_spent=month_spent,
+    )
 
 @app.post("/consume/<int:product_id>")
 @login_required
 def consume(product_id):
     user = current_user()
-    db = get_db()
 
-    # Verrou logique : on vérifie et décrémente dans la même transaction.
+    try:
+        quantity = int(request.form.get("quantity", "1"))
+    except ValueError:
+        quantity = 1
+
+    if quantity < 1:
+        flash("Quantité invalide.", "error")
+        return redirect(url_for("dashboard"))
+
+    db = get_db()
     product = db.execute(
         "SELECT * FROM products WHERE id = ? AND active = 1 AND stock > 0",
         (product_id,)
@@ -396,15 +443,22 @@ def consume(product_id):
 
     if not product:
         db.close()
-        flash("Cette boisson est indisponible.", "error")
+        flash("Ce produit est indisponible.", "error")
         return redirect(url_for("dashboard"))
 
-    db.execute("""
-        INSERT INTO consumptions (user_id, product_id, product_name, price_cents)
-        VALUES (?, ?, ?, ?)
-    """, (user["id"], product["id"], product["name"], product["price_cents"]))
+    if quantity > product["stock"]:
+        available = product["stock"]
+        db.close()
+        flash(f"Stock insuffisant : il ne reste que {available} × {product['name']}.", "error")
+        return redirect(url_for("dashboard"))
 
-    new_stock = product["stock"] - 1
+    for _ in range(quantity):
+        db.execute("""
+            INSERT INTO consumptions (user_id, product_id, product_name, price_cents)
+            VALUES (?, ?, ?, ?)
+        """, (user["id"], product["id"], product["name"], product["price_cents"]))
+
+    new_stock = product["stock"] - quantity
     db.execute(
         "UPDATE products SET stock = ?, active = CASE WHEN ? <= 0 THEN 0 ELSE active END WHERE id = ?",
         (new_stock, new_stock, product["id"])
@@ -412,13 +466,15 @@ def consume(product_id):
     db.commit()
     db.close()
 
-    if new_stock <= 0:
-        flash(f"{product['name']} ajouté. Stock épuisé : produit maintenant indisponible.", "success")
+    total_cents = product["price_cents"] * quantity
+    total_eur = f"{total_cents / 100:.2f}".replace(".", ",")
+
+    if quantity == 1:
+        flash(f"{product['name']} ajouté à ton ardoise.", "success")
     else:
-        flash(f"{product['name']} ajouté à ton ardoise. Stock restant : {new_stock}.", "success")
+        flash(f"{quantity} × {product['name']} ajoutés — {total_eur} €.", "success")
+
     return redirect(url_for("dashboard"))
-
-
 
 @app.route("/declare-payment", methods=["GET", "POST"])
 @login_required

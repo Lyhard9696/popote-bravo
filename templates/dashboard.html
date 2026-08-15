@@ -1,86 +1,141 @@
-
 {% extends "base.html" %}
-{% block title %}Mon ardoise{% endblock %}
+{% block title %}Mon ardoise — Popote Bravo{% endblock %}
 {% block content %}
-<div class="mobile-welcome">
-  <div class="mobile-welcome-icon">
-    <img src="{{ url_for('static', filename='insigne-bravo.jpeg') }}" alt="">
+<div class="member-home">
+  <div class="hero member-hero">
+    <div>
+      <p class="eyebrow">Mon compte</p>
+      <h1>{{ current_user["name"] }}</h1>
+      <p class="muted">Ajoute tes consommations et suis ton ardoise.</p>
+    </div>
   </div>
-  <div>
-    <span>POPOTE BRAVO · P3</span>
-    <strong>Bonjour {{ current_user["name"] }}</strong>
-  </div>
-</div>
 
-<div class="hero">
-  <div>
-    <p class="eyebrow">Aujourd’hui</p>
-    <h1>Ton ardoise</h1>
+  <div class="member-summary">
+    <div class="member-summary-card">
+      <span>Ardoise actuelle</span>
+      <strong>{{ format_eur(balance) }}</strong>
+    </div>
+    <div class="member-summary-card">
+      <span>Dépensé ce mois</span>
+      <strong>{{ format_eur(month_spent) }}</strong>
+    </div>
+    <div class="member-summary-card {% if pending_claims %}pending{% endif %}">
+      <span>Paiements en attente</span>
+      <strong>{{ format_eur(pending_claims) }}</strong>
+    </div>
   </div>
-  <div class="balance">{{ format_eur(estimated_balance) }}<small>Reste estimé</small></div>
-</div>
-{% if estimated_balance > 0 %}
-  <a class="pay-cta" href="{{ url_for('declare_payment') }}">💳 Payer / déclarer avec PayPal</a>
-{% endif %}
 
-{% if pending_claims > 0 %}
-<div class="card pending-summary">
-  <strong>{{ format_eur(pending_claims) }} en attente de validation</strong>
-  <span>Dette officielle : {{ format_eur(balance) }}</span>
-</div>
-{% endif %}
-<h2>Je prends une boisson</h2>
-<div class="products">
+  {% if pending_claims %}
+  <div class="payment-followup-banner">
+    <strong>⏳ {{ format_eur(pending_claims) }} en attente de validation</strong>
+    <span>Ardoise estimée après validation : {{ format_eur(estimated_balance) }}</span>
+  </div>
+  {% endif %}
+
+  <div class="quick-payment">
+    <a class="button-link" href="{{ url_for('declare_payment') }}">Payer / déclarer un paiement</a>
+  </div>
+
+  <div class="section-heading">
+    <div>
+      <h2>Ajouter une consommation</h2>
+      <p class="muted">Pour plusieurs articles identiques, choisis directement la quantité.</p>
+    </div>
+  </div>
+
+  <div class="products member-products">
   {% for p in products %}
-    <form method="post" action="{{ url_for('consume', product_id=p['id']) }}" class="product-card">
-      <div>
+    <div class="card member-product-card">
+      <div class="member-product-info">
         <strong>{{ p["name"] }}</strong>
-        <span>{{ format_eur(p["price_cents"]) }} · {{ p["stock"] }} restant{% if p["stock"] > 1 %}s{% endif %}</span>
+        <span>{{ format_eur(p["price_cents"]) }} · {{ p["stock"] }} en stock</span>
       </div>
-      <button type="submit">+ Ajouter</button>
-    </form>
+      <form method="post" action="{{ url_for('consume', product_id=p['id']) }}"
+            class="quantity-consume-form"
+            onsubmit="return confirmQuantity(this, '{{ p['name']|e }}', {{ p['price_cents'] }});">
+        <div class="quantity-picker">
+          <button type="button" class="qty-minus" aria-label="Retirer une unité">−</button>
+          <input class="qty-input" name="quantity" type="number" min="1" max="{{ p['stock'] }}" value="1" inputmode="numeric">
+          <button type="button" class="qty-plus" aria-label="Ajouter une unité">+</button>
+        </div>
+        <button type="submit" class="consume-multi-btn">
+          Ajouter <span class="qty-label">1</span>
+        </button>
+      </form>
+    </div>
   {% else %}
-    <div class="card">Aucune boisson disponible pour le moment.</div>
+    <div class="card">Aucun produit disponible pour le moment.</div>
   {% endfor %}
+  </div>
+
+  <h2>Mes paiements déclarés</h2>
+  <div class="payment-status-list">
+  {% for c in claims %}
+    <div class="card payment-status-row">
+      <div>
+        <strong>{{ format_eur(c["amount_cents"]) }}</strong>
+        <span>{{ c["created_at"] }}{% if c["note"] %} · {{ c["note"] }}{% endif %}</span>
+      </div>
+      {% if c["status"] == "pending" %}
+        <span class="payment-state pending">⏳ En attente</span>
+      {% elif c["status"] == "approved" %}
+        <span class="payment-state approved">✓ Validé</span>
+      {% else %}
+        <span class="payment-state rejected">✕ Refusé</span>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="card muted">Aucun paiement déclaré.</div>
+  {% endfor %}
+  </div>
+
+  <h2>Dernières consommations</h2>
+  <div class="history-list">
+  {% for h in history %}
+    <div class="card history-row">
+      <div>
+        <strong>{{ h["product_name"] }}</strong>
+        <span>{{ h["created_at"] }}</span>
+      </div>
+      <strong>{{ format_eur(h["price_cents"]) }}</strong>
+      {% if h["can_undo"] %}
+        <form method="post" action="{{ url_for('undo_consumption', consumption_id=h['id']) }}">
+          <button class="undo-btn" type="submit">Annuler</button>
+        </form>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="card muted">Aucune consommation pour le moment.</div>
+  {% endfor %}
+  </div>
 </div>
 
-<h2>Mes paiements déclarés</h2>
-<div class="card table-wrap">
-<table>
-<thead><tr><th>Montant</th><th>Statut</th><th>Date</th></tr></thead>
-<tbody>
-{% for c in claims %}
-<tr>
-<td>{{ format_eur(c["amount_cents"]) }}</td>
-<td>{% if c["status"] == "pending" %}<span class="badge pending">En attente</span>{% elif c["status"] == "approved" %}<span class="badge approved">Validé</span>{% else %}<span class="badge rejected">Refusé</span>{% endif %}</td>
-<td>{{ c["created_at"] }}</td>
-</tr>
-{% else %}<tr><td colspan="3">Aucun paiement déclaré.</td></tr>{% endfor %}
-</tbody>
-</table>
-</div>
-<h2>Mes dernières consommations</h2>
-<div class="card table-wrap">
-<table>
-  <thead><tr><th>Boisson</th><th>Prix</th><th>Date</th><th></th></tr></thead>
-  <tbody>
-    {% for c in history %}
-      <tr>
-        <td>{{ c["product_name"] }}</td>
-        <td>{{ format_eur(c["price_cents"]) }}</td>
-        <td>{{ c["created_at"] }}</td>
-        <td>
-          {% if c["can_undo"] %}
-          <form method="post" action="{{ url_for('undo_consumption', consumption_id=c['id']) }}">
-            <button type="submit" class="undo-btn">Annuler</button>
-          </form>
-          {% endif %}
-        </td>
-      </tr>
-    {% else %}
-      <tr><td colspan="4">Rien pour l'instant.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
+<script>
+document.querySelectorAll('.quantity-consume-form').forEach(function(form) {
+  const input = form.querySelector('.qty-input');
+  const label = form.querySelector('.qty-label');
+  const minus = form.querySelector('.qty-minus');
+  const plus = form.querySelector('.qty-plus');
+
+  function sync() {
+    let value = parseInt(input.value || '1', 10);
+    const max = parseInt(input.max || '1', 10);
+    if (value < 1) value = 1;
+    if (value > max) value = max;
+    input.value = value;
+    label.textContent = value;
+  }
+  minus.addEventListener('click', function() { input.value = Math.max(1, parseInt(input.value || '1', 10) - 1); sync(); });
+  plus.addEventListener('click', function() { input.value = Math.min(parseInt(input.max, 10), parseInt(input.value || '1', 10) + 1); sync(); });
+  input.addEventListener('input', sync);
+  sync();
+});
+
+function confirmQuantity(form, productName, priceCents) {
+  const quantity = parseInt(form.querySelector('.qty-input').value || '1', 10);
+  if (quantity <= 1) return true;
+  const total = (quantity * priceCents / 100).toFixed(2).replace('.', ',');
+  return confirm('Ajouter ' + quantity + ' × ' + productName + ' pour ' + total + ' € ?');
+}
+</script>
 {% endblock %}

@@ -1,5 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Classement — Popote Bravo{% endblock %}
+{% block title %}Classement — Popote Bravo
+<div class="my-ranking-card card">
+  {% if my_position %}
+    <span>Ma position ce mois-ci</span>
+    <strong>{{ my_position }}<sup>e</sup> — {{ format_eur(my_total_cents) }}</strong>
+  {% else %}
+    <span>Ma position ce mois-ci</span>
+    <strong>Pas encore classé</strong>
+    <small>Ta première consommation du mois te fera entrer dans le classement.</small>
+  {% endif %}
+</div>
+
+{% endblock %}
 {% block content %}
 <div class="ranking-page">
   <p class="eyebrow">Ce mois-ci · {{ month_label }}</p>

@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.4
+# Popote Bravo — V6.5
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -236,3 +236,12 @@ Correctif mobile :
 - Stock / Courses reste une page séparée.
 - Le tableau principal conserve les paiements à vérifier et l'enregistrement manuel des paiements.
 - Correction de la modification du seuil de stock faible dans les fiches produits.
+
+## V6.5 — Expérience utilisateur
+
+- Accueil membre plus rapide : ardoise actuelle, dépensé ce mois, paiements en attente.
+- Quantité multiple : ajouter plusieurs exemplaires d'un produit en une seule validation.
+- Confirmation automatique pour les quantités supérieures à 1.
+- Le stock ne peut jamais descendre sous zéro.
+- Suivi visuel des paiements déclarés : en attente, validé ou refusé.
+- Classement enrichi : Top 3 public + position personnelle et montant consommé dans le mois.
