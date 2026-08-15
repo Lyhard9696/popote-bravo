@@ -807,6 +807,24 @@ def admin_delete_consumption(consumption_id):
     flash("Consommation supprimée et stock restauré.", "success")
     return redirect(url_for("member_detail", user_id=user_id))
 
+
+@app.route("/admin/stock")
+@admin_required
+def admin_stock():
+    db = get_db()
+    products = db.execute("""
+        SELECT id, name, stock, low_stock_threshold, active
+        FROM products
+        ORDER BY
+            CASE WHEN stock = 0 THEN 0
+                 WHEN stock <= low_stock_threshold THEN 1
+                 ELSE 2 END,
+            stock ASC,
+            name COLLATE NOCASE
+    """).fetchall()
+    db.close()
+    return render_template("stock.html", products=products)
+
 @app.route("/admin")
 @admin_required
 def admin():
@@ -893,6 +911,53 @@ def edit_product(product_id):
     db.close()
     return redirect(url_for("admin"))
 
+
+
+@app.post("/admin/products/<int:product_id>/set-stock")
+@admin_required
+def set_product_stock(product_id):
+    try:
+        stock = int(request.form["stock"])
+    except (KeyError, ValueError):
+        flash("Stock invalide.", "error")
+        return redirect(url_for("admin"))
+
+    if stock < 0:
+        flash("Le stock ne peut pas être négatif.", "error")
+        return redirect(url_for("admin"))
+
+    db = get_db()
+    product = db.execute("SELECT id, name FROM products WHERE id = ?", (product_id,)).fetchone()
+    if not product:
+        db.close()
+        flash("Boisson introuvable.", "error")
+        return redirect(url_for("admin"))
+
+    db.execute(
+        "UPDATE products SET stock = ?, active = CASE WHEN ? > 0 THEN 1 ELSE 0 END WHERE id = ?",
+        (stock, stock, product_id)
+    )
+    db.commit()
+    db.close()
+    flash(f"Stock de {product['name']} mis à {stock}.", "success")
+    return redirect(url_for("admin"))
+
+@app.post("/admin/products/<int:product_id>/delete")
+@admin_required
+def delete_product(product_id):
+    db = get_db()
+    product = db.execute("SELECT id, name FROM products WHERE id = ?", (product_id,)).fetchone()
+    if not product:
+        db.close()
+        flash("Boisson introuvable.", "error")
+        return redirect(url_for("admin"))
+
+    db.execute("UPDATE consumptions SET product_id = NULL WHERE product_id = ?", (product_id,))
+    db.execute("DELETE FROM products WHERE id = ?", (product_id,))
+    db.commit()
+    db.close()
+    flash(f"{product['name']} supprimé du catalogue.", "success")
+    return redirect(url_for("admin"))
 
 @app.post("/admin/products/<int:product_id>/restock")
 @admin_required
@@ -1012,6 +1077,34 @@ def add_payment_global():
     flash(f"Paiement de {amount_cents/100:.2f} € enregistré pour {user['name']}.", "success")
     return redirect(url_for("admin"))
 
+
+
+@app.post("/admin/members/<int:user_id>/delete")
+@admin_required
+def delete_member(user_id):
+    if request.form.get("confirm_delete") != "DELETE":
+        flash("Suppression non confirmée.", "error")
+        return redirect(url_for("admin"))
+
+    db = get_db()
+    user = db.execute(
+        "SELECT id, name FROM users WHERE id = ? AND is_admin = 0",
+        (user_id,)
+    ).fetchone()
+    if not user:
+        db.close()
+        flash("Membre introuvable.", "error")
+        return redirect(url_for("admin"))
+
+    db.execute("DELETE FROM payment_claims WHERE user_id = ?", (user_id,))
+    db.execute("DELETE FROM payments WHERE user_id = ?", (user_id,))
+    db.execute("DELETE FROM consumptions WHERE user_id = ?", (user_id,))
+    db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    db.commit()
+    db.close()
+
+    flash(f"Compte {user['name']} supprimé définitivement.", "success")
+    return redirect(url_for("admin"))
 
 @app.post("/admin/members/<int:user_id>/update")
 @admin_required

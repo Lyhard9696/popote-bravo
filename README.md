@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.2.1
+# Popote Bravo — V6.3.1
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -208,3 +208,21 @@ L'insigne P3 est utilisé comme icône d'écran d'accueil iPhone et comme favico
 
 Correctif mobile :
 - ajout d'un bouton « Se déconnecter » visible sur la page Profil / Mot de passe.
+
+
+## V6.3 — Gestion popotier
+
+- Suppression définitive d'un compte membre.
+- Ajout de boisson toujours disponible.
+- Suppression d'une boisson du catalogue, en conservant l'historique des anciennes consommations.
+- Mise à jour directe du stock : si le stock affiche 20, saisir 6 puis valider met immédiatement le stock à 6.
+- Un stock mis à 0 rend automatiquement la boisson indisponible.
+
+
+## V6.3.1 — Onglet Stock
+
+- Nouvel onglet Stock réservé au popotier.
+- Affichage volontairement simple : nom du produit + quantité restante.
+- Les ruptures apparaissent en rouge.
+- Les stocks sous leur seuil apparaissent en jaune.
+- Tri automatique : ruptures et stocks faibles en premier, pratique pour faire les courses.

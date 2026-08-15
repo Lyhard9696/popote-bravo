@@ -27,6 +27,7 @@
         <span>{{ current_user["name"] }}</span>
         {% if current_user["is_admin"] %}
           <a href="{{ url_for('admin') }}">Gestion</a>
+          <a href="{{ url_for('admin_stock') }}">Stock</a>
         {% else %}
           <a href="{{ url_for('dashboard') }}">Mon ardoise</a>
         {% endif %}
@@ -50,10 +51,13 @@
 </main>
 
 {% if current_user %}
-<nav class="mobile-tabbar" aria-label="Navigation principale">
+<nav class="mobile-tabbar {% if current_user["is_admin"] %}admin-tabbar{% endif %}" aria-label="Navigation principale">
   {% if current_user["is_admin"] %}
     <a href="{{ url_for('admin') }}" class="{% if request.endpoint == 'admin' %}active{% endif %}">
       <span class="tab-icon">⌂</span><span>Gestion</span>
+    </a>
+    <a href="{{ url_for('admin_stock') }}" class="{% if request.endpoint == 'admin_stock' %}active{% endif %}">
+      <span class="tab-icon">▤</span><span>Stock</span>
     </a>
   {% else %}
     <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">

@@ -64,6 +64,13 @@
       <input name="new_password" type="password" minlength="8" placeholder="Minimum 8 caractères" required>
       <button type="submit">Réinitialiser le mot de passe</button>
     </form>
+
+    <form method="post" action="{{ url_for('delete_member', user_id=m['id']) }}"
+          class="delete-member-form"
+          onsubmit="return confirm('Supprimer définitivement ce compte et son historique ?');">
+      <input type="hidden" name="confirm_delete" value="DELETE">
+      <button type="submit" class="delete-member-btn">Supprimer le compte</button>
+    </form>
   </div>
 {% else %}
   <div class="card">Aucun membre inscrit.</div>
@@ -148,9 +155,23 @@
       <button type="submit">Enregistrer</button>
     </form>
 
+    <form method="post" action="{{ url_for('set_product_stock', product_id=p['id']) }}" class="set-stock-form">
+      <div>
+        <label>Stock réel</label>
+        <input name="stock" type="number" min="0" value="{{ p['stock'] }}" required>
+      </div>
+      <button type="submit">Mettre à jour le stock</button>
+    </form>
+
     <form method="post" action="{{ url_for('restock_product', product_id=p['id']) }}" class="restock-form">
       <input name="quantity" type="number" min="1" placeholder="+ quantité" required>
-      <button type="submit">Réapprovisionner</button>
+      <button type="submit">Ajouter au stock</button>
+    </form>
+
+    <form method="post" action="{{ url_for('delete_product', product_id=p['id']) }}"
+          class="danger-form"
+          onsubmit="return confirm('Supprimer définitivement cette boisson du catalogue ?');">
+      <button type="submit" class="delete-product-btn">Supprimer cette boisson</button>
     </form>
   </div>
 {% else %}

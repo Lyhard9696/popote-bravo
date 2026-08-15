@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Stock — Popote Bravo{% endblock %}
+{% block content %}
+<div class="stock-page">
+  <div class="hero">
+    <div>
+      <p class="eyebrow">Popotier</p>
+      <h1>Stock</h1>
+      <p class="muted">Vue rapide pour les courses : uniquement ce qu’il reste.</p>
+    </div>
+  </div>
+
+  <div class="stock-list">
+    {% for p in products %}
+      <div class="stock-line {% if p['stock'] == 0 %}stock-line-zero{% elif p['stock'] <= p['low_stock_threshold'] %}stock-line-low{% endif %}">
+        <div>
+          <strong>{{ p["name"] }}</strong>
+          {% if p["stock"] == 0 %}
+            <span class="stock-status danger">Indisponible</span>
+          {% elif p["stock"] <= p["low_stock_threshold"] %}
+            <span class="stock-status warning">Stock faible</span>
+          {% endif %}
+        </div>
+        <div class="stock-count">
+          <strong>{{ p["stock"] }}</strong>
+          <span>restant{% if p["stock"] > 1 %}s{% endif %}</span>
+        </div>
+      </div>
+    {% else %}
+      <div class="card">Aucun produit dans le catalogue.</div>
+    {% endfor %}
+  </div>
+
+  <a class="stock-back-link" href="{{ url_for('admin') }}">← Retour à la gestion</a>
+</div>
+{% endblock %}
