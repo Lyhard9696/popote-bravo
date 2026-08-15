@@ -22,6 +22,7 @@ PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
 PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
 PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox").lower()
 PAYPAL_WEBHOOK_ID = os.getenv("PAYPAL_WEBHOOK_ID", "")
+PAYPAL_ME_URL = os.getenv("PAYPAL_ME_URL", "https://paypal.me/PopoteBellac").rstrip("/")
 PAYPAL_API_BASE = "https://api-m.paypal.com" if PAYPAL_MODE == "live" else "https://api-m.sandbox.paypal.com"
 
 def get_db():
@@ -381,6 +382,15 @@ def declare_payment():
     pending_total = user_pending_claims_cents(user["id"])
     available = max(0, official_balance - pending_total)
 
+    prefill_cents = 0
+    try:
+        if request.args.get("amount"):
+            prefill_cents = int(round(float(request.args["amount"].replace(",", ".")) * 100))
+    except ValueError:
+        prefill_cents = 0
+    if prefill_cents <= 0 or prefill_cents > available:
+        prefill_cents = available
+
     if request.method == "POST":
         try:
             amount_cents = int(round(float(request.form["amount"].replace(",", ".")) * 100))
@@ -405,10 +415,14 @@ def declare_payment():
         flash("Paiement déclaré : en attente de validation du popotier.", "success")
         return redirect(url_for("dashboard"))
 
-    return render_template("declare_payment.html",
-                           official_balance=official_balance,
-                           pending_total=pending_total,
-                           available=available)
+    return render_template(
+        "declare_payment.html",
+        official_balance=official_balance,
+        pending_total=pending_total,
+        available=available,
+        prefill_cents=prefill_cents,
+        paypal_me_url=PAYPAL_ME_URL
+    )
 
 @app.post("/admin/payment-claims/<int:claim_id>/approve")
 @admin_required

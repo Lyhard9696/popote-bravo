@@ -1,5 +1,5 @@
 
-# Popote Bravo — V5.2
+# Popote Bravo — V5.3
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -149,3 +149,22 @@ Le formulaire :
 
 ## V5.2
 Paiements PayPal déclarés par le membre, puis validés ou refusés par le popotier.
+
+
+## V5.3 — PayPal.Me
+
+Lien de paiement par défaut :
+
+    https://paypal.me/PopoteBellac
+
+Le membre :
+- choisit le montant à régler ;
+- ouvre PayPal.Me avec le montant prérempli ;
+- revient dans Popote Bravo ;
+- déclare le même montant ;
+- voit son reste estimé diminuer immédiatement ;
+- attend la validation du popotier.
+
+Variable optionnelle :
+
+    PAYPAL_ME_URL=https://paypal.me/PopoteBellac

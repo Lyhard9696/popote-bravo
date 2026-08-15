@@ -176,3 +176,28 @@ select {
 .approve-btn { background:#166534; }
 .reject-btn { background:#991b1b; }
 @media (max-width:620px) { .pending-summary,.claim-actions { flex-direction:column; } }
+
+
+.paypal-me-button {
+  display: block;
+  margin-top: 12px;
+  padding: 15px 18px;
+  border-radius: 12px;
+  text-align: center;
+  text-decoration: none;
+  font-weight: 850;
+  font-size: 18px;
+  background: #ffc439;
+  color: #111;
+}
+
+.paypal-me-button.disabled {
+  opacity: .5;
+  pointer-events: none;
+}
+
+.section-separator {
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  margin: 28px 0;
+}

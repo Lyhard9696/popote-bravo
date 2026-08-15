@@ -10,7 +10,7 @@
   <div class="balance">{{ format_eur(estimated_balance) }}<small>Reste estimé</small></div>
 </div>
 {% if estimated_balance > 0 %}
-  <a class="pay-cta" href="{{ url_for('declare_payment') }}">💳 Déclarer un paiement PayPal</a>
+  <a class="pay-cta" href="{{ url_for('declare_payment') }}">💳 Payer / déclarer avec PayPal</a>
 {% endif %}
 
 {% if pending_claims > 0 %}

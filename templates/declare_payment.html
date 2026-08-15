@@ -1,27 +1,113 @@
 {% extends "base.html" %}
-{% block title %}Déclarer un paiement{% endblock %}
+{% block title %}Payer avec PayPal{% endblock %}
 {% block content %}
 <div class="hero">
-  <div><p class="eyebrow">PayPal</p><h1>Déclarer un paiement</h1></div>
+  <div>
+    <p class="eyebrow">PayPal</p>
+    <h1>Payer mon ardoise</h1>
+  </div>
   <div class="balance">{{ format_eur(available) }}<small>Reste estimé</small></div>
 </div>
+
 <div class="card narrow-pay">
-  <p>Fais ton PayPal normalement, puis indique ici le montant envoyé. Le popotier devra le vérifier et le valider.</p>
   <div class="payment-recap">
     <span>Dette officielle</span><strong>{{ format_eur(official_balance) }}</strong>
     <span>Déjà en attente</span><strong>{{ format_eur(pending_total) }}</strong>
     <span>Reste estimé</span><strong>{{ format_eur(available) }}</strong>
   </div>
+
   {% if available > 0 %}
-  <form method="post">
-    <label>Montant envoyé (€)</label>
-    <input name="amount" type="number" min="0.01" max="{{ '%.2f'|format(available/100) }}" step="0.01" value="{{ '%.2f'|format(available/100) }}" required>
-    <label>Note (optionnel)</label>
-    <input name="note" placeholder="Ex. PayPal envoyé à 18h30">
-    <button type="submit">J’ai effectué ce paiement</button>
-  </form>
+    <h2>1. Choisis le montant</h2>
+    <label>Montant à payer (€)</label>
+    <input
+      id="paypal-amount"
+      type="number"
+      min="0.01"
+      max="{{ '%.2f'|format(available/100) }}"
+      step="0.01"
+      value="{{ '%.2f'|format(prefill_cents/100) }}"
+      required
+    >
+
+    <button type="button" id="all-btn" class="secondary">
+      Tout payer ({{ format_eur(available) }})
+    </button>
+
+    <a id="paypal-me-button" class="paypal-me-button" href="#" target="_blank" rel="noopener">
+      Payer avec PayPal
+    </a>
+
+    <p class="muted">
+      PayPal s’ouvrira avec le montant prérempli. Une fois le paiement effectué, reviens ici pour le déclarer.
+    </p>
+
+    <hr class="section-separator">
+
+    <h2>2. J’ai effectué le paiement</h2>
+    <form method="post" id="declare-form">
+      <label>Montant envoyé (€)</label>
+      <input
+        id="declared-amount"
+        name="amount"
+        type="number"
+        min="0.01"
+        max="{{ '%.2f'|format(available/100) }}"
+        step="0.01"
+        value="{{ '%.2f'|format(prefill_cents/100) }}"
+        required
+      >
+
+      <label>Note (optionnel)</label>
+      <input name="note" placeholder="Ex. PayPal envoyé à 18h30">
+
+      <button type="submit">J’ai effectué ce paiement</button>
+    </form>
   {% else %}
-  <p><strong>Rien à déclarer pour le moment.</strong></p>
+    <p><strong>Rien à payer ou déclarer pour le moment.</strong></p>
   {% endif %}
 </div>
+
+{% if available > 0 %}
+<script>
+const paypalBase = {{ paypal_me_url|tojson }};
+const maxCents = {{ available }};
+const payInput = document.getElementById("paypal-amount");
+const declareInput = document.getElementById("declared-amount");
+const paypalButton = document.getElementById("paypal-me-button");
+
+function validAmountCents() {
+  const cents = Math.round(Number(payInput.value) * 100);
+  if (!Number.isFinite(cents) || cents <= 0 || cents > maxCents) return null;
+  return cents;
+}
+
+function refreshPayPalLink() {
+  const cents = validAmountCents();
+  if (cents === null) {
+    paypalButton.href = "#";
+    paypalButton.classList.add("disabled");
+    return;
+  }
+  paypalButton.classList.remove("disabled");
+  const amount = (cents / 100).toFixed(2);
+  paypalButton.href = `${paypalBase}/${amount}EUR`;
+  declareInput.value = amount;
+}
+
+payInput.addEventListener("input", refreshPayPalLink);
+document.getElementById("all-btn").addEventListener("click", () => {
+  payInput.value = (maxCents / 100).toFixed(2);
+  refreshPayPalLink();
+});
+
+paypalButton.addEventListener("click", (event) => {
+  if (!validAmountCents()) {
+    event.preventDefault();
+    alert("Choisis un montant valide.");
+  }
+});
+
+refreshPayPalLink();
+</script>
+{% endif %}
 {% endblock %}
