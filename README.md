@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.8
+# Popote Bravo — V6.8.1
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -319,3 +319,11 @@ Correctif mobile :
 - Boutons rapides −1 / +1 pour corriger le stock.
 - Bouton « Modifier » pour ouvrir prix, catégorie, seuil, stock exact et suppression.
 - Toutes les fonctions existantes restent disponibles.
+
+
+## V6.8.1 — Correctif templates Popotier
+
+- Correction de `admin_accounts.html`.
+- Correction de `admin_consumptions.html`.
+- Les blocs Jinja sont désormais correctement fermés avec `{% endblock %}`.
+- Aucun changement sur la base de données ni sur la logique métier.
