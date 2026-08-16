@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.9.1
+# Popote Bravo — V6.9.2
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -382,3 +382,12 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - Restauration du gros bouton jaune « Payer avec PayPal ».
 - Un clic ouvre directement le PayPal de la Popote avec le montant choisi.
 - Suppression définitive de l'ancien swipe cassé.
+
+
+## V6.9.2 — Correctif activation Push
+
+- Correction du template Notifications : le JavaScript n'est plus injecté dans le titre de page.
+- Le script Push s'exécute maintenant après le chargement du contenu.
+- Attente explicite de `navigator.serviceWorker.ready`.
+- Le bouton « Activer les notifications » est désormais réellement connecté au script.
+- Ajout de messages d'erreur plus clairs en cas de problème.

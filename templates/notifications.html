@@ -1,131 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Notifications — Popote Bravo
-{% if push_configured %}
-<script>
-const VAPID_PUBLIC_KEY = {{ vapid_public_key|tojson }};
-const pushToggle = document.getElementById("push-toggle");
-const pushStatus = document.getElementById("push-status");
-const pushTest = document.getElementById("push-test");
+{% block title %}Notifications — Popote Bravo{% endblock %}
 
-function urlBase64ToUint8Array(base64String) {
-  const padding = "=".repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = window.atob(base64);
-  return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
-}
-
-function isStandaloneIOS() {
-  return window.matchMedia("(display-mode: standalone)").matches ||
-         window.navigator.standalone === true;
-}
-
-async function getRegistration() {
-  if (!("serviceWorker" in navigator)) throw new Error("Service Worker non supporté");
-  return navigator.serviceWorker.register("/sw.js", { scope: "/" });
-}
-
-async function currentSubscription() {
-  const registration = await getRegistration();
-  return {
-    registration,
-    subscription: await registration.pushManager.getSubscription()
-  };
-}
-
-async function refreshPushStatus() {
-  if (!("Notification" in window) || !("PushManager" in window)) {
-    pushStatus.textContent = "❌ Notifications non compatibles ici";
-    pushToggle.disabled = true;
-    return;
-  }
-
-  if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !isStandaloneIOS()) {
-    pushStatus.textContent = "Ajoute Popote Bravo à l’écran d’accueil pour activer les notifications";
-    pushToggle.disabled = true;
-    pushTest.hidden = true;
-    return;
-  }
-
-  try {
-    const { subscription } = await currentSubscription();
-
-    if (subscription) {
-      pushStatus.textContent = "🟢 Activées sur cet appareil";
-      pushToggle.textContent = "Désactiver";
-      pushToggle.dataset.enabled = "1";
-      pushTest.hidden = false;
-    } else {
-      pushStatus.textContent = "🔴 Désactivées";
-      pushToggle.textContent = "Activer les notifications";
-      pushToggle.dataset.enabled = "0";
-      pushTest.hidden = true;
-    }
-  } catch (_) {
-    pushStatus.textContent = "Impossible de vérifier les notifications";
-  }
-}
-
-pushToggle.addEventListener("click", async () => {
-  pushToggle.disabled = true;
-
-  try {
-    const { registration, subscription } = await currentSubscription();
-
-    if (subscription) {
-      const endpoint = subscription.endpoint;
-      await subscription.unsubscribe();
-
-      await fetch("/push/unsubscribe", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ endpoint })
-      });
-    } else {
-      const permission = await Notification.requestPermission();
-
-      if (permission !== "granted") {
-        alert("Les notifications n'ont pas été autorisées.");
-        return;
-      }
-
-      const newSubscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
-
-      const response = await fetch("/push/subscribe", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(newSubscription.toJSON())
-      });
-
-      if (!response.ok) throw new Error("Abonnement impossible");
-    }
-  } catch (_) {
-    alert("Impossible d'activer les notifications sur cet appareil.");
-  } finally {
-    pushToggle.disabled = false;
-    await refreshPushStatus();
-  }
-});
-
-pushTest.addEventListener("click", async () => {
-  pushTest.disabled = true;
-  try {
-    const response = await fetch("/push/test", { method: "POST" });
-    if (!response.ok) throw new Error();
-  } catch (_) {
-    alert("La notification test n'a pas pu être envoyée.");
-  } finally {
-    pushTest.disabled = false;
-  }
-});
-
-refreshPushStatus();
-</script>
-{% endif %}
-
-{% endblock %}
 {% block content %}
 <div class="notifications-page">
   <div class="management-page-head">
@@ -140,7 +15,6 @@ refreshPushStatus();
     </form>
     {% endif %}
   </div>
-
 
   <div class="card push-settings-card">
     <p class="eyebrow">Téléphone</p>
@@ -179,4 +53,149 @@ refreshPushStatus();
   {% endfor %}
   </div>
 </div>
+
+{% if push_configured %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const VAPID_PUBLIC_KEY = {{ vapid_public_key|tojson }};
+  const pushToggle = document.getElementById("push-toggle");
+  const pushStatus = document.getElementById("push-status");
+  const pushTest = document.getElementById("push-test");
+
+  if (!pushToggle || !pushStatus || !pushTest) return;
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    return Uint8Array.from([...rawData].map(char => char.charCodeAt(0)));
+  }
+
+  function isStandaloneIOS() {
+    return window.matchMedia("(display-mode: standalone)").matches ||
+           window.navigator.standalone === true;
+  }
+
+  async function getRegistration() {
+    if (!("serviceWorker" in navigator)) {
+      throw new Error("Service Worker non supporté");
+    }
+
+    const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    await navigator.serviceWorker.ready;
+    return registration;
+  }
+
+  async function currentSubscription() {
+    const registration = await getRegistration();
+    const subscription = await registration.pushManager.getSubscription();
+    return { registration, subscription };
+  }
+
+  async function refreshPushStatus() {
+    if (!("Notification" in window) || !("PushManager" in window)) {
+      pushStatus.textContent = "❌ Notifications non compatibles ici";
+      pushToggle.disabled = true;
+      pushTest.hidden = true;
+      return;
+    }
+
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !isStandaloneIOS()) {
+      pushStatus.textContent = "Ajoute Popote Bravo à l’écran d’accueil pour activer les notifications";
+      pushToggle.disabled = true;
+      pushTest.hidden = true;
+      return;
+    }
+
+    try {
+      const { subscription } = await currentSubscription();
+
+      if (subscription) {
+        pushStatus.textContent = "🟢 Activées sur cet appareil";
+        pushToggle.textContent = "Désactiver";
+        pushToggle.dataset.enabled = "1";
+        pushTest.hidden = false;
+      } else {
+        pushStatus.textContent = "🔴 Désactivées";
+        pushToggle.textContent = "Activer les notifications";
+        pushToggle.dataset.enabled = "0";
+        pushTest.hidden = true;
+      }
+    } catch (error) {
+      console.error("Push status error:", error);
+      pushStatus.textContent = "⚠️ Impossible de vérifier les notifications";
+      pushToggle.disabled = false;
+      pushTest.hidden = true;
+    }
+  }
+
+  pushToggle.addEventListener("click", async () => {
+    pushToggle.disabled = true;
+
+    try {
+      const { registration, subscription } = await currentSubscription();
+
+      if (subscription) {
+        const endpoint = subscription.endpoint;
+        await subscription.unsubscribe();
+
+        await fetch("/push/unsubscribe", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ endpoint })
+        });
+      } else {
+        const permission = await Notification.requestPermission();
+
+        if (permission !== "granted") {
+          alert("Les notifications n'ont pas été autorisées.");
+          return;
+        }
+
+        const newSubscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+
+        const response = await fetch("/push/subscribe", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(newSubscription.toJSON())
+        });
+
+        if (!response.ok) {
+          throw new Error("Abonnement impossible");
+        }
+      }
+    } catch (error) {
+      console.error("Push activation error:", error);
+      alert("Impossible d'activer les notifications sur cet appareil.");
+    } finally {
+      pushToggle.disabled = false;
+      await refreshPushStatus();
+    }
+  });
+
+  pushTest.addEventListener("click", async () => {
+    pushTest.disabled = true;
+
+    try {
+      const response = await fetch("/push/test", { method: "POST" });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Test impossible");
+      }
+    } catch (error) {
+      console.error("Push test error:", error);
+      alert("La notification test n'a pas pu être envoyée.");
+    } finally {
+      pushTest.disabled = false;
+    }
+  });
+
+  refreshPushStatus();
+});
+</script>
+{% endif %}
 {% endblock %}
