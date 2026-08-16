@@ -3,4 +3,6 @@ popote.db
 __pycache__/
 *.pyc
 .venv/
-venv/
+venv/private_key.pem
+public_key.pem
+private_key.pem

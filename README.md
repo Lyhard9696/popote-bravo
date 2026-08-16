@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.9
+# Popote Bravo — V6.9.1
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -372,3 +372,13 @@ Correctif mobile :
 - `VAPID_SUBJECT` (ex. `mailto:adresse@example.com`)
 
 Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notifications doivent être autorisées.
+
+
+## V6.9.1 — Correctif Push + PayPal
+
+- L'activation des notifications Push est maintenant directement dans la page 🔔 Notifications.
+- État visible : activées / désactivées / iPhone non installé sur l'écran d'accueil.
+- Bouton de notification test après activation.
+- Restauration du gros bouton jaune « Payer avec PayPal ».
+- Un clic ouvre directement le PayPal de la Popote avec le montant choisi.
+- Suppression définitive de l'ancien swipe cassé.

@@ -2033,3 +2033,60 @@ button:active,
     width: 100%;
   }
 }
+
+
+/* V6.9.1 — Push visible + PayPal direct restauré */
+.notifications-page .push-settings-card {
+  margin: 16px 0 22px;
+}
+
+.paypal-simple-wrap {
+  margin-top: 14px;
+}
+
+.paypal-direct-button {
+  width: 100%;
+  min-height: 58px;
+  margin: 0;
+  border-radius: 16px;
+  background: #ffc439;
+  color: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 850;
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+}
+
+.paypal-direct-button:active {
+  transform: scale(.985);
+}
+
+.paypal-direct-button:disabled {
+  opacity: .72;
+}
+
+.paypal-direct-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: #003087;
+  color: #fff;
+  font-size: 22px;
+  font-style: italic;
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.paypal-direct-status {
+  min-height: 20px;
+  margin: 7px 0 0;
+  text-align: center;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+}

@@ -33,15 +33,12 @@
       Tout payer ({{ format_eur(available) }})
     </button>
 
-    <div class="paypal-swipe-wrap">
-      <div class="paypal-swipe" id="paypal-swipe">
-        <div class="paypal-swipe-fill" id="paypal-swipe-fill"></div>
-        <span class="paypal-swipe-text">Glisser pour payer avec PayPal</span>
-        <button type="button" class="paypal-swipe-thumb" id="paypal-swipe-thumb" aria-label="Glisser pour ouvrir PayPal">P</button>
-      </div>
-      <a id="paypal-me-button-old" class="paypal-fallback-link" href="#" target="_blank" rel="noopener">
-        Ouvrir PayPal manuellement
-      </a>
+    <div class="paypal-simple-wrap">
+      <button type="button" id="paypal-direct-button" class="paypal-direct-button">
+        <span class="paypal-direct-logo">P</span>
+        <span>Payer avec PayPal</span>
+      </button>
+      <p id="paypal-direct-status" class="paypal-direct-status"></p>
     </div>
 
     <p class="muted">
@@ -80,7 +77,9 @@ const paypalBase = {{ paypal_me_url|tojson }};
 const maxCents = {{ available }};
 const payInput = document.getElementById("paypal-amount");
 const declareInput = document.getElementById("declared-amount");
-const paypalButton = document.getElementById("paypal-me-button");
+const allButton = document.getElementById("all-btn");
+const paypalDirectButton = document.getElementById("paypal-direct-button");
+const paypalDirectStatus = document.getElementById("paypal-direct-status");
 
 function validAmountCents() {
   const cents = Math.round(Number(payInput.value) * 100);
@@ -88,25 +87,11 @@ function validAmountCents() {
   return cents;
 }
 
-function refreshPayPalLink() {
+function syncDeclaredAmount() {
   const cents = validAmountCents();
-  if (cents === null) {
-    paypalButton.href = "#";
-    paypalButton.classList.add("disabled");
-    return;
-  }
-  paypalButton.classList.remove("disabled");
-  const amount = (cents / 100).toFixed(2);
-  paypalButton.href = `${paypalBase}/${amount}EUR`;
-  declareInput.value = amount;
+  if (cents === null) return;
+  declareInput.value = (cents / 100).toFixed(2);
 }
-
-payInput.addEventListener("input", refreshPayPalLink);
-document.getElementById("all-btn").addEventListener("click", () => {
-  payInput.value = (maxCents / 100).toFixed(2);
-  
-const paypalDirectButton = document.getElementById("paypal-direct-button");
-const paypalDirectStatus = document.getElementById("paypal-direct-status");
 
 function openPayPalDirectly() {
   const cents = validAmountCents();
@@ -120,37 +105,27 @@ function openPayPalDirectly() {
   declareInput.value = amount;
 
   paypalDirectButton.disabled = true;
-  paypalDirectButton.classList.add("is-opening");
-  if (paypalDirectStatus) {
-    paypalDirectStatus.textContent = "Ouverture de PayPal…";
-  }
+  paypalDirectStatus.textContent = "Ouverture de PayPal…";
 
   window.location.assign(`${paypalBase}/${amount}EUR`);
 }
 
-if (paypalDirectButton) {
-  paypalDirectButton.addEventListener("click", openPayPalDirectly);
+payInput.addEventListener("input", syncDeclaredAmount);
 
-  window.addEventListener("pageshow", () => {
-    paypalDirectButton.disabled = false;
-    paypalDirectButton.classList.remove("is-opening");
-    if (paypalDirectStatus) {
-      paypalDirectStatus.textContent = "";
-    }
-  });
-}
-
-refreshPayPalLink();
+allButton.addEventListener("click", () => {
+  payInput.value = (maxCents / 100).toFixed(2);
+  syncDeclaredAmount();
 });
 
-paypalButton.addEventListener("click", (event) => {
-  if (!validAmountCents()) {
-    event.preventDefault();
-    alert("Choisis un montant valide.");
-  }
+paypalDirectButton.addEventListener("click", openPayPalDirectly);
+
+window.addEventListener("pageshow", () => {
+  paypalDirectButton.disabled = false;
+  paypalDirectStatus.textContent = "";
+  syncDeclaredAmount();
 });
 
-refreshPayPalLink();
+syncDeclaredAmount();
 </script>
 {% endif %}
 {% endblock %}
