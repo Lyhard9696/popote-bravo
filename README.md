@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.8.4
+# Popote Bravo — V6.9
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -354,3 +354,21 @@ Correctif mobile :
 - Un seul bouton jaune « Payer avec PayPal ».
 - Un clic ouvre directement PayPal avec le montant saisi/prérempli.
 - Le bouton se désactive pendant l'ouverture pour éviter les doubles clics.
+
+
+## V6.9 — Notifications Push téléphone
+
+- Abonnement Web Push depuis Profil.
+- Service worker pour recevoir les notifications même lorsque Popote Bravo n'est pas ouvert.
+- Push aux comptes Popotier lorsqu'un membre déclare un paiement.
+- Push au membre quand son paiement est validé ou refusé.
+- Bouton de notification test.
+- Le centre de notifications interne reste disponible en secours.
+
+### Variables Render requises
+
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT` (ex. `mailto:adresse@example.com`)
+
+Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notifications doivent être autorisées.

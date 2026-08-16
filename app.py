@@ -10,6 +10,8 @@ import os
 import requests
 import qrcode
 import uuid
+import json
+from pywebpush import webpush, WebPushException
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR)))
@@ -27,6 +29,10 @@ PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox").lower()
 PAYPAL_WEBHOOK_ID = os.getenv("PAYPAL_WEBHOOK_ID", "")
 PAYPAL_ME_URL = os.getenv("PAYPAL_ME_URL", "https://paypal.me/PopoteBellac").rstrip("/")
 PAYPAL_API_BASE = "https://api-m.paypal.com" if PAYPAL_MODE == "live" else "https://api-m.sandbox.paypal.com"
+
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@popote-bravo.local")
 
 def get_db():
     db = sqlite3.connect(DB_PATH)
@@ -115,6 +121,17 @@ def init_db():
         link TEXT,
         dedupe_key TEXT,
         is_read INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        user_agent TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
     );
@@ -229,6 +246,78 @@ def notify_admins(db, title, message, kind="warning", link="/admin/stock", dedup
         add_notification(db, admin["id"], title, message, kind, link, key)
 
 
+
+def push_configured():
+    return bool(VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY and VAPID_SUBJECT)
+
+
+def send_push_to_user(user_id, title, body, url="/", tag=None):
+    if not push_configured():
+        return 0
+
+    db = get_db()
+    subscriptions = db.execute("""
+        SELECT id, endpoint, p256dh, auth
+        FROM push_subscriptions
+        WHERE user_id = ?
+    """, (user_id,)).fetchall()
+
+    sent = 0
+    stale_ids = []
+
+    payload = json.dumps({
+        "title": title,
+        "body": body,
+        "url": url,
+        "tag": tag or "popote-bravo"
+    }, ensure_ascii=False)
+
+    for sub in subscriptions:
+        subscription_info = {
+            "endpoint": sub["endpoint"],
+            "keys": {
+                "p256dh": sub["p256dh"],
+                "auth": sub["auth"]
+            }
+        }
+        try:
+            webpush(
+                subscription_info=subscription_info,
+                data=payload,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": VAPID_SUBJECT},
+                ttl=300
+            )
+            sent += 1
+        except WebPushException as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            if status in (404, 410):
+                stale_ids.append(sub["id"])
+        except Exception:
+            # Le push ne doit jamais bloquer l'action métier.
+            pass
+
+    for sub_id in stale_ids:
+        db.execute("DELETE FROM push_subscriptions WHERE id = ?", (sub_id,))
+    if stale_ids:
+        db.commit()
+    db.close()
+    return sent
+
+
+def send_push_to_admins(title, body, url="/admin", tag=None):
+    db = get_db()
+    admins = db.execute(
+        "SELECT id FROM users WHERE is_admin = 1 AND active = 1"
+    ).fetchall()
+    db.close()
+
+    total = 0
+    for admin in admins:
+        total += send_push_to_user(admin["id"], title, body, url, tag)
+    return total
+
+
 def paypal_configured():
     return bool(PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET)
 
@@ -278,9 +367,89 @@ def inject_helpers():
         "paypal_client_id": PAYPAL_CLIENT_ID,
         "paypal_mode": PAYPAL_MODE,
         "unread_notifications": unread_notifications,
+        "vapid_public_key": VAPID_PUBLIC_KEY,
+        "push_configured": push_configured(),
     }
 
 
+
+
+
+@app.route("/sw.js")
+def service_worker():
+    response = app.send_static_file("sw.js")
+    response.headers["Content-Type"] = "application/javascript; charset=utf-8"
+    response.headers["Service-Worker-Allowed"] = "/"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
+@app.post("/push/subscribe")
+@login_required
+def push_subscribe():
+    user = current_user()
+    data = request.get_json(silent=True) or {}
+
+    endpoint = data.get("endpoint", "")
+    keys = data.get("keys") or {}
+    p256dh = keys.get("p256dh", "")
+    auth = keys.get("auth", "")
+
+    if not endpoint or not p256dh or not auth:
+        return {"ok": False, "error": "Abonnement push invalide."}, 400
+
+    db = get_db()
+    db.execute("""
+        INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(endpoint) DO UPDATE SET
+            user_id = excluded.user_id,
+            p256dh = excluded.p256dh,
+            auth = excluded.auth,
+            user_agent = excluded.user_agent
+    """, (
+        user["id"], endpoint, p256dh, auth,
+        request.headers.get("User-Agent", "")[:500]
+    ))
+    db.commit()
+    db.close()
+
+    return {"ok": True}
+
+
+@app.post("/push/unsubscribe")
+@login_required
+def push_unsubscribe():
+    user = current_user()
+    data = request.get_json(silent=True) or {}
+    endpoint = data.get("endpoint", "")
+
+    if endpoint:
+        db = get_db()
+        db.execute(
+            "DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?",
+            (user["id"], endpoint)
+        )
+        db.commit()
+        db.close()
+
+    return {"ok": True}
+
+
+@app.post("/push/test")
+@login_required
+def push_test():
+    user = current_user()
+    sent = send_push_to_user(
+        user["id"],
+        "Popote Bravo",
+        "Les notifications téléphone fonctionnent ✅",
+        "/notifications",
+        "push-test"
+    )
+    if sent:
+        return {"ok": True}
+    return {"ok": False, "error": "Aucun appareil abonné ou Push non configuré."}, 400
 
 
 @app.route("/notifications")
@@ -849,6 +1018,12 @@ def declare_payment():
         db.commit()
         db.close()
 
+        send_push_to_admins(
+            "💳 Paiement à valider",
+            f"{user['name']} déclare un paiement de {amount_cents/100:.2f} €.".replace(".", ","),
+            "/admin",
+            f"payment-claim-{user['id']}"
+        )
         flash("Paiement déclaré : en attente de validation du popotier.", "success")
         return redirect(url_for("dashboard"))
 
@@ -906,6 +1081,13 @@ def approve_payment_claim(claim_id):
         "/dashboard"
     )
     db.commit()
+    send_push_to_user(
+        claim["user_id"],
+        "✅ Paiement validé",
+        f"Ton paiement de {claim['amount_cents']/100:.2f} € a été validé.".replace(".", ","),
+        "/dashboard",
+        f"payment-approved-{claim_id}"
+    )
     db.close()
     flash(f"Paiement de {claim['amount_cents']/100:.2f} € validé pour {claim['user_name']}.", "success")
     return redirect(url_for("admin"))
@@ -936,6 +1118,13 @@ def reject_payment_claim(claim_id):
         "/dashboard"
     )
     db.commit()
+    send_push_to_user(
+        claim["user_id"],
+        "❌ Paiement refusé",
+        f"Ta déclaration de {claim['amount_cents']/100:.2f} € a été refusée.".replace(".", ","),
+        "/dashboard",
+        f"payment-rejected-{claim_id}"
+    )
     db.close()
     flash("Déclaration refusée.", "success")
     return redirect(url_for("admin"))

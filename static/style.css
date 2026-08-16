@@ -1994,3 +1994,42 @@ button:active,
 .paypal-fallback-link {
   display: none !important;
 }
+
+
+/* V6.9 — Notifications Push */
+.push-settings-card {
+  margin-top: 20px;
+}
+
+.push-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.push-status-row span {
+  font-weight: 800;
+}
+
+.push-status-row button {
+  margin: 0;
+}
+
+.push-test-btn {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--bravo-yellow);
+  color: #111;
+}
+
+@media (max-width: 520px) {
+  .push-status-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .push-status-row button {
+    width: 100%;
+  }
+}
