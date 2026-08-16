@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.8.3
+# Popote Bravo — V6.8.4
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -345,3 +345,12 @@ Correctif mobile :
 - Aucun clic supplémentaire n'est nécessaire après le swipe.
 - Le lien « Ouvrir PayPal manuellement » reste uniquement comme solution de secours.
 - Ajout d'espace sous les pages mobiles pour éviter que la navigation fixe masque les formulaires.
+
+
+## V6.8.4 — Paiement PayPal simplifié
+
+- Suppression complète du slider / swipe PayPal.
+- Suppression du lien « Ouvrir PayPal manuellement ».
+- Un seul bouton jaune « Payer avec PayPal ».
+- Un clic ouvre directement PayPal avec le montant saisi/prérempli.
+- Le bouton se désactive pendant l'ouverture pour éviter les doubles clics.

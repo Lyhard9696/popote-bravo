@@ -39,7 +39,7 @@
         <span class="paypal-swipe-text">Glisser pour payer avec PayPal</span>
         <button type="button" class="paypal-swipe-thumb" id="paypal-swipe-thumb" aria-label="Glisser pour ouvrir PayPal">P</button>
       </div>
-      <a id="paypal-me-button" class="paypal-fallback-link" href="#" target="_blank" rel="noopener">
+      <a id="paypal-me-button-old" class="paypal-fallback-link" href="#" target="_blank" rel="noopener">
         Ouvrir PayPal manuellement
       </a>
     </div>
@@ -105,66 +105,39 @@ payInput.addEventListener("input", refreshPayPalLink);
 document.getElementById("all-btn").addEventListener("click", () => {
   payInput.value = (maxCents / 100).toFixed(2);
   
-const swipeRange = document.getElementById("paypal-swipe-range");
-const swipeStatus = document.getElementById("paypal-swipe-status");
-let paypalOpening = false;
+const paypalDirectButton = document.getElementById("paypal-direct-button");
+const paypalDirectStatus = document.getElementById("paypal-direct-status");
 
-function resetPayPalSlider() {
-  if (!swipeRange) return;
-  swipeRange.value = "0";
-  swipeRange.style.setProperty("--swipe-progress", "0%");
-  if (swipeStatus) swipeStatus.textContent = "";
-}
-
-function openPayPalFromSlider() {
-  if (paypalOpening) return;
-
+function openPayPalDirectly() {
   const cents = validAmountCents();
+
   if (cents === null) {
     alert("Choisis un montant valide.");
-    resetPayPalSlider();
     return;
   }
 
-  paypalOpening = true;
   const amount = (cents / 100).toFixed(2);
-
   declareInput.value = amount;
-  if (swipeStatus) swipeStatus.textContent = "✓ Ouverture de PayPal…";
 
-  swipeRange.disabled = true;
-  swipeRange.style.setProperty("--swipe-progress", "100%");
+  paypalDirectButton.disabled = true;
+  paypalDirectButton.classList.add("is-opening");
+  if (paypalDirectStatus) {
+    paypalDirectStatus.textContent = "Ouverture de PayPal…";
+  }
 
-  // Navigation directe dans la même fenêtre : plus fiable sur iPhone
-  // qu'un window.open déclenché après une animation.
   window.location.assign(`${paypalBase}/${amount}EUR`);
 }
 
-if (swipeRange) {
-  swipeRange.addEventListener("input", () => {
-    const value = Number(swipeRange.value || 0);
-    swipeRange.style.setProperty("--swipe-progress", `${value}%`);
+if (paypalDirectButton) {
+  paypalDirectButton.addEventListener("click", openPayPalDirectly);
 
-    if (value >= 96) {
-      openPayPalFromSlider();
-    }
-  });
-
-  swipeRange.addEventListener("change", () => {
-    const value = Number(swipeRange.value || 0);
-    if (value < 96 && !paypalOpening) {
-      resetPayPalSlider();
-    }
-  });
-
-  // Au retour depuis PayPal, le slider revient à zéro.
   window.addEventListener("pageshow", () => {
-    paypalOpening = false;
-    swipeRange.disabled = false;
-    resetPayPalSlider();
+    paypalDirectButton.disabled = false;
+    paypalDirectButton.classList.remove("is-opening");
+    if (paypalDirectStatus) {
+      paypalDirectStatus.textContent = "";
+    }
   });
-
-  resetPayPalSlider();
 }
 
 refreshPayPalLink();
