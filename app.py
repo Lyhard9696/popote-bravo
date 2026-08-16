@@ -135,6 +135,14 @@ def init_db():
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+    CREATE TABLE IF NOT EXISTS monthly_ranking_notifications (
+        month_key TEXT NOT NULL,
+        user_id INTEGER NOT NULL,
+        sent_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(month_key, user_id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
     """)
     db.commit()
 
@@ -245,6 +253,105 @@ def notify_admins(db, title, message, kind="warning", link="/admin/stock", dedup
         key = f"{dedupe_key}:{admin['id']}" if dedupe_key else None
         add_notification(db, admin["id"], title, message, kind, link, key)
 
+
+
+
+def notify_member_debt_added(user_id, amount_cents, note=None):
+    """Push envoyé lorsqu'un Popotier ajoute manuellement une dette."""
+    amount = f"{amount_cents/100:.2f} €".replace(".", ",")
+    body = f"Le Popotier a ajouté {amount} à ton ardoise."
+    if note:
+        body += f" Motif : {note}"
+    send_push_to_user(
+        user_id,
+        "🧾 Nouvelle dette",
+        body,
+        "/dashboard",
+        f"debt-added-{user_id}-{int(datetime.now().timestamp())}"
+    )
+
+
+def notify_admins_stockout(product_name):
+    """Push uniquement au passage réel d'un stock positif à zéro."""
+    send_push_to_admins(
+        "🔴 Rupture de stock",
+        f"{product_name} vient de passer à 0.",
+        "/admin/consumptions",
+        f"stockout-{product_name}"
+    )
+
+
+
+def send_previous_month_ranking_notifications():
+    """
+    Envoie une seule fois le bilan du mois précédent.
+    L'appel est idempotent grâce à monthly_ranking_notifications.
+    """
+    now = datetime.now()
+    first_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    previous_end = first_this_month
+    if first_this_month.month == 1:
+        previous_start = first_this_month.replace(year=first_this_month.year - 1, month=12)
+    else:
+        previous_start = first_this_month.replace(month=first_this_month.month - 1)
+
+    month_key = previous_start.strftime("%Y-%m")
+    month_names = [
+        "janvier", "février", "mars", "avril", "mai", "juin",
+        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+    ]
+    month_label = month_names[previous_start.month - 1]
+
+    db = get_db()
+    rows = db.execute("""
+        SELECT u.id, u.name,
+               COALESCE(SUM(c.price_cents), 0) AS total_cents
+        FROM users u
+        LEFT JOIN consumptions c
+          ON c.user_id = u.id
+         AND c.created_at >= ?
+         AND c.created_at < ?
+        WHERE u.is_admin = 0 AND u.active = 1
+        GROUP BY u.id, u.name
+        ORDER BY total_cents DESC, u.name COLLATE NOCASE
+    """, (
+        previous_start.strftime("%Y-%m-%d %H:%M:%S"),
+        previous_end.strftime("%Y-%m-%d %H:%M:%S")
+    )).fetchall()
+
+    already = {
+        row["user_id"] for row in db.execute(
+            "SELECT user_id FROM monthly_ranking_notifications WHERE month_key = ?",
+            (month_key,)
+        ).fetchall()
+    }
+    db.close()
+
+    for position, row in enumerate(rows, start=1):
+        if row["id"] in already:
+            continue
+
+        medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(position, "🏆")
+        total = f"{row['total_cents']/100:.2f} €".replace(".", ",")
+        body = f"Classement de {month_label} terminé — tu termines {position}e avec {total} de consommations."
+        if position == 1:
+            body = f"Classement de {month_label} terminé — tu termines 1er avec {total} de consommations."
+
+        send_push_to_user(
+            row["id"],
+            f"{medal} Classement de {month_label}",
+            body,
+            "/classement",
+            f"ranking-{month_key}-{row['id']}"
+        )
+
+        db2 = get_db()
+        db2.execute("""
+            INSERT OR IGNORE INTO monthly_ranking_notifications (month_key, user_id)
+            VALUES (?, ?)
+        """, (month_key, row["id"]))
+        db2.commit()
+        db2.close()
 
 
 def push_configured():
@@ -373,6 +480,17 @@ def inject_helpers():
 
 
 
+
+
+
+@app.before_request
+def maybe_send_monthly_ranking_push():
+    if datetime.now().day <= 3:
+        try:
+            send_previous_month_ranking_notifications()
+        except Exception:
+            # Une notification ne doit jamais empêcher l'utilisation de Popote Bravo.
+            pass
 
 
 @app.route("/sw.js")
@@ -807,18 +925,22 @@ def consume(product_id):
         (new_stock, new_stock, product["id"])
     )
 
-    if new_stock <= product["low_stock_threshold"]:
-        title = "Rupture de stock" if new_stock == 0 else "Stock faible"
+    became_out_of_stock = product["stock"] > 0 and new_stock == 0
+    if became_out_of_stock:
         notify_admins(
-            db, title,
-            f"{product['name']} : {new_stock} restant(s).",
-            "danger" if new_stock == 0 else "warning",
+            db,
+            "Rupture de stock",
+            f"{product['name']} : rupture de stock.",
+            "danger",
             "/admin/stock",
-            f"stock:{product['id']}:{'zero' if new_stock == 0 else 'low'}"
+            f"stock:{product['id']}:zero"
         )
 
     db.commit()
     db.close()
+
+    if became_out_of_stock:
+        notify_admins_stockout(product["name"])
 
     total_cents = product["price_cents"] * quantity
     session["last_order_id"] = order_id
@@ -881,6 +1003,7 @@ def cart_checkout():
     total_cents = 0
     total_articles = 0
     summary = []
+    stockouts = []
 
     for product_id, quantity in requested.items():
         product = product_map[product_id]
@@ -917,6 +1040,9 @@ def cart_checkout():
 
     db.commit()
     db.close()
+
+    for product_name in stockouts:
+        notify_admins_stockout(product_name)
 
     session["last_order_id"] = order_id
     total_txt = f"{total_cents / 100:.2f}".replace(".", ",")
@@ -1610,6 +1736,9 @@ def product_stock_step(product_id):
     db.commit()
     db.close()
 
+    if product["stock"] > 0 and new_stock == 0:
+        notify_admins_stockout(product["name"])
+
     flash(f"Stock de {product['name']} : {new_stock}.", "success")
     return redirect(request.referrer or url_for("admin_consumptions"))
 
@@ -1645,6 +1774,10 @@ def set_product_stock(product_id):
     )
     db.commit()
     db.close()
+
+    if product["stock"] > 0 and stock == 0:
+        notify_admins_stockout(product["name"])
+
     flash(f"Stock de {product['name']} mis à {stock}.", "success")
     return redirect(request.referrer or url_for("admin_consumptions"))
 
@@ -1903,6 +2036,8 @@ def add_member_debt(user_id):
     )
     db.commit()
     db.close()
+
+    notify_member_debt_added(user_id, amount_cents, note)
 
     flash(
         f"Dette de {amount_cents/100:.2f} € ajoutée à {user['name']}.".replace(".", ","),

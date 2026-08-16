@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.9.2
+# Popote Bravo — V6.10
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -391,3 +391,13 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - Attente explicite de `navigator.serviceWorker.ready`.
 - Le bouton « Activer les notifications » est désormais réellement connecté au script.
 - Ajout de messages d'erreur plus clairs en cas de problème.
+
+
+## V6.10 — Notifications utiles
+
+- Push au membre lorsqu'un Popotier ajoute manuellement une dette, avec montant et motif.
+- Push aux Popotiers uniquement lorsqu'un produit passe réellement d'un stock positif à 0.
+- Suppression des alertes Push de stock faible : seule la rupture déclenche une notification.
+- Bilan Push du classement du mois précédent avec position et total de consommations.
+- 🥇 🥈 🥉 pour le podium, 🏆 pour les autres positions.
+- Le bilan mensuel est idempotent : un membre ne le reçoit qu'une fois par mois.
