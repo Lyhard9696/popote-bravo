@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.10
+# Popote Bravo — V6.10.1
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -401,3 +401,12 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - Bilan Push du classement du mois précédent avec position et total de consommations.
 - 🥇 🥈 🥉 pour le podium, 🏆 pour les autres positions.
 - Le bilan mensuel est idempotent : un membre ne le reçoit qu'une fois par mois.
+
+
+## V6.10.1 — Classement et dettes Popotier
+
+- Le classement mensuel additionne désormais :
+  - les consommations du mois ;
+  - les dettes manuelles ajoutées par le Popotier pendant le mois.
+- Les paiements ne diminuent toujours pas le classement.
+- La notification Push de classement de fin de mois utilise exactement le même calcul.

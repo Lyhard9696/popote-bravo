@@ -285,15 +285,21 @@ def notify_admins_stockout(product_name):
 def send_previous_month_ranking_notifications():
     """
     Envoie une seule fois le bilan du mois précédent.
-    L'appel est idempotent grâce à monthly_ranking_notifications.
+    Le classement additionne consommations + dettes manuelles du Popotier.
     """
     now = datetime.now()
     first_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     previous_end = first_this_month
+
     if first_this_month.month == 1:
-        previous_start = first_this_month.replace(year=first_this_month.year - 1, month=12)
+        previous_start = first_this_month.replace(
+            year=first_this_month.year - 1,
+            month=12
+        )
     else:
-        previous_start = first_this_month.replace(month=first_this_month.month - 1)
+        previous_start = first_this_month.replace(
+            month=first_this_month.month - 1
+        )
 
     month_key = previous_start.strftime("%Y-%m")
     month_names = [
@@ -302,21 +308,35 @@ def send_previous_month_ranking_notifications():
     ]
     month_label = month_names[previous_start.month - 1]
 
+    start_txt = previous_start.strftime("%Y-%m-%d %H:%M:%S")
+    end_txt = previous_end.strftime("%Y-%m-%d %H:%M:%S")
+
     db = get_db()
     rows = db.execute("""
-        SELECT u.id, u.name,
-               COALESCE(SUM(c.price_cents), 0) AS total_cents
+        SELECT
+            u.id,
+            u.name,
+            COALESCE((
+                SELECT SUM(c.price_cents)
+                FROM consumptions c
+                WHERE c.user_id = u.id
+                  AND c.created_at >= ?
+                  AND c.created_at < ?
+            ), 0)
+            +
+            COALESCE((
+                SELECT SUM(md.amount_cents)
+                FROM manual_debts md
+                WHERE md.user_id = u.id
+                  AND md.created_at >= ?
+                  AND md.created_at < ?
+            ), 0) AS total_cents
         FROM users u
-        LEFT JOIN consumptions c
-          ON c.user_id = u.id
-         AND c.created_at >= ?
-         AND c.created_at < ?
         WHERE u.is_admin = 0 AND u.active = 1
-        GROUP BY u.id, u.name
         ORDER BY total_cents DESC, u.name COLLATE NOCASE
     """, (
-        previous_start.strftime("%Y-%m-%d %H:%M:%S"),
-        previous_end.strftime("%Y-%m-%d %H:%M:%S")
+        start_txt, end_txt,
+        start_txt, end_txt
     )).fetchall()
 
     already = {
@@ -333,9 +353,17 @@ def send_previous_month_ranking_notifications():
 
         medal = {1: "🥇", 2: "🥈", 3: "🥉"}.get(position, "🏆")
         total = f"{row['total_cents']/100:.2f} €".replace(".", ",")
-        body = f"Classement de {month_label} terminé — tu termines {position}e avec {total} de consommations."
+
         if position == 1:
-            body = f"Classement de {month_label} terminé — tu termines 1er avec {total} de consommations."
+            body = (
+                f"Classement de {month_label} terminé — "
+                f"tu termines 1er avec {total}."
+            )
+        else:
+            body = (
+                f"Classement de {month_label} terminé — "
+                f"tu termines {position}e avec {total}."
+            )
 
         send_push_to_user(
             row["id"],
@@ -607,13 +635,24 @@ def classement():
     db = get_db()
 
     full_ranking = db.execute("""
-        SELECT u.id, u.name, COALESCE(SUM(c.price_cents), 0) AS total_cents
+        SELECT
+            u.id,
+            u.name,
+            COALESCE((
+                SELECT SUM(c.price_cents)
+                FROM consumptions c
+                WHERE c.user_id = u.id
+                  AND strftime('%Y-%m', c.created_at) = strftime('%Y-%m', 'now')
+            ), 0)
+            +
+            COALESCE((
+                SELECT SUM(md.amount_cents)
+                FROM manual_debts md
+                WHERE md.user_id = u.id
+                  AND strftime('%Y-%m', md.created_at) = strftime('%Y-%m', 'now')
+            ), 0) AS total_cents
         FROM users u
-        LEFT JOIN consumptions c
-          ON c.user_id = u.id
-         AND strftime('%Y-%m', c.created_at) = strftime('%Y-%m', 'now')
         WHERE u.is_admin = 0 AND u.active = 1
-        GROUP BY u.id, u.name
         ORDER BY total_cents DESC, u.name COLLATE NOCASE
     """).fetchall()
 
