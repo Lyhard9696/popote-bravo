@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.6.1
+# Popote Bravo — V6.7.1
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -271,3 +271,30 @@ Correctif mobile :
 - Ajout d'un pictogramme PayPal stylisé.
 - Le badge du nombre de paiements en attente reste visible.
 - Aucun changement fonctionnel sur les paiements.
+
+
+## V6.7
+
+- Swipe « Glisser pour payer avec PayPal ».
+- Le popotier peut ajouter une dette manuelle à un membre.
+- Les dettes manuelles augmentent l'ardoise mais ne comptent pas dans le classement.
+- Suppression d'un produit sans confirmation supplémentaire.
+- Catégories produit : Boisson / Nourriture.
+- Catalogue utilisateur organisé en menus déroulants par catégorie.
+- Recherche utilisateur dans le catalogue.
+- Classement général affichant tous les membres du mois.
+
+
+## V6.7.1 — Catalogue mobile amélioré
+
+- Mini-panier compact, invisible lorsqu'il est vide.
+- Mini-panier fixé juste au-dessus de la navigation mobile.
+- Panier dépliable pour voir le détail des articles sélectionnés.
+- Cartes produits beaucoup plus compactes.
+- Bouton « + Ajouter » qui devient automatiquement un compteur − / +.
+- Total par ligne lorsque plusieurs unités sont sélectionnées.
+- Filtres rapides Tout / Boissons / Nourriture.
+- Recherche catalogue conservée en haut pendant le défilement.
+- Stock faible affiché en orange et stock critique en rouge.
+- Produit sélectionné mis en évidence en jaune.
+- Bouton de validation passe à « Enregistrement… » pendant l'envoi.

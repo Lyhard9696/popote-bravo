@@ -33,9 +33,16 @@
       Tout payer ({{ format_eur(available) }})
     </button>
 
-    <a id="paypal-me-button" class="paypal-me-button" href="#" target="_blank" rel="noopener">
-      Payer avec PayPal
-    </a>
+    <div class="paypal-swipe-wrap">
+      <div class="paypal-swipe" id="paypal-swipe">
+        <div class="paypal-swipe-fill" id="paypal-swipe-fill"></div>
+        <span class="paypal-swipe-text">Glisser pour payer avec PayPal</span>
+        <button type="button" class="paypal-swipe-thumb" id="paypal-swipe-thumb" aria-label="Glisser pour ouvrir PayPal">P</button>
+      </div>
+      <a id="paypal-me-button" class="paypal-fallback-link" href="#" target="_blank" rel="noopener">
+        Ouvrir PayPal manuellement
+      </a>
+    </div>
 
     <p class="muted">
       PayPal s’ouvrira avec le montant prérempli. Une fois le paiement effectué, reviens ici pour le déclarer.
@@ -97,7 +104,66 @@ function refreshPayPalLink() {
 payInput.addEventListener("input", refreshPayPalLink);
 document.getElementById("all-btn").addEventListener("click", () => {
   payInput.value = (maxCents / 100).toFixed(2);
-  refreshPayPalLink();
+  
+const swipe = document.getElementById("paypal-swipe");
+const swipeThumb = document.getElementById("paypal-swipe-thumb");
+const swipeFill = document.getElementById("paypal-swipe-fill");
+let swiping = false;
+let swipeStartX = 0;
+let swipeMax = 0;
+
+function resetSwipe() {
+  swipeThumb.style.transform = "translateX(0px)";
+  swipeFill.style.width = "0px";
+}
+
+function openPayPalFromSwipe() {
+  const cents = validAmountCents();
+  if (cents === null) {
+    alert("Choisis un montant valide.");
+    resetSwipe();
+    return;
+  }
+  const amount = (cents / 100).toFixed(2);
+  declareInput.value = amount;
+  window.location.href = `${paypalBase}/${amount}EUR`;
+}
+
+function startSwipe(event) {
+  swiping = true;
+  swipeStartX = event.clientX;
+  swipeMax = swipe.clientWidth - swipeThumb.offsetWidth - 8;
+  swipeThumb.setPointerCapture(event.pointerId);
+}
+
+function moveSwipe(event) {
+  if (!swiping) return;
+  let distance = Math.max(0, Math.min(swipeMax, event.clientX - swipeStartX));
+  swipeThumb.style.transform = `translateX(${distance}px)`;
+  swipeFill.style.width = `${distance + swipeThumb.offsetWidth}px`;
+}
+
+function endSwipe(event) {
+  if (!swiping) return;
+  swiping = false;
+  const matrix = new DOMMatrixReadOnly(getComputedStyle(swipeThumb).transform);
+  const distance = matrix.m41 || 0;
+  if (distance >= swipeMax * 0.82) {
+    swipeThumb.style.transform = `translateX(${swipeMax}px)`;
+    swipeFill.style.width = "100%";
+    setTimeout(openPayPalFromSwipe, 120);
+  } else {
+    resetSwipe();
+  }
+}
+
+swipeThumb.addEventListener("pointerdown", startSwipe);
+swipeThumb.addEventListener("pointermove", moveSwipe);
+swipeThumb.addEventListener("pointerup", endSwipe);
+swipeThumb.addEventListener("pointercancel", () => { swiping = false; resetSwipe(); });
+
+
+refreshPayPalLink();
 });
 
 paypalButton.addEventListener("click", (event) => {

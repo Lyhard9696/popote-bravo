@@ -72,51 +72,89 @@
   </div>
 
   <form method="post" action="{{ url_for('cart_checkout') }}" id="cart-form">
-    <div class="section-heading">
-      <div>
-        <h2>Consommations</h2>
-        <p class="muted">Choisis plusieurs produits, puis valide tout le panier en une fois.</p>
+    <div class="catalogue-toolbar">
+      <div class="catalogue-search-wrap">
+        <input id="user-product-search" type="search"
+               placeholder="🔎 Rechercher une consommation…"
+               autocomplete="off">
+      </div>
+
+      <div class="catalogue-tabs" role="tablist" aria-label="Catégories">
+        <button type="button" class="catalogue-tab active" data-filter="all">Tout</button>
+        <button type="button" class="catalogue-tab" data-filter="Boisson">🥤 Boissons</button>
+        <button type="button" class="catalogue-tab" data-filter="Nourriture">🍫 Nourriture</button>
       </div>
     </div>
 
-    <div class="products member-products">
+    <div class="products compact-products" id="catalogue-products">
     {% for p in products %}
-      <div class="card member-product-card {% if p['stock'] == 0 %}product-out{% endif %}"
-           data-price="{{ p['price_cents'] }}" data-name="{{ p['name']|e }}">
-        <div class="member-product-info">
-          <strong>{{ p["name"] }}</strong>
-          {% if p["stock"] == 0 %}
-            <span class="rupture-label">Rupture</span>
-          {% else %}
-            <span>{{ format_eur(p["price_cents"]) }} · {{ p["stock"] }} en stock</span>
-          {% endif %}
-        </div>
+      <div class="card compact-product-card searchable-user-product
+                  {% if p['stock'] == 0 %}product-out{% elif p['stock'] <= p['low_stock_threshold'] %}product-low{% endif %}"
+           data-search="{{ p['name']|lower }}"
+           data-category="{{ p['category'] }}"
+           data-price="{{ p['price_cents'] }}"
+           data-name="{{ p['name']|e }}">
 
-        {% if p["stock"] > 0 and p["active"] %}
-        <div class="quantity-picker cart-picker">
-          <button type="button" class="qty-minus" aria-label="Retirer une unité">−</button>
-          <input class="qty-input cart-qty"
-                 name="qty_{{ p['id'] }}"
-                 type="number"
-                 min="0"
-                 max="{{ p['stock'] }}"
-                 value="0"
-                 inputmode="numeric">
-          <button type="button" class="qty-plus" aria-label="Ajouter une unité">+</button>
+        <div class="compact-product-main">
+          <div class="compact-product-copy">
+            <strong>{{ p["name"] }}</strong>
+            {% if p["stock"] == 0 %}
+              <span class="rupture-label">Rupture</span>
+            {% else %}
+              <span class="product-meta">
+                {{ format_eur(p["price_cents"]) }} ·
+                <b class="{% if p['stock'] <= 1 %}stock-critical{% elif p['stock'] <= p['low_stock_threshold'] %}stock-warning{% endif %}">
+                  {{ p["stock"] }} restant{% if p["stock"] > 1 %}s{% endif %}
+                </b>
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="compact-product-action">
+            {% if p["stock"] > 0 and p["active"] %}
+              <button type="button" class="quick-add-btn">+ Ajouter</button>
+
+              <div class="inline-qty-control" hidden>
+                <button type="button" class="qty-minus" aria-label="Retirer une unité">−</button>
+                <input class="qty-input cart-qty"
+                       name="qty_{{ p['id'] }}"
+                       type="number"
+                       min="0"
+                       max="{{ p['stock'] }}"
+                       value="0"
+                       inputmode="numeric">
+                <button type="button" class="qty-plus" aria-label="Ajouter une unité">+</button>
+              </div>
+              <span class="line-total" hidden>0,00 €</span>
+            {% else %}
+              <div class="out-of-stock-action">Indisponible</div>
+            {% endif %}
+          </div>
         </div>
-        {% else %}
-        <div class="out-of-stock-action">Indisponible</div>
-        {% endif %}
       </div>
     {% endfor %}
     </div>
 
-    <div class="cart-bar" id="cart-bar">
-      <div>
-        <strong>Panier · <span id="cart-count">0</span> article(s)</strong>
-        <span id="cart-total">0,00 €</span>
+    <div class="empty-search-result" id="empty-search-result" hidden>
+      Aucun produit trouvé.
+    </div>
+
+    <div class="mini-cart" id="mini-cart" hidden>
+      <button type="button" class="mini-cart-summary" id="mini-cart-summary">
+        <span class="mini-cart-main">
+          🛒 <strong><span id="cart-count">0</span> article(s)</strong>
+          <span id="cart-total">0,00 €</span>
+        </span>
+        <span class="mini-cart-chevron">⌃</span>
+      </button>
+
+      <div class="mini-cart-details" id="mini-cart-details" hidden>
+        <div id="mini-cart-lines" class="mini-cart-lines"></div>
       </div>
-      <button type="submit" id="cart-submit" disabled>Ajouter à mon ardoise</button>
+
+      <button type="submit" id="cart-submit" class="mini-cart-submit">
+        Valider →
+      </button>
     </div>
   </form>
 
@@ -170,41 +208,98 @@
 
 <script>
 const cartForm = document.getElementById('cart-form');
-const cartBar = document.getElementById('cart-bar');
+const miniCart = document.getElementById('mini-cart');
 const cartCount = document.getElementById('cart-count');
 const cartTotal = document.getElementById('cart-total');
 const cartSubmit = document.getElementById('cart-submit');
+const miniCartSummary = document.getElementById('mini-cart-summary');
+const miniCartDetails = document.getElementById('mini-cart-details');
+const miniCartLines = document.getElementById('mini-cart-lines');
+const userSearch = document.getElementById('user-product-search');
+const emptySearchResult = document.getElementById('empty-search-result');
+let activeCategory = 'all';
+
+function formatEuro(cents) {
+  return (cents / 100).toFixed(2).replace('.', ',') + ' €';
+}
+
+function syncProductCard(card) {
+  const input = card.querySelector('.cart-qty');
+  if (!input) return;
+
+  let qty = parseInt(input.value || '0', 10);
+  const max = parseInt(input.max || '0', 10);
+
+  if (qty < 0) qty = 0;
+  if (qty > max) qty = max;
+  input.value = qty;
+
+  const quickAdd = card.querySelector('.quick-add-btn');
+  const control = card.querySelector('.inline-qty-control');
+  const lineTotal = card.querySelector('.line-total');
+
+  if (qty > 0) {
+    quickAdd.hidden = true;
+    control.hidden = false;
+    lineTotal.hidden = false;
+    lineTotal.textContent = formatEuro(qty * parseInt(card.dataset.price || '0', 10));
+    card.classList.add('selected-product');
+  } else {
+    quickAdd.hidden = false;
+    control.hidden = true;
+    lineTotal.hidden = true;
+    card.classList.remove('selected-product');
+  }
+}
 
 function refreshCart() {
   let count = 0;
   let totalCents = 0;
+  const lines = [];
 
-  document.querySelectorAll('.member-product-card').forEach((card) => {
+  document.querySelectorAll('.compact-product-card').forEach((card) => {
     const input = card.querySelector('.cart-qty');
     if (!input) return;
-    let qty = parseInt(input.value || '0', 10);
-    const max = parseInt(input.max || '0', 10);
-    if (qty < 0) qty = 0;
-    if (qty > max) qty = max;
-    input.value = qty;
 
-    count += qty;
-    totalCents += qty * parseInt(card.dataset.price || '0', 10);
-    card.classList.toggle('selected-product', qty > 0);
+    syncProductCard(card);
+
+    const qty = parseInt(input.value || '0', 10);
+    if (qty > 0) {
+      const lineCents = qty * parseInt(card.dataset.price || '0', 10);
+      count += qty;
+      totalCents += lineCents;
+      lines.push({
+        name: card.dataset.name,
+        qty: qty,
+        total: lineCents
+      });
+    }
   });
 
   cartCount.textContent = count;
-  cartTotal.textContent = (totalCents / 100).toFixed(2).replace('.', ',') + ' €';
-  cartSubmit.disabled = count === 0;
-  cartBar.classList.toggle('cart-active', count > 0);
+  cartTotal.textContent = formatEuro(totalCents);
+  miniCart.hidden = count === 0;
+
+  miniCartLines.innerHTML = lines.map(line =>
+    `<div class="mini-cart-line">
+      <span>${line.qty} × ${line.name}</span>
+      <strong>${formatEuro(line.total)}</strong>
+    </div>`
+  ).join('');
 }
 
-document.querySelectorAll('.member-product-card').forEach((card) => {
+document.querySelectorAll('.compact-product-card').forEach((card) => {
   const input = card.querySelector('.cart-qty');
   if (!input) return;
 
+  const quickAdd = card.querySelector('.quick-add-btn');
   const minus = card.querySelector('.qty-minus');
   const plus = card.querySelector('.qty-plus');
+
+  quickAdd.addEventListener('click', () => {
+    input.value = '1';
+    refreshCart();
+  });
 
   minus.addEventListener('click', () => {
     input.value = Math.max(0, parseInt(input.value || '0', 10) - 1);
@@ -212,19 +307,56 @@ document.querySelectorAll('.member-product-card').forEach((card) => {
   });
 
   plus.addEventListener('click', () => {
-    input.value = Math.min(parseInt(input.max, 10), parseInt(input.value || '0', 10) + 1);
+    input.value = Math.min(
+      parseInt(input.max || '0', 10),
+      parseInt(input.value || '0', 10) + 1
+    );
     refreshCart();
   });
 
   input.addEventListener('input', refreshCart);
 });
 
+function refreshCatalogueFilter() {
+  const term = (userSearch.value || '').trim().toLowerCase();
+  let visibleCount = 0;
+
+  document.querySelectorAll('.searchable-user-product').forEach((card) => {
+    const matchesSearch = card.dataset.search.includes(term);
+    const matchesCategory = activeCategory === 'all' || card.dataset.category === activeCategory;
+    const visible = matchesSearch && matchesCategory;
+
+    card.hidden = !visible;
+    if (visible) visibleCount++;
+  });
+
+  emptySearchResult.hidden = visibleCount !== 0;
+}
+
+document.querySelectorAll('.catalogue-tab').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('.catalogue-tab').forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+    activeCategory = button.dataset.filter;
+    refreshCatalogueFilter();
+  });
+});
+
+userSearch.addEventListener('input', refreshCatalogueFilter);
+
+miniCartSummary.addEventListener('click', () => {
+  const isHidden = miniCartDetails.hidden;
+  miniCartDetails.hidden = !isHidden;
+  miniCartSummary.querySelector('.mini-cart-chevron').textContent = isHidden ? '⌄' : '⌃';
+});
+
 cartForm.addEventListener('submit', () => {
   cartSubmit.disabled = true;
   cartSubmit.textContent = 'Enregistrement…';
-  cartBar.classList.add('saving');
+  miniCart.classList.add('saving');
 });
 
 refreshCart();
+refreshCatalogueFilter();
 </script>
 {% endblock %}

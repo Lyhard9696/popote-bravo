@@ -40,6 +40,25 @@
 </table>
 </div>
 
+
+<h2>Dettes ajoutées par le popotier</h2>
+<div class="card table-wrap">
+<table>
+  <thead><tr><th>Montant</th><th>Motif</th><th>Date</th></tr></thead>
+  <tbody>
+  {% for d in manual_debts %}
+    <tr>
+      <td><strong>{{ format_eur(d["amount_cents"]) }}</strong></td>
+      <td>{{ d["note"] or "—" }}</td>
+      <td>{{ d["created_at"] }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="3">Aucune dette ajoutée manuellement.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
 <h2>Paiements</h2>
 <div class="card table-wrap">
 <table>

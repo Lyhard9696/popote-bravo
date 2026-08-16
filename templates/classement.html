@@ -1,34 +1,35 @@
 {% extends "base.html" %}
-{% block title %}Classement — Popote Bravo
-<div class="my-ranking-card card">
-  {% if my_position %}
-    <span>Ma position ce mois-ci</span>
-    <strong>{{ my_position }}<sup>e</sup> — {{ format_eur(my_total_cents) }}</strong>
-  {% else %}
-    <span>Ma position ce mois-ci</span>
-    <strong>Pas encore classé</strong>
-    <small>Ta première consommation du mois te fera entrer dans le classement.</small>
-  {% endif %}
-</div>
-
-{% endblock %}
+{% block title %}Classement — Popote Bravo{% endblock %}
 {% block content %}
 <div class="ranking-page">
-  <p class="eyebrow">Ce mois-ci · {{ month_label }}</p>
+  <p class="eyebrow">Classement général · {{ month_label }}</p>
   <h1>🏆 Classement</h1>
-  <p class="muted">Top 3 selon le montant total consommé ce mois-ci. Les paiements ne changent pas le classement.</p>
+  <p class="muted">Tout le peloton, classé selon le montant consommé ce mois-ci. Les paiements et dettes manuelles ne comptent pas.</p>
 
-  <div class="podium-list">
-  {% set medals = ["🥇", "🥈", "🥉"] %}
+  <div class="full-ranking-list">
   {% for member in ranking %}
-    <div class="podium-card podium-{{ loop.index }}">
-      <span class="podium-medal">{{ medals[loop.index0] }}</span>
-      <div class="podium-name">{{ member["name"] }}</div>
-      <strong>{{ format_eur(member["total_cents"]) }}</strong>
+    <div class="card full-ranking-row {% if member['id'] == current_user['id'] %}my-rank-row{% endif %}">
+      <span class="rank-number">
+        {% if loop.index == 1 %}🥇
+        {% elif loop.index == 2 %}🥈
+        {% elif loop.index == 3 %}🥉
+        {% else %}{{ loop.index }}{% endif %}
+      </span>
+      <strong>{{ member["name"] }}</strong>
+      <span class="rank-amount">{{ format_eur(member["total_cents"]) }}</span>
     </div>
   {% else %}
-    <div class="card">Aucune consommation enregistrée ce mois-ci.</div>
+    <div class="card">Aucun membre à afficher.</div>
   {% endfor %}
+  </div>
+
+  <div class="my-ranking-card card">
+    <span>Ma position ce mois-ci</span>
+    {% if my_position %}
+      <strong>{{ my_position }}e — {{ format_eur(my_total_cents) }}</strong>
+    {% else %}
+      <strong>Pas encore classé</strong>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

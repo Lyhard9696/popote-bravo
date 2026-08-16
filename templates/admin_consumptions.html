@@ -17,6 +17,13 @@
       <div><label>Nom</label><input name="name" placeholder="Ex. Coca Zero" required></div>
       <div><label>Prix (€)</label><input name="price" placeholder="Ex. 1,50" inputmode="decimal" required></div>
       <div><label>Stock initial</label><input name="stock" type="number" min="0" value="0" required></div>
+      <div>
+        <label>Catégorie</label>
+        <select name="category" required>
+          <option value="Boisson">Boisson</option>
+          <option value="Nourriture">Nourriture</option>
+        </select>
+      </div>
       <div><label>Alerte stock faible</label><input name="low_stock_threshold" type="number" min="0" value="5" required></div>
       <button type="submit">Ajouter le produit</button>
     </form>
@@ -65,9 +72,7 @@
       </form>
 
       <form method="post" action="{{ url_for('delete_product', product_id=p['id']) }}"
-            class="danger-form"
-            onsubmit="return confirmProductDeletion(this, '{{ p['name']|e }}');">
-        <input type="hidden" name="confirm_delete" value="">
+            class="danger-form">
         <button type="submit" class="delete-product-btn">Supprimer ce produit</button>
       </form>
     </div>
@@ -86,15 +91,6 @@ document.getElementById('product-search').addEventListener('input', function() {
   });
 });
 
-function confirmProductDeletion(form, name) {
-  const answer = prompt(
-    'SUPPRESSION DÉFINITIVE\n\nProduit : ' + name +
-    '\nLes anciennes consommations seront conservées.\n\nTape SUPPRIMER pour confirmer.'
-  );
-  if (answer !== 'SUPPRIMER') return false;
-  form.querySelector('[name="confirm_delete"]').value = 'SUPPRIMER';
-  return true;
-}
 
 function confirmLargeStockChange(form, name) {
   const current = parseInt(form.dataset.currentStock || '0', 10);

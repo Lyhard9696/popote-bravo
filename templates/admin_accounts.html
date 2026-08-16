@@ -37,6 +37,23 @@
         <button type="submit">Enregistrer le compte</button>
       </form>
 
+
+      <form method="post" action="{{ url_for('add_member_debt', user_id=m['id']) }}"
+            class="member-debt-form">
+        <h3>Ajouter une dette</h3>
+        <div class="debt-grid">
+          <div>
+            <label>Montant (€)</label>
+            <input name="amount" inputmode="decimal" placeholder="Ex. 5,00" required>
+          </div>
+          <div>
+            <label>Motif</label>
+            <input name="note" placeholder="Ex. achat exceptionnel">
+          </div>
+        </div>
+        <button type="submit">Ajouter à l’ardoise</button>
+      </form>
+
       <form method="post" action="{{ url_for('reset_member_password', user_id=m['id']) }}" class="member-password-form">
         <label>Nouveau mot de passe</label>
         <input name="new_password" type="password" minlength="8" placeholder="Minimum 8 caractères" required>

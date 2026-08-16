@@ -80,6 +80,17 @@ def init_db():
         FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS manual_debts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        amount_cents INTEGER NOT NULL,
+        note TEXT,
+        created_by INTEGER,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
     CREATE TABLE IF NOT EXISTS payment_claims (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -121,6 +132,9 @@ def init_db():
         db.commit()
     if "low_stock_threshold" not in product_cols:
         db.execute("ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER NOT NULL DEFAULT 5")
+        db.commit()
+    if "category" not in product_cols:
+        db.execute("ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT 'Boisson'")
         db.commit()
 
     cols = {row["name"] for row in db.execute("PRAGMA table_info(payments)").fetchall()}
@@ -179,13 +193,16 @@ def user_balance_cents(user_id):
         "SELECT COALESCE(SUM(price_cents), 0) AS total FROM consumptions WHERE user_id = ?",
         (user_id,)
     ).fetchone()["total"]
+    manual_debts = db.execute(
+        "SELECT COALESCE(SUM(amount_cents), 0) AS total FROM manual_debts WHERE user_id = ?",
+        (user_id,)
+    ).fetchone()["total"]
     paid = db.execute(
         "SELECT COALESCE(SUM(amount_cents), 0) AS total FROM payments WHERE user_id = ?",
         (user_id,)
     ).fetchone()["total"]
     db.close()
-    return spent - paid
-
+    return spent + manual_debts - paid
 
 
 def add_notification(db, user_id, title, message, kind="info", link=None, dedupe_key=None):
@@ -301,19 +318,17 @@ def classement():
 
     full_ranking = db.execute("""
         SELECT u.id, u.name, COALESCE(SUM(c.price_cents), 0) AS total_cents
-        FROM consumptions c
-        JOIN users u ON u.id = c.user_id
-        WHERE u.is_admin = 0
-          AND strftime('%Y-%m', c.created_at) = strftime('%Y-%m', 'now')
+        FROM users u
+        LEFT JOIN consumptions c
+          ON c.user_id = u.id
+         AND strftime('%Y-%m', c.created_at) = strftime('%Y-%m', 'now')
+        WHERE u.is_admin = 0 AND u.active = 1
         GROUP BY u.id, u.name
-        HAVING SUM(c.price_cents) > 0
         ORDER BY total_cents DESC, u.name COLLATE NOCASE
     """).fetchall()
 
-    ranking = full_ranking[:3]
     my_position = None
     my_total_cents = 0
-
     for position, row in enumerate(full_ranking, start=1):
         if row["id"] == user["id"]:
             my_position = position
@@ -325,7 +340,7 @@ def classement():
 
     return render_template(
         "classement.html",
-        ranking=ranking,
+        ranking=full_ranking,
         month_label=month_label,
         my_position=my_position,
         my_total_cents=my_total_cents,
@@ -467,7 +482,9 @@ def dashboard():
         SELECT *
         FROM products
         WHERE active = 1 OR stock = 0
-        ORDER BY CASE WHEN stock = 0 THEN 1 ELSE 0 END, name COLLATE NOCASE
+        ORDER BY category COLLATE NOCASE,
+                 CASE WHEN stock = 0 THEN 1 ELSE 0 END,
+                 name COLLATE NOCASE
     """).fetchall()
 
     raw_history = db.execute("""
@@ -1203,7 +1220,9 @@ def admin_accounts():
     members = db.execute("""
         SELECT u.id, u.name, u.active,
                COALESCE((SELECT SUM(c.price_cents)
-                         FROM consumptions c WHERE c.user_id = u.id), 0) AS spent,
+                         FROM consumptions c WHERE c.user_id = u.id), 0)
+               + COALESCE((SELECT SUM(md.amount_cents)
+                           FROM manual_debts md WHERE md.user_id = u.id), 0) AS spent,
                COALESCE((SELECT SUM(p.amount_cents)
                          FROM payments p WHERE p.user_id = u.id), 0) AS paid
         FROM users u
@@ -1252,7 +1271,9 @@ def admin():
     members = db.execute("""
         SELECT u.id, u.name, u.active,
                COALESCE((SELECT SUM(c.price_cents)
-                         FROM consumptions c WHERE c.user_id = u.id), 0) AS spent,
+                         FROM consumptions c WHERE c.user_id = u.id), 0)
+               + COALESCE((SELECT SUM(md.amount_cents)
+                           FROM manual_debts md WHERE md.user_id = u.id), 0) AS spent,
                COALESCE((SELECT SUM(p.amount_cents)
                          FROM payments p WHERE p.user_id = u.id), 0) AS paid
         FROM users u
@@ -1298,6 +1319,9 @@ def admin():
 @admin_required
 def add_product():
     name = request.form["name"].strip()
+    category = request.form.get("category", "Boisson").strip()
+    if category not in {"Boisson", "Nourriture"}:
+        category = "Boisson"
     try:
         price_cents = int(round(float(request.form["price"].replace(",", ".")) * 100))
         stock = int(request.form.get("stock", "0"))
@@ -1313,8 +1337,8 @@ def add_product():
     db = get_db()
     try:
         db.execute(
-            "INSERT INTO products (name, price_cents, stock, low_stock_threshold, active) VALUES (?, ?, ?, ?, ?)",
-            (name, price_cents, stock, low_stock_threshold, 1 if stock > 0 else 0)
+            "INSERT INTO products (name, price_cents, stock, low_stock_threshold, category, active) VALUES (?, ?, ?, ?, ?, ?)",
+            (name, price_cents, stock, low_stock_threshold, category, 1 if stock > 0 else 0)
         )
         db.commit()
         flash("Boisson ajoutée.", "success")
@@ -1328,6 +1352,9 @@ def add_product():
 def edit_product(product_id):
     name = request.form["name"].strip()
     requested_active = 1 if request.form.get("active") == "on" else 0
+    category = request.form.get("category", "Boisson").strip()
+    if category not in {"Boisson", "Nourriture"}:
+        category = "Boisson"
 
     try:
         price_cents = int(round(float(request.form["price"].replace(",", ".")) * 100))
@@ -1346,8 +1373,8 @@ def edit_product(product_id):
     db = get_db()
     try:
         db.execute(
-            "UPDATE products SET name = ?, price_cents = ?, stock = ?, low_stock_threshold = ?, active = ? WHERE id = ?",
-            (name, price_cents, stock, low_stock_threshold, active, product_id)
+            "UPDATE products SET name = ?, price_cents = ?, stock = ?, low_stock_threshold = ?, category = ?, active = ? WHERE id = ?",
+            (name, price_cents, stock, low_stock_threshold, category, active, product_id)
         )
         db.commit()
         flash("Produit mis à jour.", "success")
@@ -1395,9 +1422,6 @@ def set_product_stock(product_id):
 @app.post("/admin/products/<int:product_id>/delete")
 @admin_required
 def delete_product(product_id):
-    if request.form.get("confirm_delete") != "SUPPRIMER":
-        flash("Suppression non confirmée.", "error")
-        return redirect(request.referrer or url_for("admin_consumptions"))
 
     db = get_db()
     product = db.execute("SELECT id, name FROM products WHERE id = ?", (product_id,)).fetchone()
@@ -1607,6 +1631,57 @@ def reset_member_password(user_id):
     flash("Mot de passe du membre réinitialisé.", "success")
     return redirect(request.referrer or url_for("admin_accounts"))
 
+
+@app.post("/admin/members/<int:user_id>/add-debt")
+@admin_required
+def add_member_debt(user_id):
+    admin_user = current_user()
+    try:
+        amount_cents = int(round(float(request.form["amount"].replace(",", ".")) * 100))
+    except (KeyError, ValueError):
+        flash("Montant de dette invalide.", "error")
+        return redirect(request.referrer or url_for("admin_accounts"))
+
+    note = request.form.get("note", "").strip()
+
+    if amount_cents <= 0:
+        flash("La dette doit être supérieure à 0 €.", "error")
+        return redirect(request.referrer or url_for("admin_accounts"))
+
+    db = get_db()
+    user = db.execute(
+        "SELECT id, name FROM users WHERE id = ? AND is_admin = 0",
+        (user_id,)
+    ).fetchone()
+    if not user:
+        db.close()
+        flash("Membre introuvable.", "error")
+        return redirect(url_for("admin_accounts"))
+
+    db.execute("""
+        INSERT INTO manual_debts (user_id, amount_cents, note, created_by)
+        VALUES (?, ?, ?, ?)
+    """, (user_id, amount_cents, note, admin_user["id"]))
+
+    add_notification(
+        db,
+        user_id,
+        "Dette ajoutée",
+        f"Le popotier a ajouté {amount_cents/100:.2f} € à ton ardoise"
+        + (f" : {note}" if note else "."),
+        "warning",
+        "/dashboard"
+    )
+    db.commit()
+    db.close()
+
+    flash(
+        f"Dette de {amount_cents/100:.2f} € ajoutée à {user['name']}.".replace(".", ","),
+        "success"
+    )
+    return redirect(request.referrer or url_for("admin_accounts"))
+
+
 @app.route("/admin/member/<int:user_id>")
 @admin_required
 def member_detail(user_id):
@@ -1615,23 +1690,27 @@ def member_detail(user_id):
     if not user:
         db.close()
         flash("Membre introuvable.", "error")
-        return redirect(url_for("admin"))
+        return redirect(url_for("admin_accounts"))
+
     consumptions = db.execute(
-        "SELECT * FROM consumptions WHERE user_id = ? ORDER BY id DESC", (user_id,)
+        "SELECT * FROM consumptions WHERE user_id = ? ORDER BY id DESC",
+        (user_id,)
     ).fetchall()
     payments = db.execute(
-        "SELECT * FROM payments WHERE user_id = ? ORDER BY id DESC", (user_id,)
+        "SELECT * FROM payments WHERE user_id = ? ORDER BY id DESC",
+        (user_id,)
+    ).fetchall()
+    manual_debts = db.execute(
+        "SELECT * FROM manual_debts WHERE user_id = ? ORDER BY id DESC",
+        (user_id,)
     ).fetchall()
     db.close()
+
     return render_template(
         "member_detail.html",
         member=user,
         consumptions=consumptions,
         payments=payments,
+        manual_debts=manual_debts,
         balance=user_balance_cents(user_id)
     )
-
-init_db()
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=os.getenv("APP_ENV") != "production")
