@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.8.1
+# Popote Bravo — V6.8.2
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -327,3 +327,12 @@ Correctif mobile :
 - Correction de `admin_consumptions.html`.
 - Les blocs Jinja sont désormais correctement fermés avec `{% endblock %}`.
 - Aucun changement sur la base de données ni sur la logique métier.
+
+
+## V6.8.2 — Correctif swipe PayPal
+
+- Le curseur PayPal peut maintenant être glissé réellement au doigt sur iPhone.
+- Support Pointer Events + fallback Touch Events.
+- Support souris pour test sur PC.
+- Déclenchement à environ 78 % de la course.
+- Retour automatique à gauche si le swipe n'est pas terminé.

@@ -108,12 +108,32 @@ document.getElementById("all-btn").addEventListener("click", () => {
 const swipe = document.getElementById("paypal-swipe");
 const swipeThumb = document.getElementById("paypal-swipe-thumb");
 const swipeFill = document.getElementById("paypal-swipe-fill");
-let swiping = false;
-let swipeStartX = 0;
-let swipeMax = 0;
+
+let dragging = false;
+let startX = 0;
+let currentX = 0;
+let maxDistance = 0;
+
+function clientXFromEvent(event) {
+  if (event.touches && event.touches.length) return event.touches[0].clientX;
+  if (event.changedTouches && event.changedTouches.length) return event.changedTouches[0].clientX;
+  return event.clientX;
+}
+
+function setSwipePosition(distance) {
+  const clamped = Math.max(0, Math.min(maxDistance, distance));
+  currentX = clamped;
+  swipeThumb.style.transition = "none";
+  swipeFill.style.transition = "none";
+  swipeThumb.style.transform = `translate3d(${clamped}px, 0, 0)`;
+  swipeFill.style.width = `${clamped + swipeThumb.offsetWidth}px`;
+}
 
 function resetSwipe() {
-  swipeThumb.style.transform = "translateX(0px)";
+  currentX = 0;
+  swipeThumb.style.transition = "transform .18s ease";
+  swipeFill.style.transition = "width .18s ease";
+  swipeThumb.style.transform = "translate3d(0,0,0)";
   swipeFill.style.width = "0px";
 }
 
@@ -129,39 +149,60 @@ function openPayPalFromSwipe() {
   window.location.href = `${paypalBase}/${amount}EUR`;
 }
 
-function startSwipe(event) {
-  swiping = true;
-  swipeStartX = event.clientX;
-  swipeMax = swipe.clientWidth - swipeThumb.offsetWidth - 8;
-  swipeThumb.setPointerCapture(event.pointerId);
+function startDrag(event) {
+  dragging = true;
+  startX = clientXFromEvent(event);
+  currentX = 0;
+  maxDistance = Math.max(0, swipe.clientWidth - swipeThumb.offsetWidth - 8);
+  swipe.classList.add("dragging");
+
+  if (event.pointerId && swipeThumb.setPointerCapture) {
+    try { swipeThumb.setPointerCapture(event.pointerId); } catch (_) {}
+  }
+
+  event.preventDefault();
 }
 
-function moveSwipe(event) {
-  if (!swiping) return;
-  let distance = Math.max(0, Math.min(swipeMax, event.clientX - swipeStartX));
-  swipeThumb.style.transform = `translateX(${distance}px)`;
-  swipeFill.style.width = `${distance + swipeThumb.offsetWidth}px`;
+function moveDrag(event) {
+  if (!dragging) return;
+  const x = clientXFromEvent(event);
+  setSwipePosition(x - startX);
+  event.preventDefault();
 }
 
-function endSwipe(event) {
-  if (!swiping) return;
-  swiping = false;
-  const matrix = new DOMMatrixReadOnly(getComputedStyle(swipeThumb).transform);
-  const distance = matrix.m41 || 0;
-  if (distance >= swipeMax * 0.82) {
-    swipeThumb.style.transform = `translateX(${swipeMax}px)`;
-    swipeFill.style.width = "100%";
-    setTimeout(openPayPalFromSwipe, 120);
+function endDrag(event) {
+  if (!dragging) return;
+  dragging = false;
+  swipe.classList.remove("dragging");
+
+  if (currentX >= maxDistance * 0.78) {
+    setSwipePosition(maxDistance);
+    swipeThumb.style.transition = "transform .12s ease";
+    swipeFill.style.transition = "width .12s ease";
+    setTimeout(openPayPalFromSwipe, 140);
   } else {
     resetSwipe();
   }
+
+  event.preventDefault();
 }
 
-swipeThumb.addEventListener("pointerdown", startSwipe);
-swipeThumb.addEventListener("pointermove", moveSwipe);
-swipeThumb.addEventListener("pointerup", endSwipe);
-swipeThumb.addEventListener("pointercancel", () => { swiping = false; resetSwipe(); });
+/* Pointer Events : Safari récent, Chrome, Android */
+swipeThumb.addEventListener("pointerdown", startDrag, { passive: false });
+window.addEventListener("pointermove", moveDrag, { passive: false });
+window.addEventListener("pointerup", endDrag, { passive: false });
+window.addEventListener("pointercancel", endDrag, { passive: false });
 
+/* Fallback iOS / Safari */
+swipeThumb.addEventListener("touchstart", startDrag, { passive: false });
+window.addEventListener("touchmove", moveDrag, { passive: false });
+window.addEventListener("touchend", endDrag, { passive: false });
+window.addEventListener("touchcancel", endDrag, { passive: false });
+
+/* Souris pour tests PC */
+swipeThumb.addEventListener("mousedown", startDrag);
+window.addEventListener("mousemove", moveDrag);
+window.addEventListener("mouseup", endDrag);
 
 refreshPayPalLink();
 });

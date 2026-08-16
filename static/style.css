@@ -1785,3 +1785,28 @@ button:active,
     margin-left: auto;
   }
 }
+
+
+/* V6.8.2 — correctif swipe PayPal tactile */
+.paypal-swipe {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.paypal-swipe-thumb {
+  touch-action: none !important;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: grab;
+  will-change: transform;
+}
+
+.paypal-swipe.dragging .paypal-swipe-thumb {
+  cursor: grabbing;
+  transition: none !important;
+}
+
+.paypal-swipe.dragging .paypal-swipe-fill {
+  transition: none !important;
+}
