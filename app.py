@@ -1388,6 +1388,43 @@ def edit_product(product_id):
 
 
 
+
+@app.post("/admin/products/<int:product_id>/stock-step")
+@admin_required
+def product_stock_step(product_id):
+    try:
+        step = int(request.form.get("step", "0"))
+    except ValueError:
+        step = 0
+
+    if step not in {-1, 1}:
+        flash("Ajustement de stock invalide.", "error")
+        return redirect(request.referrer or url_for("admin_consumptions"))
+
+    db = get_db()
+    product = db.execute(
+        "SELECT id, name, stock FROM products WHERE id = ?",
+        (product_id,)
+    ).fetchone()
+
+    if not product:
+        db.close()
+        flash("Produit introuvable.", "error")
+        return redirect(request.referrer or url_for("admin_consumptions"))
+
+    new_stock = max(0, product["stock"] + step)
+
+    db.execute(
+        "UPDATE products SET stock = ?, active = CASE WHEN ? > 0 THEN 1 ELSE 0 END WHERE id = ?",
+        (new_stock, new_stock, product_id)
+    )
+    db.commit()
+    db.close()
+
+    flash(f"Stock de {product['name']} : {new_stock}.", "success")
+    return redirect(request.referrer or url_for("admin_consumptions"))
+
+
 @app.post("/admin/products/<int:product_id>/set-stock")
 @admin_required
 def set_product_stock(product_id):

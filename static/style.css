@@ -1605,3 +1605,183 @@ button:active,
     padding: 8px 11px;
   }
 }
+
+
+/* V6.8 — Popotier compact */
+
+.compact-admin-list {
+  display: grid;
+  gap: 10px;
+}
+
+.compact-admin-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+}
+
+.compact-admin-card.is-open {
+  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+  border: 1px solid #e5e7eb;
+}
+
+.compact-admin-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.compact-admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.compact-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: #111;
+  color: #f6c515;
+  font-weight: 900;
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+
+.compact-admin-identity > div:last-child,
+.compact-product-summary > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.compact-admin-identity strong,
+.compact-product-summary strong {
+  font-size: 17px;
+}
+
+.compact-admin-identity span,
+.compact-product-summary span {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.compact-admin-identity em {
+  font-style: normal;
+  font-weight: 800;
+}
+
+.status-active {
+  color: #166534;
+}
+
+.status-disabled {
+  color: #991b1b;
+}
+
+.compact-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.compact-detail-link {
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #f3f4f6;
+}
+
+.compact-toggle {
+  margin: 0;
+  padding: 9px 11px;
+  min-height: 40px;
+  background: #111;
+  color: white;
+  font-size: 13px;
+}
+
+.compact-admin-panel {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+  animation: compactPanelIn .16s ease-out;
+}
+
+@keyframes compactPanelIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.compact-product-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.compact-stock-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.compact-stock-controls form {
+  margin: 0;
+}
+
+.stock-step-btn {
+  margin: 0;
+  min-width: 42px;
+  min-height: 40px;
+  padding: 7px 9px;
+  background: var(--bravo-yellow);
+  color: #111;
+}
+
+.stock-step-btn:disabled {
+  opacity: .35;
+}
+
+.stock-number {
+  min-width: 34px;
+  text-align: center;
+  font-weight: 900;
+  font-size: 18px;
+}
+
+@media (max-width: 680px) {
+  .compact-admin-summary {
+    align-items: flex-start;
+  }
+
+  .compact-admin-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .compact-detail-link,
+  .compact-toggle {
+    text-align: center;
+  }
+
+  .compact-product-admin .compact-admin-summary {
+    display: grid;
+    gap: 12px;
+  }
+
+  .compact-stock-controls {
+    width: 100%;
+  }
+
+  .compact-stock-controls .compact-toggle {
+    margin-left: auto;
+  }
+}

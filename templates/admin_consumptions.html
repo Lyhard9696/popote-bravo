@@ -33,14 +33,21 @@
   <div class="search-box">
     <input id="product-search" type="search" placeholder="🔎 Rechercher un produit…" autocomplete="off">
   </div>
-  <div class="products" id="product-list">
+  <div class="compact-admin-list" id="product-list">
   {% for p in products %}
-    <div class="card edit-product product-management-card searchable-product" data-search="{{ p['name']|lower }}">
-      <div class="product-management-title">
+  <article class="card compact-admin-card compact-product-admin searchable-product"
+           data-search="{{ p['name']|lower }}">
+
+    <div class="compact-admin-summary">
+      <div class="compact-product-summary">
         <div>
           <strong>{{ p["name"] }}</strong>
-          <span>{{ format_eur(p["price_cents"]) }} · {{ p["stock"] }} restant{% if p["stock"] > 1 %}s{% endif %}</span>
+          <span>
+            {{ p["category"] }} · {{ format_eur(p["price_cents"]) }}
+            · Stock <b>{{ p["stock"] }}</b>
+          </span>
         </div>
+
         {% if p["stock"] == 0 %}
           <span class="stock-status danger">Rupture</span>
         {% elif p["stock"] <= p["low_stock_threshold"] %}
@@ -48,42 +55,100 @@
         {% endif %}
       </div>
 
-      <form method="post" action="{{ url_for('edit_product', product_id=p['id']) }}" class="stock-edit-form">
-        <label>Nom</label><input name="name" value="{{ p['name'] }}" required>
-        <label>Prix (€)</label><input name="price" value="{{ '%.2f'|format(p['price_cents']/100) }}" inputmode="decimal" required>
-<label>Seuil stock faible</label><input name="low_stock_threshold" type="number" min="0" value="{{ p['low_stock_threshold'] }}" required>
+      <div class="compact-stock-controls">
+        <form method="post" action="{{ url_for('product_stock_step', product_id=p['id']) }}">
+          <input type="hidden" name="step" value="-1">
+          <button type="submit" class="stock-step-btn" {% if p["stock"] <= 0 %}disabled{% endif %}>−1</button>
+        </form>
+
+        <span class="stock-number">{{ p["stock"] }}</span>
+
+        <form method="post" action="{{ url_for('product_stock_step', product_id=p['id']) }}">
+          <input type="hidden" name="step" value="1">
+          <button type="submit" class="stock-step-btn">+1</button>
+        </form>
+
+        <button type="button" class="compact-toggle" aria-expanded="false">Modifier</button>
+      </div>
+    </div>
+
+    <div class="compact-admin-panel" hidden>
+      <form method="post" action="{{ url_for('edit_product', product_id=p['id']) }}"
+            class="stock-edit-form">
+        <label>Nom</label>
+        <input name="name" value="{{ p['name'] }}" required>
+
+        <label>Prix (€)</label>
+        <input name="price"
+               value="{{ '%.2f'|format(p['price_cents']/100) }}"
+               inputmode="decimal" required>
+
+        <input type="hidden" name="stock" value="{{ p['stock'] }}">
+
+        <label>Catégorie</label>
+        <select name="category" required>
+          <option value="Boisson" {% if p["category"] == "Boisson" %}selected{% endif %}>Boisson</option>
+          <option value="Nourriture" {% if p["category"] == "Nourriture" %}selected{% endif %}>Nourriture</option>
+        </select>
+
+        <label>Seuil stock faible</label>
+        <input name="low_stock_threshold" type="number" min="0"
+               value="{{ p['low_stock_threshold'] }}" required>
+
         <label class="check">
-          <input type="checkbox" name="active" {% if p["active"] and p["stock"] > 0 %}checked{% endif %}>
+          <input type="checkbox" name="active"
+                 {% if p["active"] and p["stock"] > 0 %}checked{% endif %}>
           Disponible
         </label>
-        <button type="submit">Enregistrer nom / prix / seuil</button>
+
+        <button type="submit">Enregistrer les modifications</button>
       </form>
 
-      <form method="post" action="{{ url_for('set_product_stock', product_id=p['id']) }}" class="set-stock-form"
-            data-current-stock="{{ p['stock'] }}" onsubmit="return confirmLargeStockChange(this, '{{ p['name']|e }}');">
+      <form method="post"
+            action="{{ url_for('set_product_stock', product_id=p['id']) }}"
+            class="set-stock-form"
+            data-current-stock="{{ p['stock'] }}"
+            onsubmit="return confirmLargeStockChange(this, '{{ p['name']|e }}');">
         <input type="hidden" name="confirm_large" value="">
-        <div><label>Corriger le stock réel</label><input name="stock" type="number" min="0" value="{{ p['stock'] }}" required></div>
-        <button type="submit">Mettre le stock à cette valeur</button>
+        <div>
+          <label>Stock exact</label>
+          <input name="stock" type="number" min="0" value="{{ p['stock'] }}" required>
+        </div>
+        <button type="submit">Mettre à jour</button>
       </form>
 
-      <form method="post" action="{{ url_for('restock_product', product_id=p['id']) }}" class="restock-form">
+      <form method="post"
+            action="{{ url_for('restock_product', product_id=p['id']) }}"
+            class="restock-form">
         <input name="quantity" type="number" min="1" placeholder="+ quantité" required>
         <button type="submit">Ajouter au stock</button>
       </form>
 
-      <form method="post" action="{{ url_for('delete_product', product_id=p['id']) }}"
+      <form method="post"
+            action="{{ url_for('delete_product', product_id=p['id']) }}"
             class="danger-form">
         <button type="submit" class="delete-product-btn">Supprimer ce produit</button>
       </form>
     </div>
+  </article>
   {% else %}
     <div class="card">Aucun produit dans le catalogue.</div>
   {% endfor %}
-  </div>
 </div>
-{% endblock %}
 
 <script>
+document.querySelectorAll('.compact-toggle').forEach((button) => {
+  button.addEventListener('click', () => {
+    const card = button.closest('.compact-admin-card');
+    const panel = card.querySelector('.compact-admin-panel');
+    const opening = panel.hidden;
+    panel.hidden = !opening;
+    button.setAttribute('aria-expanded', opening ? 'true' : 'false');
+    button.textContent = opening ? 'Fermer' : 'Modifier';
+    card.classList.toggle('is-open', opening);
+  });
+});
+
 document.getElementById('product-search').addEventListener('input', function() {
   const term = this.value.trim().toLowerCase();
   document.querySelectorAll('.searchable-product').forEach((card) => {

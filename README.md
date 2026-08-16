@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.7.2
+# Popote Bravo — V6.8
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -307,3 +307,15 @@ Correctif mobile :
 - Ajoute notamment les structures nécessaires pour les dettes manuelles et les catégories Boisson/Nourriture.
 - Le schéma neuf contient directement la colonne `category`.
 - Les migrations utilisent `CREATE TABLE IF NOT EXISTS` et `ALTER TABLE` uniquement quand une colonne manque : les données existantes sont conservées.
+
+
+## V6.8 — Popotier compact
+
+- Gestion des comptes affichée sous forme de fiches compactes.
+- Une fiche membre affiche immédiatement nom, ardoise et statut.
+- Bouton « Gérer » pour ouvrir uniquement les actions détaillées du membre.
+- Gestion des produits affichée sous forme de fiches compactes.
+- Chaque produit affiche nom, catégorie, prix et stock sur une seule ligne.
+- Boutons rapides −1 / +1 pour corriger le stock.
+- Bouton « Modifier » pour ouvrir prix, catégorie, seuil, stock exact et suppression.
+- Toutes les fonctions existantes restent disponibles.
