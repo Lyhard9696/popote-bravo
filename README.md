@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.8.2
+# Popote Bravo — V6.8.3
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -336,3 +336,12 @@ Correctif mobile :
 - Support souris pour test sur PC.
 - Déclenchement à environ 78 % de la course.
 - Retour automatique à gauche si le swipe n'est pas terminé.
+
+
+## V6.8.3 — Slider PayPal iPhone
+
+- Remplacement du drag JavaScript par un `input[type=range]` natif, beaucoup plus fiable sur iPhone/Safari.
+- Le slider ouvre directement PayPal lorsque le curseur atteint 96 %.
+- Aucun clic supplémentaire n'est nécessaire après le swipe.
+- Le lien « Ouvrir PayPal manuellement » reste uniquement comme solution de secours.
+- Ajout d'espace sous les pages mobiles pour éviter que la navigation fixe masque les formulaires.

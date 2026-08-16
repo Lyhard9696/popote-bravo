@@ -105,104 +105,67 @@ payInput.addEventListener("input", refreshPayPalLink);
 document.getElementById("all-btn").addEventListener("click", () => {
   payInput.value = (maxCents / 100).toFixed(2);
   
-const swipe = document.getElementById("paypal-swipe");
-const swipeThumb = document.getElementById("paypal-swipe-thumb");
-const swipeFill = document.getElementById("paypal-swipe-fill");
+const swipeRange = document.getElementById("paypal-swipe-range");
+const swipeStatus = document.getElementById("paypal-swipe-status");
+let paypalOpening = false;
 
-let dragging = false;
-let startX = 0;
-let currentX = 0;
-let maxDistance = 0;
-
-function clientXFromEvent(event) {
-  if (event.touches && event.touches.length) return event.touches[0].clientX;
-  if (event.changedTouches && event.changedTouches.length) return event.changedTouches[0].clientX;
-  return event.clientX;
+function resetPayPalSlider() {
+  if (!swipeRange) return;
+  swipeRange.value = "0";
+  swipeRange.style.setProperty("--swipe-progress", "0%");
+  if (swipeStatus) swipeStatus.textContent = "";
 }
 
-function setSwipePosition(distance) {
-  const clamped = Math.max(0, Math.min(maxDistance, distance));
-  currentX = clamped;
-  swipeThumb.style.transition = "none";
-  swipeFill.style.transition = "none";
-  swipeThumb.style.transform = `translate3d(${clamped}px, 0, 0)`;
-  swipeFill.style.width = `${clamped + swipeThumb.offsetWidth}px`;
-}
+function openPayPalFromSlider() {
+  if (paypalOpening) return;
 
-function resetSwipe() {
-  currentX = 0;
-  swipeThumb.style.transition = "transform .18s ease";
-  swipeFill.style.transition = "width .18s ease";
-  swipeThumb.style.transform = "translate3d(0,0,0)";
-  swipeFill.style.width = "0px";
-}
-
-function openPayPalFromSwipe() {
   const cents = validAmountCents();
   if (cents === null) {
     alert("Choisis un montant valide.");
-    resetSwipe();
+    resetPayPalSlider();
     return;
   }
+
+  paypalOpening = true;
   const amount = (cents / 100).toFixed(2);
+
   declareInput.value = amount;
-  window.location.href = `${paypalBase}/${amount}EUR`;
+  if (swipeStatus) swipeStatus.textContent = "✓ Ouverture de PayPal…";
+
+  swipeRange.disabled = true;
+  swipeRange.style.setProperty("--swipe-progress", "100%");
+
+  // Navigation directe dans la même fenêtre : plus fiable sur iPhone
+  // qu'un window.open déclenché après une animation.
+  window.location.assign(`${paypalBase}/${amount}EUR`);
 }
 
-function startDrag(event) {
-  dragging = true;
-  startX = clientXFromEvent(event);
-  currentX = 0;
-  maxDistance = Math.max(0, swipe.clientWidth - swipeThumb.offsetWidth - 8);
-  swipe.classList.add("dragging");
+if (swipeRange) {
+  swipeRange.addEventListener("input", () => {
+    const value = Number(swipeRange.value || 0);
+    swipeRange.style.setProperty("--swipe-progress", `${value}%`);
 
-  if (event.pointerId && swipeThumb.setPointerCapture) {
-    try { swipeThumb.setPointerCapture(event.pointerId); } catch (_) {}
-  }
+    if (value >= 96) {
+      openPayPalFromSlider();
+    }
+  });
 
-  event.preventDefault();
+  swipeRange.addEventListener("change", () => {
+    const value = Number(swipeRange.value || 0);
+    if (value < 96 && !paypalOpening) {
+      resetPayPalSlider();
+    }
+  });
+
+  // Au retour depuis PayPal, le slider revient à zéro.
+  window.addEventListener("pageshow", () => {
+    paypalOpening = false;
+    swipeRange.disabled = false;
+    resetPayPalSlider();
+  });
+
+  resetPayPalSlider();
 }
-
-function moveDrag(event) {
-  if (!dragging) return;
-  const x = clientXFromEvent(event);
-  setSwipePosition(x - startX);
-  event.preventDefault();
-}
-
-function endDrag(event) {
-  if (!dragging) return;
-  dragging = false;
-  swipe.classList.remove("dragging");
-
-  if (currentX >= maxDistance * 0.78) {
-    setSwipePosition(maxDistance);
-    swipeThumb.style.transition = "transform .12s ease";
-    swipeFill.style.transition = "width .12s ease";
-    setTimeout(openPayPalFromSwipe, 140);
-  } else {
-    resetSwipe();
-  }
-
-  event.preventDefault();
-}
-
-/* Pointer Events : Safari récent, Chrome, Android */
-swipeThumb.addEventListener("pointerdown", startDrag, { passive: false });
-window.addEventListener("pointermove", moveDrag, { passive: false });
-window.addEventListener("pointerup", endDrag, { passive: false });
-window.addEventListener("pointercancel", endDrag, { passive: false });
-
-/* Fallback iOS / Safari */
-swipeThumb.addEventListener("touchstart", startDrag, { passive: false });
-window.addEventListener("touchmove", moveDrag, { passive: false });
-window.addEventListener("touchend", endDrag, { passive: false });
-window.addEventListener("touchcancel", endDrag, { passive: false });
-
-/* Souris pour tests PC */
-swipeThumb.addEventListener("mousedown", startDrag);
-window.addEventListener("mousemove", moveDrag);
-window.addEventListener("mouseup", endDrag);
 
 refreshPayPalLink();
 });
