@@ -51,6 +51,7 @@ def init_db():
         price_cents INTEGER NOT NULL,
         stock INTEGER NOT NULL DEFAULT 0,
         low_stock_threshold INTEGER NOT NULL DEFAULT 5,
+        category TEXT NOT NULL DEFAULT 'Boisson',
         active INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -178,6 +179,8 @@ def admin_required(view):
             return redirect(url_for("dashboard"))
         return view(*args, **kwargs)
     return wrapped
+
+init_db()
 
 def current_user():
     if "user_id" not in session:

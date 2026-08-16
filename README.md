@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.7.1
+# Popote Bravo — V6.7.2
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -298,3 +298,12 @@ Correctif mobile :
 - Stock faible affiché en orange et stock critique en rouge.
 - Produit sélectionné mis en évidence en jaune.
 - Bouton de validation passe à « Enregistrement… » pendant l'envoi.
+
+
+## V6.7.2 — Correctif Internal Server Error
+
+- `init_db()` est maintenant exécuté automatiquement au démarrage sur Render/Gunicorn.
+- Les migrations de la base existante sont donc appliquées avant les premières requêtes.
+- Ajoute notamment les structures nécessaires pour les dettes manuelles et les catégories Boisson/Nourriture.
+- Le schéma neuf contient directement la colonne `category`.
+- Les migrations utilisent `CREATE TABLE IF NOT EXISTS` et `ALTER TABLE` uniquement quand une colonne manque : les données existantes sont conservées.
