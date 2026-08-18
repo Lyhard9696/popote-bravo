@@ -5501,3 +5501,61 @@ body {
 .premium-gold-home .summary-balance strong {
   color: #111 !important;
 }
+
+
+/* ============================================================
+   V6.15.3 — Finition des 3 cartes du compte
+   ============================================================ */
+
+/* "Ardoise actuelle" revient en noir sur sa carte blanche. */
+.premium-gold-home .summary-balance > span:not(.summary-icon) {
+  color: #111111 !important;
+}
+
+/* Les trois pictogrammes utilisent le même langage visuel premium. */
+.premium-gold-home .member-summary-card .summary-icon {
+  border: 0 !important;
+  background: transparent !important;
+  width: 35px !important;
+  height: 35px !important;
+  margin-bottom: 14px !important;
+  padding: 0 !important;
+  display: inline-grid !important;
+  place-items: center !important;
+}
+
+.premium-gold-home .summary-svg {
+  display: block !important;
+  width: 31px !important;
+  height: 31px !important;
+  fill: none !important;
+  stroke: #b9820c !important;
+  stroke-width: 1.7 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+.premium-gold-home .summary-svg-fill {
+  fill: #b9820c !important;
+  stroke: none !important;
+}
+
+/* Les cartes secondaires gardent la même présence visuelle que l'Ardoise. */
+.premium-gold-home .summary-month .summary-icon,
+.premium-gold-home .summary-pending .summary-icon,
+.premium-gold-home .summary-balance .summary-icon {
+  color: #b9820c !important;
+}
+
+@media (max-width: 680px) {
+  .premium-gold-home .member-summary-card .summary-icon {
+    width: 30px !important;
+    height: 30px !important;
+    margin-bottom: 11px !important;
+  }
+
+  .premium-gold-home .summary-svg {
+    width: 28px !important;
+    height: 28px !important;
+  }
+}

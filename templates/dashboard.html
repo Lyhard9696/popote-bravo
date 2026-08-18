@@ -13,17 +13,36 @@
 
   <div class="member-summary">
     <div class="member-summary-card summary-balance">
-      <span class="summary-icon" aria-hidden="true">▣</span>
+      <span class="summary-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="summary-svg">
+          <rect x="3.5" y="6.5" width="17" height="12" rx="2.5"></rect>
+          <path d="M6 6.5V5.8A2.3 2.3 0 0 1 8.3 3.5h8.2"></path>
+          <path d="M15.5 10h5v5h-5a2.5 2.5 0 0 1 0-5Z"></path>
+          <circle cx="16.7" cy="12.5" r=".7" class="summary-svg-fill"></circle>
+        </svg>
+      </span>
       <span>Ardoise actuelle</span>
       <strong>{{ format_eur(balance) }}</strong>
     </div>
     <div class="member-summary-card summary-month">
-      <span class="summary-icon" aria-hidden="true">♧</span>
+      <span class="summary-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="summary-svg">
+          <ellipse cx="12" cy="6" rx="6.5" ry="2.7"></ellipse>
+          <path d="M5.5 6v4c0 1.5 2.9 2.7 6.5 2.7s6.5-1.2 6.5-2.7V6"></path>
+          <path d="M5.5 10v4c0 1.5 2.9 2.7 6.5 2.7s6.5-1.2 6.5-2.7v-4"></path>
+          <path d="M7.2 17.2c1.2.8 2.9 1.3 4.8 1.3 3.6 0 6.5-1.2 6.5-2.7"></path>
+        </svg>
+      </span>
       <span>Dépensé ce mois</span>
       <strong>{{ format_eur(month_spent) }}</strong>
     </div>
     <div class="member-summary-card summary-pending {% if pending_claims %}pending{% endif %}">
-      <span class="summary-icon" aria-hidden="true">◷</span>
+      <span class="summary-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" class="summary-svg">
+          <circle cx="12" cy="12" r="7.8"></circle>
+          <path d="M12 7.7v4.8l3.2 2"></path>
+        </svg>
+      </span>
       <span>Paiements en attente</span>
       <strong>{{ format_eur(pending_claims) }}</strong>
     </div>
