@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.10.5
+# Popote Bravo — V6.11
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -448,3 +448,20 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - La liste commence avec le vrai 4e membre.
 - Les positions suivantes restent correctes : 5e, 6e, 7e, etc.
 - Le badge « 🦀 Pince du mois » reste sur le dernier.
+
+
+## V6.11 — Accueil premium/mobile
+
+- « Mes paiements » replié par défaut avec compteur des paiements en attente.
+- « Historique » replié par défaut.
+- Les deux accordéons s'ouvrent avec une animation courte et mémorisent leur état pendant la session.
+- Suppression du filtre « Tout ».
+- Sélecteur uniquement « 🥤 Boissons / 🍔 Nourriture ».
+- Boissons sélectionné par défaut.
+- Capsule jaune animée entre les catégories.
+- Apparition douce et progressive des fiches produits.
+- Micro-retour tactile sur les boutons + / − et les cartes.
+- Animation du compteur de quantité et du total panier.
+- Apparition douce du mini-panier au premier article.
+- Ombres, bordures et transitions harmonisées pour un rendu plus premium.
+- Respect de `prefers-reduced-motion`.

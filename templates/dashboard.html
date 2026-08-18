@@ -79,10 +79,10 @@
                autocomplete="off">
       </div>
 
-      <div class="catalogue-tabs" role="tablist" aria-label="Catégories">
-        <button type="button" class="catalogue-tab active" data-filter="all">Tout</button>
-        <button type="button" class="catalogue-tab" data-filter="Boisson">🥤 Boissons</button>
-        <button type="button" class="catalogue-tab" data-filter="Nourriture">🍫 Nourriture</button>
+      <div class="catalogue-tabs premium-segmented" role="tablist" aria-label="Catégories">
+        <span class="segmented-indicator" aria-hidden="true"></span>
+        <button type="button" class="catalogue-tab active" data-filter="Boisson">🥤 Boissons</button>
+        <button type="button" class="catalogue-tab" data-filter="Nourriture">🍔 Nourriture</button>
       </div>
     </div>
 
@@ -158,8 +158,17 @@
     </div>
   </form>
 
-  <h2>Mes paiements</h2>
-  <div class="payment-status-list">
+  <div class="premium-accordion-stack">
+    <details class="premium-accordion" id="payments-accordion">
+      <summary>
+        <span class="accordion-title">
+          <span class="accordion-icon">💳</span>
+          <span>Mes paiements{% if pending_claim_count %} · {{ pending_claim_count }} en attente{% endif %}</span>
+        </span>
+        <span class="accordion-chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="premium-accordion-content">
+<div class="payment-status-list">
   {% for c in claims %}
     <div class="card payment-status-row">
       <div>
@@ -178,9 +187,19 @@
     <div class="card muted">Aucun paiement déclaré.</div>
   {% endfor %}
   </div>
+      </div>
+    </details>
 
-  <h2>Historique</h2>
-  <div class="history-list">
+    <details class="premium-accordion" id="history-accordion">
+      <summary>
+        <span class="accordion-title">
+          <span class="accordion-icon">🧾</span>
+          <span>Historique</span>
+        </span>
+        <span class="accordion-chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="premium-accordion-content">
+<div class="history-list">
   {% for order in history_groups %}
     <div class="card grouped-history-row">
       <div class="grouped-order-head">
@@ -205,6 +224,10 @@
   {% endfor %}
   </div>
 </div>
+      </div>
+    </details>
+  </div>
+
 
 <script>
 const cartForm = document.getElementById('cart-form');
@@ -217,7 +240,7 @@ const miniCartDetails = document.getElementById('mini-cart-details');
 const miniCartLines = document.getElementById('mini-cart-lines');
 const userSearch = document.getElementById('user-product-search');
 const emptySearchResult = document.getElementById('empty-search-result');
-let activeCategory = 'all';
+let activeCategory = 'Boisson';
 
 function formatEuro(cents) {
   return (cents / 100).toFixed(2).replace('.', ',') + ' €';
@@ -278,7 +301,13 @@ function refreshCart() {
 
   cartCount.textContent = count;
   cartTotal.textContent = formatEuro(totalCents);
+  const wasHidden = miniCart.hidden;
   miniCart.hidden = count === 0;
+  if (count > 0 && wasHidden) {
+    miniCart.classList.remove('mini-cart-enter');
+    void miniCart.offsetWidth;
+    miniCart.classList.add('mini-cart-enter');
+  }
 
   miniCartLines.innerHTML = lines.map(line =>
     `<div class="mini-cart-line">
@@ -323,11 +352,17 @@ function refreshCatalogueFilter() {
 
   document.querySelectorAll('.searchable-user-product').forEach((card) => {
     const matchesSearch = card.dataset.search.includes(term);
-    const matchesCategory = activeCategory === 'all' || card.dataset.category === activeCategory;
+    const matchesCategory = card.dataset.category === activeCategory;
     const visible = matchesSearch && matchesCategory;
 
     card.hidden = !visible;
-    if (visible) visibleCount++;
+    if (visible) {
+      visibleCount++;
+      card.classList.remove('product-reveal');
+      void card.offsetWidth;
+      card.classList.add('product-reveal');
+      card.style.setProperty('--reveal-delay', `${Math.min(visibleCount - 1, 7) * 28}ms`);
+    }
   });
 
   emptySearchResult.hidden = visibleCount !== 0;
@@ -355,6 +390,65 @@ cartForm.addEventListener('submit', () => {
   cartSubmit.textContent = 'Enregistrement…';
   miniCart.classList.add('saving');
 });
+
+
+function updateSegmentIndicator() {
+  const tabs = document.querySelector('.premium-segmented');
+  const active = tabs?.querySelector('.catalogue-tab.active');
+  const indicator = tabs?.querySelector('.segmented-indicator');
+  if (!tabs || !active || !indicator) return;
+
+  const parentRect = tabs.getBoundingClientRect();
+  const rect = active.getBoundingClientRect();
+  indicator.style.width = `${rect.width}px`;
+  indicator.style.transform = `translateX(${rect.left - parentRect.left}px)`;
+}
+
+function pulseElement(element, className = 'micro-pulse') {
+  if (!element) return;
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+
+document.querySelectorAll('.catalogue-tab').forEach((button) => {
+  button.addEventListener('click', () => {
+    requestAnimationFrame(updateSegmentIndicator);
+  });
+});
+
+document.querySelectorAll('.compact-product-card').forEach((card) => {
+  const input = card.querySelector('.cart-qty');
+  if (!input) return;
+
+  const plus = card.querySelector('.qty-plus');
+  const minus = card.querySelector('.qty-minus');
+  const quickAdd = card.querySelector('.quick-add-btn');
+
+  [plus, minus, quickAdd].filter(Boolean).forEach((button) => {
+    button.addEventListener('click', () => {
+      pulseElement(card, 'card-touch-feedback');
+      setTimeout(() => {
+        pulseElement(input, 'qty-bump');
+        pulseElement(document.getElementById('cart-total'), 'total-bump');
+      }, 20);
+    });
+  });
+});
+
+document.querySelectorAll('.premium-accordion').forEach((details) => {
+  const key = `popote:${details.id}:open`;
+  if (sessionStorage.getItem(key) === '1') {
+    details.open = true;
+  }
+
+  details.addEventListener('toggle', () => {
+    sessionStorage.setItem(key, details.open ? '1' : '0');
+  });
+});
+
+window.addEventListener('resize', updateSegmentIndicator);
+requestAnimationFrame(updateSegmentIndicator);
 
 refreshCart();
 refreshCatalogueFilter();
