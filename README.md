@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.10.3
+# Popote Bravo — V6.10.4
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -431,3 +431,12 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - La ligne de l'utilisateur reste mise en évidence en jaune.
 - Le badge « 🦀 Pince du mois » est conservé.
 - Sur les très petits écrans, les trois cartes passent en une colonne.
+
+
+## V6.10.4 — Classement sans doublons
+
+- Suppression de la carte « Ma position ».
+- La ligne du membre connecté reste mise en évidence en jaune.
+- Les trois premiers restent uniquement sur le podium.
+- La liste générale commence directement au 4e.
+- Le badge « 🦀 Pince du mois » reste affiché sur le dernier.
