@@ -1,35 +1,84 @@
 {% extends "base.html" %}
 {% block title %}Classement — Popote Bravo{% endblock %}
 {% block content %}
-<div class="ranking-page">
-  <p class="eyebrow">Classement général · {{ month_label }}</p>
-  <h1>🏆 Classement</h1>
-  <p class="muted">Tout le peloton, classé selon les consommations et dettes ajoutées par le Popotier ce mois-ci. Les paiements ne comptent pas.</p>
-
-  <div class="full-ranking-list">
-  {% for member in ranking %}
-    <div class="card full-ranking-row {% if member['id'] == current_user['id'] %}my-rank-row{% endif %}">
-      <span class="rank-number">
-        {% if loop.index == 1 %}🥇
-        {% elif loop.index == 2 %}🥈
-        {% elif loop.index == 3 %}🥉
-        {% else %}{{ loop.index }}{% endif %}
-      </span>
-      <strong>{{ member["name"] }}</strong>
-      <span class="rank-amount">{{ format_eur(member["total_cents"]) }}</span>
+<div class="ranking-page ranking-redesign">
+  <div class="ranking-hero">
+    <div>
+      <p class="eyebrow">Classement · {{ month_label }}</p>
+      <h1>🏆 Classement du mois</h1>
+      <p class="muted">Consommations + dettes ajoutées par le Popotier.</p>
     </div>
-  {% else %}
-    <div class="card">Aucun membre à afficher.</div>
-  {% endfor %}
   </div>
 
-  <div class="my-ranking-card card">
-    <span>Ma position ce mois-ci</span>
+  {% set podium = ranking[:3] %}
+
+  {% if podium %}
+  <div class="podium-grid">
+    {% if podium|length > 1 %}
+    <div class="podium-card podium-second {% if podium[1]['id'] == current_user['id'] %}is-me{% endif %}">
+      <div class="podium-medal">🥈</div>
+      <strong class="podium-name">{{ podium[1]["name"] }}</strong>
+      <span class="podium-amount">{{ format_eur(podium[1]["total_cents"]) }}</span>
+      <small>2e</small>
+    </div>
+    {% endif %}
+
+    <div class="podium-card podium-first {% if podium[0]['id'] == current_user['id'] %}is-me{% endif %}">
+      <div class="podium-medal">🥇</div>
+      <strong class="podium-name">{{ podium[0]["name"] }}</strong>
+      <span class="podium-amount">{{ format_eur(podium[0]["total_cents"]) }}</span>
+      <small>1er</small>
+    </div>
+
+    {% if podium|length > 2 %}
+    <div class="podium-card podium-third {% if podium[2]['id'] == current_user['id'] %}is-me{% endif %}">
+      <div class="podium-medal">🥉</div>
+      <strong class="podium-name">{{ podium[2]["name"] }}</strong>
+      <span class="podium-amount">{{ format_eur(podium[2]["total_cents"]) }}</span>
+      <small>3e</small>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="my-position-card">
+    <span>Ma position</span>
     {% if my_position %}
       <strong>{{ my_position }}e — {{ format_eur(my_total_cents) }}</strong>
     {% else %}
       <strong>Pas encore classé</strong>
     {% endif %}
+  </div>
+
+  <div class="ranking-list">
+  {% for member in ranking %}
+    <div class="card ranking-row
+                {% if member['id'] == current_user['id'] %}my-rank-row{% endif %}
+                {% if loop.last and ranking|length > 1 %}last-rank-row{% endif %}">
+      <div class="ranking-position">
+        {% if loop.index == 1 %}🥇
+        {% elif loop.index == 2 %}🥈
+        {% elif loop.index == 3 %}🥉
+        {% else %}{{ loop.index }}{% endif %}
+      </div>
+
+      <div class="ranking-member">
+        <strong>{{ member["name"] }}</strong>
+
+        {% if loop.last and ranking|length > 1 %}
+          <span class="crab-badge">🦀 Pince du mois 🦀</span>
+        {% elif member['id'] == current_user['id'] %}
+          <span class="you-badge">Toi</span>
+        {% endif %}
+      </div>
+
+      <div class="ranking-amount">
+        {{ format_eur(member["total_cents"]) }}
+      </div>
+    </div>
+  {% else %}
+    <div class="card">Aucun membre à afficher.</div>
+  {% endfor %}
   </div>
 </div>
 {% endblock %}

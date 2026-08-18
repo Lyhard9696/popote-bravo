@@ -2090,3 +2090,237 @@ button:active,
   font-size: 13px;
   font-weight: 700;
 }
+
+
+/* V6.10.2 — Classement redesign */
+.ranking-redesign {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.ranking-hero {
+  margin-bottom: 18px;
+}
+
+.podium-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.12fr 1fr;
+  gap: 12px;
+  align-items: end;
+  margin: 20px 0 18px;
+}
+
+.podium-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 18px 12px;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 8px 28px rgba(0,0,0,.08);
+  text-align: center;
+}
+
+.podium-first {
+  min-height: 182px;
+  padding-top: 24px;
+  border: 2px solid #f6c515;
+  transform: translateY(-8px);
+}
+
+.podium-second,
+.podium-third {
+  min-height: 156px;
+}
+
+.podium-card.is-me {
+  box-shadow: 0 0 0 3px rgba(246,197,21,.28), 0 8px 28px rgba(0,0,0,.08);
+}
+
+.podium-medal {
+  font-size: 38px;
+  line-height: 1;
+}
+
+.podium-first .podium-medal {
+  font-size: 48px;
+}
+
+.podium-name {
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.podium-first .podium-name {
+  font-size: 21px;
+}
+
+.podium-amount {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.podium-first .podium-amount {
+  font-size: 22px;
+}
+
+.podium-card small {
+  color: #6b7280;
+  font-weight: 800;
+}
+
+.my-position-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 12px 0 20px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #fff8cf;
+  border: 1px solid #f6c515;
+}
+
+.my-position-card span {
+  color: #6b7280;
+  font-weight: 800;
+}
+
+.my-position-card strong {
+  font-size: 18px;
+}
+
+.ranking-list {
+  display: grid;
+  gap: 9px;
+}
+
+.ranking-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.ranking-position {
+  text-align: center;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.ranking-member {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ranking-member strong {
+  font-size: 16px;
+}
+
+.ranking-amount {
+  min-width: 88px;
+  text-align: right;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.my-rank-row {
+  background: #fff8cf;
+  border: 2px solid #f6c515;
+}
+
+.you-badge {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #111;
+  color: white;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.last-rank-row {
+  border-left: 5px solid #f97316;
+}
+
+.crab-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #ffedd5;
+  color: #9a3412;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+@media (max-width: 680px) {
+  .podium-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .podium-card {
+    padding: 14px 8px;
+    border-radius: 16px;
+  }
+
+  .podium-first {
+    min-height: 164px;
+    padding-top: 19px;
+    transform: translateY(-6px);
+  }
+
+  .podium-second,
+  .podium-third {
+    min-height: 142px;
+  }
+
+  .podium-medal {
+    font-size: 30px;
+  }
+
+  .podium-first .podium-medal {
+    font-size: 39px;
+  }
+
+  .podium-name,
+  .podium-first .podium-name {
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+
+  .podium-amount {
+    font-size: 14px;
+  }
+
+  .podium-first .podium-amount {
+    font-size: 16px;
+  }
+
+  .my-position-card {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ranking-row {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 12px 13px;
+  }
+
+  .ranking-position {
+    font-size: 18px;
+  }
+
+  .ranking-amount {
+    min-width: 72px;
+    font-size: 14px;
+  }
+}
