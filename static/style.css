@@ -2952,3 +2952,36 @@ button:active,
     font-weight: 900;
   }
 }
+
+
+/* V6.11.2 — vrai correctif panier fixe iPhone
+   Un ancêtre transformé casse position:fixed sur Safari/iOS. */
+.member-home {
+  animation: premiumPageFadeOnly .24s ease-out both !important;
+  transform: none !important;
+}
+
+@keyframes premiumPageFadeOnly {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mini-cart,
+.mini-cart.is-visible {
+  position: fixed !important;
+  transform: none !important;
+}
+
+@media (max-width: 680px) {
+  .mini-cart.is-visible {
+    display: block !important;
+    position: fixed !important;
+    left: 14px !important;
+    right: 14px !important;
+    bottom: calc(94px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-width: none !important;
+    z-index: 999 !important;
+    transform: none !important;
+  }
+}
