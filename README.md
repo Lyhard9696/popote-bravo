@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.12.5
+# Popote Bravo — V6.12.6
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -555,3 +555,15 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - Un espace constant sépare visuellement le panier et la barre du bas.
 - Le bouton « Ajouter à mon ardoise » reste intégralement visible.
 - Une réserve d'espace en bas du catalogue empêche les éléments fixes de masquer les derniers produits.
+
+
+## V6.12.6 — Barre fumée Premium + logo P3 rond
+
+- Barre de navigation anthracite fumée, moins agressive qu'un noir pur.
+- Léger effet de verre fumé grâce au blur et à la transparence.
+- Doré de l'onglet actif plus feutré.
+- Panier assorti à la navigation tout en restant visuellement séparé.
+- Logo P3 affiché uniquement en rond, sans carré noir autour.
+- Logo centré verticalement dans le header.
+- Aucun déplacement du texte « POPOTE BRAVO ».
+- Aucun déplacement de la cloche.
