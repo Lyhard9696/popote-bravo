@@ -2324,3 +2324,343 @@ button:active,
     font-size: 14px;
   }
 }
+
+
+/* V6.10.3 — classement mobile optimisé */
+
+.ranking-mobile-v2 {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.mobile-podium {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "first first"
+    "second third";
+  gap: 12px;
+  margin: 20px 0 18px;
+}
+
+.mobile-podium-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.07);
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mobile-podium-card.podium-first {
+  grid-area: first;
+  border: 2px solid #f6c515;
+  background: #fffdf2;
+}
+
+.mobile-podium-card.podium-second {
+  grid-area: second;
+  border: 2px solid #e7ddba;
+}
+
+.mobile-podium-card.podium-third {
+  grid-area: third;
+  border: 2px solid #ececec;
+}
+
+.mobile-podium-card.is-me {
+  box-shadow: 0 0 0 3px rgba(246,197,21,.20), 0 8px 28px rgba(0,0,0,.07);
+}
+
+.podium-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mobile-podium-card .podium-medal {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.mobile-podium-card.podium-first .podium-medal {
+  font-size: 44px;
+}
+
+.podium-rank-label {
+  color: #6b7280;
+  font-weight: 850;
+  font-size: 14px;
+}
+
+.mobile-podium-card .podium-name {
+  display: block;
+  font-size: 20px;
+  line-height: 1.1;
+  font-weight: 900;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.mobile-podium-card.podium-first .podium-name {
+  font-size: 26px;
+}
+
+.mobile-podium-card .podium-amount {
+  display: block;
+  font-size: 18px;
+  font-weight: 900;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.mobile-podium-card.podium-first .podium-amount {
+  font-size: 22px;
+}
+
+.my-position-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 12px 0 20px;
+  padding: 15px 17px;
+  border-radius: 18px;
+  background: #fff8cf;
+  border: 1px solid #f6c515;
+}
+
+.my-position-card span {
+  color: #6b7280;
+  font-weight: 800;
+}
+
+.my-position-card strong {
+  font-size: 19px;
+  white-space: nowrap;
+}
+
+.ranking-list-mobile {
+  display: grid;
+  gap: 10px;
+}
+
+.ranking-row-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  min-width: 0;
+}
+
+.ranking-row-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ranking-row-mobile .ranking-position {
+  width: 34px;
+  flex: 0 0 34px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.ranking-name-wrap {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ranking-name {
+  font-size: 17px;
+  font-weight: 850;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.ranking-row-mobile .ranking-amount {
+  flex: 0 0 auto;
+  min-width: 86px;
+  text-align: right;
+  font-weight: 900;
+  font-size: 17px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-row-mobile.my-rank-row {
+  background: #fff8cf;
+  border: 2px solid #f6c515;
+}
+
+.ranking-row-mobile.last-rank-row {
+  border-left: 5px solid #f97316;
+}
+
+.crab-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #ffedd5;
+  color: #9a3412;
+  font-size: 11px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.you-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+@media (min-width: 769px) {
+  .mobile-podium {
+    grid-template-columns: 1fr 1.15fr 1fr;
+    grid-template-areas: "second first third";
+    align-items: end;
+  }
+
+  .mobile-podium-card.podium-first {
+    min-height: 210px;
+  }
+
+  .mobile-podium-card.podium-second,
+  .mobile-podium-card.podium-third {
+    min-height: 175px;
+  }
+}
+
+@media (max-width: 680px) {
+  .ranking-mobile-v2 {
+    padding-bottom: 26px;
+  }
+
+  .ranking-hero h1 {
+    font-size: clamp(30px, 8vw, 42px);
+    line-height: 1.05;
+  }
+
+  .ranking-hero .muted {
+    font-size: 15px;
+  }
+
+  .mobile-podium {
+    gap: 9px;
+    margin-top: 18px;
+  }
+
+  .mobile-podium-card {
+    padding: 15px;
+    border-radius: 17px;
+  }
+
+  .mobile-podium-card.podium-first {
+    min-height: 145px;
+  }
+
+  .mobile-podium-card.podium-second,
+  .mobile-podium-card.podium-third {
+    min-height: 132px;
+  }
+
+  .mobile-podium-card .podium-name {
+    font-size: 17px;
+  }
+
+  .mobile-podium-card.podium-first .podium-name {
+    font-size: 22px;
+  }
+
+  .mobile-podium-card .podium-amount {
+    font-size: 16px;
+  }
+
+  .mobile-podium-card.podium-first .podium-amount {
+    font-size: 19px;
+  }
+
+  .mobile-podium-card .podium-medal {
+    font-size: 29px;
+  }
+
+  .mobile-podium-card.podium-first .podium-medal {
+    font-size: 37px;
+  }
+
+  .my-position-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 14px 15px;
+  }
+
+  .my-position-card strong {
+    font-size: 17px;
+  }
+
+  .ranking-row-mobile {
+    padding: 13px 14px;
+    gap: 10px;
+  }
+
+  .ranking-name {
+    font-size: 16px;
+  }
+
+  .ranking-row-mobile .ranking-amount {
+    min-width: 76px;
+    font-size: 15px;
+  }
+
+  .crab-badge {
+    font-size: 10px;
+    padding: 3px 7px;
+  }
+}
+
+@media (max-width: 390px) {
+  .mobile-podium {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "first"
+      "second"
+      "third";
+  }
+
+  .mobile-podium-card.podium-first,
+  .mobile-podium-card.podium-second,
+  .mobile-podium-card.podium-third {
+    min-height: auto;
+  }
+
+  .mobile-podium-card .podium-name,
+  .mobile-podium-card.podium-first .podium-name {
+    font-size: 19px;
+  }
+
+  .my-position-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
