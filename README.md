@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.12.6
+# Popote Bravo — V6.12.7
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -567,3 +567,13 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - Logo centré verticalement dans le header.
 - Aucun déplacement du texte « POPOTE BRAVO ».
 - Aucun déplacement de la cloche.
+
+
+## V6.12.7 — Logo propre + photos persistantes
+
+- Nouveau `static/insigne-bravo-rond.png` avec transparence réelle.
+- Le header utilise ce vrai médaillon rond, sans carré noir.
+- Les nouvelles photos produits sont stockées directement dans SQLite.
+- Elles survivent donc aux redéploiements Render.
+- Les anciennes photos basées sur `image_path` restent compatibles.
+- Une route `/product-image/<id>` sert les images stockées en base.

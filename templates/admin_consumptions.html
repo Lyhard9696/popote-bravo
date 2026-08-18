@@ -107,9 +107,13 @@
 
         
         <label>Photo du produit</label>
-        {% if p["image_path"] %}
+        {% if p["image_blob"] or p["image_path"] %}
           <div class="admin-product-photo-preview">
-            <img src="{{ url_for('static', filename=p['image_path']) }}" alt="{{ p['name'] }}">
+            {% if p["image_blob"] %}
+              <img src="{{ url_for('product_image', product_id=p['id']) }}" alt="{{ p['name'] }}">
+            {% else %}
+              <img src="{{ url_for('static', filename=p['image_path']) }}" alt="{{ p['name'] }}">
+            {% endif %}
             <label class="check">
               <input type="checkbox" name="delete_image" value="1">
               Supprimer la photo actuelle

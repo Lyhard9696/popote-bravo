@@ -11,6 +11,7 @@ import os
 import requests
 import qrcode
 import uuid
+import io
 from PIL import Image
 import json
 from pywebpush import webpush, WebPushException
@@ -171,6 +172,12 @@ def init_db():
         db.commit()
     if "image_path" not in product_cols:
         db.execute("ALTER TABLE products ADD COLUMN image_path TEXT")
+        db.commit()
+    if "image_blob" not in product_cols:
+        db.execute("ALTER TABLE products ADD COLUMN image_blob BLOB")
+        db.commit()
+    if "image_mime" not in product_cols:
+        db.execute("ALTER TABLE products ADD COLUMN image_mime TEXT")
         db.commit()
 
     cols = {row["name"] for row in db.execute("PRAGMA table_info(payments)").fetchall()}
@@ -1683,9 +1690,10 @@ def admin():
     )
 
 
-def save_product_image(file_storage, product_id):
+def process_product_image(file_storage):
+    """Optimise une image produit et retourne (bytes_webp, mime)."""
     if not file_storage or not file_storage.filename:
-        return None
+        return None, None
 
     filename = secure_filename(file_storage.filename)
     if "." not in filename:
@@ -1702,17 +1710,14 @@ def save_product_image(file_storage, product_id):
         raise ValueError("L'image est trop lourde (6 Mo maximum).")
 
     try:
-        image = Image.open(file_storage.stream)
-        image = image.convert("RGB")
+        image = Image.open(file_storage.stream).convert("RGB")
         image.thumbnail((720, 720))
-
-        final_name = f"product_{product_id}.webp"
-        target = PRODUCT_UPLOAD_DIR / final_name
-        image.save(target, "WEBP", quality=84, method=6)
+        buffer = io.BytesIO()
+        image.save(buffer, "WEBP", quality=84, method=6)
+        return buffer.getvalue(), "image/webp"
     except Exception as exc:
         raise ValueError("Impossible de lire cette image.") from exc
 
-    return f"uploads/products/{final_name}"
 
 
 def delete_product_image_file(image_path):
@@ -1724,6 +1729,26 @@ def delete_product_image_file(image_path):
             target.unlink()
     except Exception:
         pass
+
+
+@app.get("/product-image/<int:product_id>")
+def product_image(product_id):
+    db = get_db()
+    row = db.execute(
+        "SELECT image_blob, image_mime FROM products WHERE id = ?",
+        (product_id,)
+    ).fetchone()
+    db.close()
+
+    if not row or not row["image_blob"]:
+        return ("", 404)
+
+    return send_file(
+        io.BytesIO(row["image_blob"]),
+        mimetype=row["image_mime"] or "image/webp",
+        max_age=86400,
+        conditional=True,
+    )
 
 
 @app.post("/admin/products/add")
@@ -1788,21 +1813,28 @@ def edit_product(product_id):
             (name, price_cents, stock, low_stock_threshold, category, active, product_id)
         )
         current = db.execute(
-            "SELECT image_path FROM products WHERE id = ?",
+            "SELECT image_path, image_blob FROM products WHERE id = ?",
             (product_id,)
         ).fetchone()
 
-        if request.form.get("delete_image") == "1" and current and current["image_path"]:
-            delete_product_image_file(current["image_path"])
-            db.execute("UPDATE products SET image_path = NULL WHERE id = ?", (product_id,))
+        if request.form.get("delete_image") == "1" and current:
+            if current["image_path"]:
+                delete_product_image_file(current["image_path"])
+            db.execute(
+                "UPDATE products SET image_path = NULL, image_blob = NULL, image_mime = NULL WHERE id = ?",
+                (product_id,),
+            )
 
         image_file = request.files.get("image")
         if image_file and image_file.filename:
             try:
-                new_image_path = save_product_image(image_file, product_id)
-                if current and current["image_path"] and current["image_path"] != new_image_path:
+                image_blob, image_mime = process_product_image(image_file)
+                if current and current["image_path"]:
                     delete_product_image_file(current["image_path"])
-                db.execute("UPDATE products SET image_path = ? WHERE id = ?", (new_image_path, product_id))
+                db.execute(
+                    "UPDATE products SET image_blob = ?, image_mime = ?, image_path = NULL WHERE id = ?",
+                    (image_blob, image_mime, product_id),
+                )
             except ValueError as exc:
                 db.rollback()
                 db.close()

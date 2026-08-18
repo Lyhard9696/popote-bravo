@@ -3772,3 +3772,23 @@ button:active,
       ) !important;
   }
 }
+
+
+/* V6.12.7 — logo rond propre + photos persistantes */
+.brand-round-logo {
+  width: 50px !important;
+  height: 50px !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  border-radius: 50% !important;
+  clip-path: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.product-media-premium img {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}

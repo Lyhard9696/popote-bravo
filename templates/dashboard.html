@@ -97,7 +97,9 @@
            data-name="{{ p['name']|e }}">
 
         <div class="product-media-premium">
-          {% if p["image_path"] %}
+          {% if p["image_blob"] %}
+            <img src="{{ url_for('product_image', product_id=p['id']) }}" alt="{{ p['name'] }}" loading="lazy">
+          {% elif p["image_path"] %}
             <img src="{{ url_for('static', filename=p['image_path']) }}" alt="{{ p['name'] }}" loading="lazy">
           {% else %}
             <span>{{ "🥤" if p["category"] == "Boisson" else "🍔" }}</span>
