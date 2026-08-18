@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.11.2
+# Popote Bravo — V6.12
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -482,3 +482,25 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - Le mini-panier retrouve un vrai `position: fixed`.
 - Position forcée au-dessus de la navigation mobile.
 - L'animation d'entrée de l'accueil reste présente sous forme de fondu.
+
+
+## V6.12 — Premium Gold + photos produits
+
+### Design Premium Gold
+- Refonte visuelle de l'accueil inspirée de la maquette Premium validée.
+- Carte « Ardoise actuelle » noire avec montant doré.
+- Fond ivoire / blanc chaud, ombres plus fines et contraste noir-or.
+- Grand insigne P3 en filigrane très discret derrière le haut de l'accueil.
+- Catalogue plus compact avec emplacement photo circulaire/arrondi.
+- Toutes les micro-animations V6.11 sont conservées.
+
+### Photos produits côté Popotier
+- Ajout d'une photo lors de la création d'un produit.
+- Remplacement ou suppression de la photo depuis « Modifier ».
+- JPG, PNG et WEBP acceptés, 6 Mo maximum.
+- Conversion automatique en WEBP et redimensionnement à 720 × 720 max.
+- Fallback automatique 🥤 / 🍔 si aucune photo n'est renseignée.
+- Les fichiers sont stockés dans `static/uploads/products/`.
+
+### Dépendance
+- Ajout de Pillow pour l'optimisation des images.

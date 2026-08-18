@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import sqlite3
 from pathlib import Path
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from functools import wraps
 from datetime import datetime
 from io import BytesIO
@@ -10,10 +11,16 @@ import os
 import requests
 import qrcode
 import uuid
+from PIL import Image
 import json
 from pywebpush import webpush, WebPushException
 
 BASE_DIR = Path(__file__).resolve().parent
+
+PRODUCT_UPLOAD_DIR = BASE_DIR / "static" / "uploads" / "products"
+PRODUCT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+ALLOWED_PRODUCT_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+MAX_PRODUCT_IMAGE_BYTES = 6 * 1024 * 1024
 DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR)))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "popote.db"
@@ -161,6 +168,9 @@ def init_db():
         db.commit()
     if "category" not in product_cols:
         db.execute("ALTER TABLE products ADD COLUMN category TEXT NOT NULL DEFAULT 'Boisson'")
+        db.commit()
+    if "image_path" not in product_cols:
+        db.execute("ALTER TABLE products ADD COLUMN image_path TEXT")
         db.commit()
 
     cols = {row["name"] for row in db.execute("PRAGMA table_info(payments)").fetchall()}
@@ -1672,6 +1682,50 @@ def admin():
         low_stock_count=low_stock_count,
     )
 
+
+def save_product_image(file_storage, product_id):
+    if not file_storage or not file_storage.filename:
+        return None
+
+    filename = secure_filename(file_storage.filename)
+    if "." not in filename:
+        raise ValueError("Format d'image invalide.")
+
+    ext = filename.rsplit(".", 1)[1].lower()
+    if ext not in ALLOWED_PRODUCT_IMAGE_EXTENSIONS:
+        raise ValueError("Formats acceptés : JPG, PNG ou WEBP.")
+
+    file_storage.stream.seek(0, os.SEEK_END)
+    size = file_storage.stream.tell()
+    file_storage.stream.seek(0)
+    if size > MAX_PRODUCT_IMAGE_BYTES:
+        raise ValueError("L'image est trop lourde (6 Mo maximum).")
+
+    try:
+        image = Image.open(file_storage.stream)
+        image = image.convert("RGB")
+        image.thumbnail((720, 720))
+
+        final_name = f"product_{product_id}.webp"
+        target = PRODUCT_UPLOAD_DIR / final_name
+        image.save(target, "WEBP", quality=84, method=6)
+    except Exception as exc:
+        raise ValueError("Impossible de lire cette image.") from exc
+
+    return f"uploads/products/{final_name}"
+
+
+def delete_product_image_file(image_path):
+    if not image_path:
+        return
+    try:
+        target = BASE_DIR / "static" / image_path
+        if target.exists() and PRODUCT_UPLOAD_DIR in target.resolve().parents:
+            target.unlink()
+    except Exception:
+        pass
+
+
 @app.post("/admin/products/add")
 @admin_required
 def add_product():
@@ -1733,6 +1787,28 @@ def edit_product(product_id):
             "UPDATE products SET name = ?, price_cents = ?, stock = ?, low_stock_threshold = ?, category = ?, active = ? WHERE id = ?",
             (name, price_cents, stock, low_stock_threshold, category, active, product_id)
         )
+        current = db.execute(
+            "SELECT image_path FROM products WHERE id = ?",
+            (product_id,)
+        ).fetchone()
+
+        if request.form.get("delete_image") == "1" and current and current["image_path"]:
+            delete_product_image_file(current["image_path"])
+            db.execute("UPDATE products SET image_path = NULL WHERE id = ?", (product_id,))
+
+        image_file = request.files.get("image")
+        if image_file and image_file.filename:
+            try:
+                new_image_path = save_product_image(image_file, product_id)
+                if current and current["image_path"] and current["image_path"] != new_image_path:
+                    delete_product_image_file(current["image_path"])
+                db.execute("UPDATE products SET image_path = ? WHERE id = ?", (new_image_path, product_id))
+            except ValueError as exc:
+                db.rollback()
+                db.close()
+                flash(str(exc), "error")
+                return redirect(request.referrer or url_for("admin_consumptions"))
+
         db.commit()
         flash("Produit mis à jour.", "success")
     except sqlite3.IntegrityError:
@@ -1825,13 +1901,14 @@ def set_product_stock(product_id):
 def delete_product(product_id):
 
     db = get_db()
-    product = db.execute("SELECT id, name FROM products WHERE id = ?", (product_id,)).fetchone()
+    product = db.execute("SELECT id, name, image_path FROM products WHERE id = ?", (product_id,)).fetchone()
     if not product:
         db.close()
         flash("Boisson introuvable.", "error")
         return redirect(request.referrer or url_for("admin_consumptions"))
 
     db.execute("UPDATE consumptions SET product_id = NULL WHERE product_id = ?", (product_id,))
+    delete_product_image_file(product["image_path"])
     db.execute("DELETE FROM products WHERE id = ?", (product_id,))
     db.commit()
     db.close()

@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Mon ardoise — Popote Bravo{% endblock %}
 {% block content %}
-<div class="member-home">
+<div class="member-home premium-gold-home">
+  <div class="premium-gold-watermark" aria-hidden="true"></div>
   <div class="hero member-hero">
     <div>
       <p class="eyebrow">Mon compte</p>
@@ -95,6 +96,20 @@
            data-price="{{ p['price_cents'] }}"
            data-name="{{ p['name']|e }}">
 
+        <div class="product-media-premium">
+          {% if product["image_path"] %}
+            <img src="{{ url_for('static', filename=product['image_path']) }}" alt="{{ product['name'] }}" loading="lazy">
+          {% else %}
+            <span>{{ "🥤" if product["category"] == "Boisson" else "🍔" }}</span>
+          {% endif %}
+        </div>
+        <div class="product-media-premium">
+          {% if product["image_path"] %}
+            <img src="{{ url_for('static', filename=product['image_path']) }}" alt="{{ product['name'] }}" loading="lazy">
+          {% else %}
+            <span>{{ "🥤" if product["category"] == "Boisson" else "🍔" }}</span>
+          {% endif %}
+        </div>
         <div class="compact-product-main">
           <div class="compact-product-copy">
             <strong>{{ p["name"] }}</strong>

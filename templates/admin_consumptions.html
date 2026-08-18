@@ -13,7 +13,7 @@
 
   <h2>Ajouter un produit</h2>
   <div class="card">
-    <form method="post" action="{{ url_for('add_product') }}" class="product-create-grid">
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('add_product') }}" class="product-create-grid">
       <div><label>Nom</label><input name="name" placeholder="Ex. Coca Zero" required></div>
       <div><label>Prix (€)</label><input name="price" placeholder="Ex. 1,50" inputmode="decimal" required></div>
       <div><label>Stock initial</label><input name="stock" type="number" min="0" value="0" required></div>
@@ -25,7 +25,11 @@
         </select>
       </div>
       <div><label>Alerte stock faible</label><input name="low_stock_threshold" type="number" min="0" value="5" required></div>
-      <button type="submit">Ajouter le produit</button>
+      <label>Photo du produit <span class="muted">(optionnel)</span></label>
+        <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+        <small class="muted">JPG, PNG ou WEBP · 6 Mo max. L'image sera optimisée automatiquement.</small>
+
+        <button type="submit">Ajouter le produit</button>
     </form>
   </div>
 
@@ -73,7 +77,7 @@
     </div>
 
     <div class="compact-admin-panel" hidden>
-      <form method="post" action="{{ url_for('edit_product', product_id=p['id']) }}"
+      <form method="post" enctype="multipart/form-data" action="{{ url_for('edit_product', product_id=p['id']) }}"
             class="stock-edit-form">
         <label>Nom</label>
         <input name="name" value="{{ p['name'] }}" required>
@@ -101,7 +105,21 @@
           Disponible
         </label>
 
-        <button type="submit">Enregistrer les modifications</button>
+        
+        <label>Photo du produit</label>
+        {% if p["image_path"] %}
+          <div class="admin-product-photo-preview">
+            <img src="{{ url_for('static', filename=p['image_path']) }}" alt="{{ p['name'] }}">
+            <label class="check">
+              <input type="checkbox" name="delete_image" value="1">
+              Supprimer la photo actuelle
+            </label>
+          </div>
+        {% endif %}
+        <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+        <small class="muted">Une nouvelle photo remplace automatiquement l'ancienne.</small>
+
+<button type="submit">Enregistrer les modifications</button>
       </form>
 
       <form method="post"
