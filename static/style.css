@@ -4212,3 +4212,133 @@ main,
     font-size: 38px !important;
   }
 }
+
+
+/* ============================================================
+   V6.13.1 — correction logo / suppression filigrane / marges globales
+   ============================================================ */
+
+/* Header : logo rond restauré, sans toucher au texte ni à la cloche */
+.topbar .brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.topbar .brand-round-logo {
+  display: block !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  border-radius: 50% !important;
+  object-fit: contain !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Le filigrane géant derrière l'accueil est définitivement supprimé */
+.premium-gold-watermark {
+  display: none !important;
+}
+
+/* Même respiration latérale pour les pages principales membre */
+.ranking-page,
+.qr-page,
+.profile-page,
+.notifications-page,
+.change-password-page,
+.account-page,
+.page-shell,
+.content-shell {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 900px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+}
+
+/* Cas où les templates utilisent directement .hero + cartes sans wrapper dédié */
+main > .hero,
+main > .card,
+main > .notifications-wrap,
+main > .ranking-page,
+main > .qr-wrap,
+main > .profile-wrap {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Notifications */
+.notifications-wrap,
+.notifications-page {
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+}
+
+/* QR */
+.qr-wrap,
+.qr-page {
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+}
+
+/* Profil / mot de passe */
+.profile-wrap,
+.profile-page,
+.change-password-page {
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+}
+
+/* Classement */
+.ranking-page,
+.ranking-mobile-v2,
+.ranking-redesign {
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+}
+
+/* Mobile : même marge que l'accueil */
+@media (max-width: 680px) {
+  .ranking-page,
+  .ranking-mobile-v2,
+  .ranking-redesign,
+  .qr-page,
+  .qr-wrap,
+  .profile-page,
+  .profile-wrap,
+  .change-password-page,
+  .notifications-page,
+  .notifications-wrap,
+  .account-page,
+  .page-shell,
+  .content-shell {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .ranking-page,
+  .ranking-mobile-v2,
+  .ranking-redesign,
+  .qr-page,
+  .qr-wrap,
+  .profile-page,
+  .profile-wrap,
+  .change-password-page,
+  .notifications-page,
+  .notifications-wrap,
+  .account-page,
+  .page-shell,
+  .content-shell {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}

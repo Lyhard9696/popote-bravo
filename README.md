@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.13
+# Popote Bravo — V6.13.1
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -610,3 +610,12 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - Espacements verticaux plus réguliers pour un rendu plus premium.
 - Conservation du design noir / or Premium Gold.
 - Conservation du verrouillage horizontal mobile.
+
+
+## V6.13.1 — Corrections logo et marges
+
+- Le logo rond P3 est restauré à côté de « POPOTE BRAVO ».
+- Le grand logo/filigrane derrière la zone Ardoise est supprimé.
+- Les marges latérales premium sont conservées sur l'accueil.
+- Les mêmes marges sont appliquées à Classement, QR, Profil/Mot de passe et Notifications.
+- Aucun changement sur les données, stocks, paiements, notifications push ou photos produits.
