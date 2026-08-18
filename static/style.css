@@ -2923,3 +2923,32 @@ button:active,
     border-radius: 14px;
   }
 }
+
+
+/* V6.11.1 — correctif mini-panier / validation */
+.mini-cart {
+  display: none;
+}
+
+.mini-cart.is-visible {
+  display: block !important;
+}
+
+.mini-cart[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 680px) {
+  .mini-cart {
+    left: 14px;
+    right: 14px;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    z-index: 60;
+  }
+
+  .mini-cart-submit {
+    min-height: 50px;
+    font-size: 16px;
+    font-weight: 900;
+  }
+}

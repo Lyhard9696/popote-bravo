@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.11
+# Popote Bravo — V6.11.1
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -465,3 +465,11 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - Apparition douce du mini-panier au premier article.
 - Ombres, bordures et transitions harmonisées pour un rendu plus premium.
 - Respect de `prefers-reduced-motion`.
+
+
+## V6.11.1 — Correctif panier
+
+- Le mini-panier réapparaît correctement dès qu'une quantité est supérieure à 0.
+- Le bouton de validation est visible au-dessus de la navigation mobile.
+- Libellé explicite : « Ajouter à mon ardoise ».
+- Les animations V6.11 restent conservées.
