@@ -3792,3 +3792,92 @@ button:active,
   height: 100% !important;
   object-fit: cover !important;
 }
+
+
+/* ============================================================
+   V6.12.8 — vrai correctif logo header
+   ============================================================ */
+
+/* Le conteneur du logo ne doit jamais dessiner un carré noir. */
+.brand-logo-wrap {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  border: 0 !important;
+  border-radius: 50% !important;
+
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+
+  box-shadow: none !important;
+  overflow: visible !important;
+
+  align-self: center !important;
+}
+
+/* Le vrai médaillon rond. */
+.brand-logo-wrap .brand-round-logo,
+.brand-round-logo {
+  display: block !important;
+
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  border: 0 !important;
+  border-radius: 50% !important;
+
+  object-fit: contain !important;
+  object-position: 50% 50% !important;
+
+  background: transparent !important;
+  background-color: transparent !important;
+
+  box-shadow: none !important;
+  outline: none !important;
+
+  clip-path: none !important;
+
+  align-self: center !important;
+  transform: none !important;
+}
+
+/* Seulement le bloc logo : centrage vertical dans le header.
+   Aucun déplacement du texte ou de la cloche. */
+.site-header .brand-logo-wrap,
+.topbar .brand-logo-wrap,
+header .brand-logo-wrap {
+  position: relative !important;
+  top: 0 !important;
+  transform: none !important;
+}
+
+/* Mobile */
+@media (max-width: 430px) {
+  .brand-logo-wrap {
+    width: 50px !important;
+    height: 50px !important;
+    min-width: 50px !important;
+  }
+
+  .brand-logo-wrap .brand-round-logo,
+  .brand-round-logo {
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    max-width: 46px !important;
+  }
+}
