@@ -4018,3 +4018,197 @@ main,
   right: -12vw !important;
   overflow: hidden !important;
 }
+
+
+/* ============================================================
+   V6.13 — Accueil respirant / sans logo header
+   ============================================================ */
+
+/* Header sans logo : texte proprement posé, cloche inchangée */
+.topbar .brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+
+  width: auto !important;
+  max-width: calc(100vw - 90px) !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Neutralise définitivement tout ancien espace réservé au logo */
+.topbar .brand-round-logo,
+.topbar .brand-logo-wrap {
+  display: none !important;
+}
+
+/* ------------------------------------------------------------
+   ACCUEIL MEMBRE : vraies marges latérales
+   ------------------------------------------------------------ */
+
+.premium-gold-home,
+.member-home {
+  box-sizing: border-box !important;
+
+  width: 100% !important;
+  max-width: 900px !important;
+
+  margin-left: auto !important;
+  margin-right: auto !important;
+
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+
+  overflow-x: hidden !important;
+}
+
+/* Le filigrane reste derrière sans déborder */
+.premium-gold-watermark {
+  max-width: 82vw !important;
+  right: -8vw !important;
+}
+
+/* Titre / intro : même alignement que les cartes */
+.member-hero,
+.ranking-hero {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.member-hero h1 {
+  margin-top: 8px !important;
+  margin-bottom: 14px !important;
+}
+
+.member-hero .muted {
+  max-width: 690px !important;
+  line-height: 1.38 !important;
+}
+
+/* Résumé compte : aucune carte collée au bord */
+.member-summary,
+.member-summary-grid {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Cartes plus sobres et mieux espacées */
+.premium-gold-home .member-summary-card {
+  border-radius: 22px !important;
+  box-shadow:
+    0 10px 28px rgba(17,17,17,.055) !important;
+}
+
+/* Paiement / recherche / catégories dans le même axe */
+.quick-payment,
+.catalogue-toolbar,
+.premium-accordion-stack {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Le bouton PayPal garde de l'air autour */
+.quick-payment {
+  margin-top: 22px !important;
+  margin-bottom: 28px !important;
+}
+
+/* Recherche moins collée aux cartes du dessus */
+.catalogue-toolbar {
+  margin-top: 0 !important;
+}
+
+/* Catalogue aligné avec le reste de la page */
+.products.compact-products,
+#catalogue-products {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Cartes produits légèrement moins larges visuellement */
+.premium-gold-home .compact-product-card {
+  border-radius: 20px !important;
+  box-shadow:
+    0 7px 22px rgba(17,17,17,.04) !important;
+}
+
+/* ------------------------------------------------------------
+   MOBILE
+   ------------------------------------------------------------ */
+@media (max-width: 680px) {
+  .topbar {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .premium-gold-home,
+  .member-home {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .member-hero {
+    padding-top: 24px !important;
+  }
+
+  .member-hero h1 {
+    font-size: clamp(36px, 10vw, 52px) !important;
+    line-height: .98 !important;
+  }
+
+  .member-hero .muted {
+    font-size: 16px !important;
+  }
+
+  .premium-gold-home .member-summary-grid,
+  .premium-gold-home .member-summary {
+    gap: 12px !important;
+  }
+
+  .premium-gold-home .member-summary-card {
+    min-height: 118px !important;
+    padding: 16px !important;
+    border-radius: 19px !important;
+  }
+
+  .quick-payment {
+    margin-top: 20px !important;
+    margin-bottom: 26px !important;
+  }
+
+  .premium-gold-home .payment-button-with-badge,
+  .premium-gold-home .paypal-home-button {
+    min-height: 58px !important;
+    border-radius: 18px !important;
+  }
+
+  .catalogue-search {
+    border-radius: 16px !important;
+  }
+
+  .premium-segmented {
+    border-radius: 16px !important;
+  }
+}
+
+/* Très petits écrans : on garde une marge premium sans étouffer le contenu */
+@media (max-width: 390px) {
+  .topbar {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+  .premium-gold-home,
+  .member-home {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+  .member-hero h1 {
+    font-size: 38px !important;
+  }
+}

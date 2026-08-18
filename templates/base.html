@@ -19,7 +19,6 @@
 <header class="topbar">
   <div class="wrap nav">
     <a class="brand" href="{{ url_for('admin' if current_user and current_user['is_admin'] else 'dashboard') if current_user else url_for('login') }}">
-      <img src="{{ url_for('static', filename='insigne-bravo-rond.png') }}" alt="" class="brand-round-logo">
       <span>POPOTE BRAVO</span>
     </a>
     {% if current_user %}
