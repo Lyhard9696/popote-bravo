@@ -48,7 +48,7 @@
   </div>
   {% endif %}
 <div class="ranking-list ranking-list-mobile">
-  {% for member in ranking %}
+  {% for member in ranking[3:] %}
     <article class="card ranking-row-mobile
                     {% if member['id'] == current_user['id'] %}my-rank-row{% endif %}
                     {% if loop.last and ranking|length > 3 %}last-rank-row{% endif %}">
@@ -60,7 +60,7 @@
         <div class="ranking-name-wrap">
           <strong class="ranking-name">{{ member["name"] }}</strong>
 
-          {% if loop.last and ranking|length > 1 %}
+          {% if loop.last and ranking|length > 3 %}
             <span class="crab-badge">🦀 Pince du mois</span>
           {% elif member['id'] == current_user['id'] %}
             <span class="you-badge">Toi</span>
