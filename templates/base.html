@@ -69,17 +69,32 @@
     </a>
   {% else %}
     <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
-      <span class="tab-icon">⌂</span><span>Ardoise</span>
+      <span class="tab-icon tab-icon-svg" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V21h13V10.5"/><path d="M9.5 21v-6h5v6"/></svg>
+      </span>
+      <span>Ardoise</span>
     </a>
   {% endif %}
   <a href="{{ url_for('classement') }}" class="{% if request.endpoint == 'classement' %}active{% endif %}">
-    <span class="tab-icon">🏆</span><span>Classement</span>
+    <span class="tab-icon tab-icon-svg" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M8 4h8v4a4 4 0 0 1-8 0V4Z"/><path d="M8 6H4v1a5 5 0 0 0 5 5"/><path d="M16 6h4v1a5 5 0 0 1-5 5"/><path d="M12 12v5"/><path d="M8.5 21h7"/><path d="M10 17h4v4h-4z"/></svg>
+    </span>
+    <span>Classement</span>
   </a>
   <a href="{{ url_for('qr_page') }}" class="{% if request.endpoint in ['qr_page','qr_image'] %}active{% endif %}">
-    <span class="tab-icon">▦</span><span>QR</span>
+    <span class="tab-icon tab-icon-svg qr-nav-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3z"/>
+        <path d="M14 14h3v3h-3zM18 14h3v3M14 18v3h3M19 18h2v3h-3"/>
+      </svg>
+    </span>
+    <span>QR</span>
   </a>
   <a href="{{ url_for('change_password') }}" class="{% if request.endpoint == 'change_password' %}active{% endif %}">
-    <span class="tab-icon">●</span><span>Profil</span>
+    <span class="tab-icon tab-icon-svg" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>
+    </span>
+    <span>Profil</span>
   </a>
 </nav>
 {% endif %}

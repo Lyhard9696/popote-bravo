@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.12.2
+# Popote Bravo — V6.12.3
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -522,3 +522,14 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - La recherche reste limitée à la catégorie active.
 - La capsule jaune du sélecteur continue de suivre la catégorie sélectionnée.
 - Aucun changement sur les données, les stocks ou les photos produits.
+
+
+## V6.12.3 — Catégories + navigation Premium
+
+- Correction définitive du filtre Boissons / Nourriture sur Safari/iPhone.
+- Les produits de la catégorie inactive sont forcés en `display:none`.
+- Recherche toujours limitée à la catégorie active.
+- Nouvelle barre mobile noire haut de gamme.
+- Icônes Ardoise / Classement / QR / Profil en tracé fin.
+- L'onglet actif devient doré avec un soulignement discret.
+- Suppression du gros pavé jaune autour de l'onglet actif.

@@ -3242,3 +3242,121 @@ button:active,
     height: 44px;
   }
 }
+
+
+/* ============================================================
+   V6.12.3 — filtres catégories + navigation Premium Gold
+   ============================================================ */
+
+/* Safari/iOS : un produit filtré doit réellement disparaître,
+   même si la carte Premium a display:grid. */
+.searchable-user-product.category-hidden,
+.searchable-user-product[hidden] {
+  display: none !important;
+}
+
+/* Navigation mobile premium : noire, légère, icônes contour */
+.mobile-tabbar:not(.admin-tabbar) {
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  min-height: 78px;
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, rgba(24,24,24,.99), rgba(9,9,9,.99));
+  border: 1px solid rgba(255,255,255,.065);
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.045);
+}
+
+.mobile-tabbar:not(.admin-tabbar) a {
+  position: relative;
+  min-height: 58px;
+  padding: 5px 5px 8px;
+  border-radius: 12px;
+  background: transparent !important;
+  color: #b9b9b9;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  transition:
+    color .18s ease,
+    transform .15s ease;
+}
+
+.mobile-tabbar:not(.admin-tabbar) a::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: #e7b927;
+  transform: translateX(-50%);
+  box-shadow: 0 0 9px rgba(231,185,39,.5);
+  transition: width .2s ease;
+}
+
+.mobile-tabbar:not(.admin-tabbar) a.active {
+  color: #e7b927 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.mobile-tabbar:not(.admin-tabbar) a.active::after {
+  width: 32px;
+}
+
+.mobile-tabbar:not(.admin-tabbar) a:active {
+  transform: scale(.96);
+}
+
+.mobile-tabbar:not(.admin-tabbar) .tab-icon-svg {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  margin: 0 auto;
+  color: currentColor;
+}
+
+.mobile-tabbar:not(.admin-tabbar) .tab-icon-svg svg {
+  width: 27px;
+  height: 27px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mobile-tabbar:not(.admin-tabbar) .qr-nav-icon svg {
+  stroke-width: 1.55;
+}
+
+@media (max-width: 430px) {
+  .mobile-tabbar:not(.admin-tabbar) {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    min-height: 72px;
+    border-radius: 19px;
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+
+  .mobile-tabbar:not(.admin-tabbar) a {
+    min-height: 53px;
+    font-size: 10px;
+  }
+
+  .mobile-tabbar:not(.admin-tabbar) .tab-icon-svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .mobile-tabbar:not(.admin-tabbar) .tab-icon-svg svg {
+    width: 24px;
+    height: 24px;
+  }
+}

@@ -366,6 +366,9 @@ function refreshCatalogueFilter() {
     const visible = matchesSearch && matchesCategory;
 
     card.hidden = !visible;
+    card.classList.toggle('category-hidden', !visible);
+    card.style.display = visible ? '' : 'none';
+
     if (visible) {
       visibleCount++;
       card.classList.remove('product-reveal');
