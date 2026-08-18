@@ -1234,14 +1234,27 @@ def approve_payment_claim(claim_id):
         flash("Déclaration introuvable ou déjà traitée.", "error")
         return redirect(url_for("admin"))
 
-    spent = db.execute("SELECT COALESCE(SUM(price_cents),0) total FROM consumptions WHERE user_id=?",
-                       (claim["user_id"],)).fetchone()["total"]
-    paid = db.execute("SELECT COALESCE(SUM(amount_cents),0) total FROM payments WHERE user_id=?",
-                      (claim["user_id"],)).fetchone()["total"]
+    spent = db.execute(
+        "SELECT COALESCE(SUM(price_cents), 0) AS total FROM consumptions WHERE user_id = ?",
+        (claim["user_id"],)
+    ).fetchone()["total"]
+    manual_debts = db.execute(
+        "SELECT COALESCE(SUM(amount_cents), 0) AS total FROM manual_debts WHERE user_id = ?",
+        (claim["user_id"],)
+    ).fetchone()["total"]
+    paid = db.execute(
+        "SELECT COALESCE(SUM(amount_cents), 0) AS total FROM payments WHERE user_id = ?",
+        (claim["user_id"],)
+    ).fetchone()["total"]
 
-    if claim["amount_cents"] > spent - paid:
+    remaining_balance = spent + manual_debts - paid
+
+    if claim["amount_cents"] > remaining_balance:
         db.close()
-        flash("Le montant dépasse la dette officielle restante.", "error")
+        flash(
+            "Le montant déclaré dépasse maintenant l'ardoise restante.",
+            "error"
+        )
         return redirect(url_for("admin"))
 
     note = "PayPal déclaré par le membre, validé par le popotier"

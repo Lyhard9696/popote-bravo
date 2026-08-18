@@ -1,18 +1,17 @@
-# Popote Bravo — V6.16
+# Popote Bravo — V6.16.1
 
-## Notification générale Popotier
+## Correctif validation des paiements déclarés
 
-Ajout dans la page Gestion d'un bloc « Notification générale ».
+Correction d'un bug lors de la validation d'un paiement par le Popotier.
 
-Fonctionnement :
-- le Popotier écrit un titre et un message ;
-- bouton « Envoyer à tout le monde » ;
-- tous les comptes actifs reçoivent la notification dans Popote Bravo ;
-- les comptes ayant activé le push la reçoivent aussi sur leur téléphone ;
-- `{prenom}` peut être utilisé dans le titre ou le message pour insérer le nom du membre ;
-- un message de confirmation indique le nombre de comptes notifiés et le nombre d'appareils push atteints.
+Avant :
+- la validation comparait le paiement uniquement aux consommations moins les paiements déjà validés ;
+- les dettes manuelles ajoutées par le Popotier étaient oubliées ;
+- un membre pouvait donc voir 15 € d'ardoise, déclarer 15 €, puis obtenir à tort le message « le montant dépasse la dette officielle restante ».
 
-Fichiers à copier dans `popote_bravo_v5_render` :
+Maintenant :
+- la validation utilise exactement le même calcul d'ardoise que le reste de l'application :
+  consommations + dettes manuelles - paiements validés.
+
+Fichier à copier dans `popote_bravo_v5_render` :
 - `app.py`
-- `static/style.css`
-- `templates/admin.html`
