@@ -92,7 +92,7 @@
       <div class="card compact-product-card searchable-user-product
                   {% if p['stock'] == 0 %}product-out{% elif p['stock'] <= p['low_stock_threshold'] %}product-low{% endif %}"
            data-search="{{ p['name']|lower }}"
-           data-category="{{ p['category'] }}"
+           data-category="{{ p['category']|trim }}"
            data-price="{{ p['price_cents'] }}"
            data-name="{{ p['name']|e }}">
 
@@ -362,7 +362,7 @@ function refreshCatalogueFilter() {
 
   document.querySelectorAll('.searchable-user-product').forEach((card) => {
     const matchesSearch = card.dataset.search.includes(term);
-    const matchesCategory = card.dataset.category === activeCategory;
+    const matchesCategory = (card.dataset.category || '').trim() === activeCategory;
     const visible = matchesSearch && matchesCategory;
 
     card.hidden = !visible;
@@ -384,6 +384,7 @@ document.querySelectorAll('.catalogue-tab').forEach((button) => {
     button.classList.add('active');
     activeCategory = button.dataset.filter;
     refreshCatalogueFilter();
+    requestAnimationFrame(updateSegmentIndicator);
   });
 });
 

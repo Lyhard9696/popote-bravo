@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.12.1
+# Popote Bravo — V6.12.2
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -512,3 +512,13 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - La boucle produit utilise maintenant correctement la variable `p`.
 - Suppression du bloc photo produit dupliqué.
 - Aucun changement sur la base de données, les comptes, les stocks ou les uploads.
+
+
+## V6.12.2 — Correction catégories
+
+- Boissons sélectionné par défaut.
+- Seules les boissons sont affichées dans l'onglet Boissons.
+- Seule la nourriture est affichée dans l'onglet Nourriture.
+- La recherche reste limitée à la catégorie active.
+- La capsule jaune du sélecteur continue de suivre la catégorie sélectionnée.
+- Aucun changement sur les données, les stocks ou les photos produits.
