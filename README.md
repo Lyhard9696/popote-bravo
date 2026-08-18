@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.13.1
+# Popote Bravo — V6.14
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -619,3 +619,15 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 - Les marges latérales premium sont conservées sur l'accueil.
 - Les mêmes marges sont appliquées à Classement, QR, Profil/Mot de passe et Notifications.
 - Aucun changement sur les données, stocks, paiements, notifications push ou photos produits.
+
+
+## V6.14 — Premium polish
+
+- La page « Déclarer un paiement » adopte les mêmes marges que le reste de l’application.
+- Harmonisation des largeurs et espacements des pages Classement, QR, Profil/Mot de passe et Notifications.
+- Cartes, formulaires, champs et boutons mieux proportionnés.
+- Hiérarchie typographique plus cohérente.
+- Mise en page PayPal plus propre et plus compacte.
+- QR recentré dans une carte mieux équilibrée.
+- Listes Classement et Notifications rendues plus régulières.
+- Conservation des fonctionnalités existantes.

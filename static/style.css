@@ -4342,3 +4342,375 @@ main > .profile-wrap {
     padding-right: 20px !important;
   }
 }
+
+
+/* ============================================================
+   V6.14 — Premium polish
+   Objectif : rendu plus net, plus cohérent, plus haut de gamme
+   ============================================================ */
+
+:root {
+  --pb-page-max: 900px;
+  --pb-mobile-pad: 24px;
+  --pb-small-pad: 20px;
+  --pb-card-radius: 20px;
+  --pb-control-radius: 15px;
+  --pb-soft-shadow: 0 10px 30px rgba(15, 15, 15, .055);
+  --pb-card-border: rgba(22, 22, 22, .08);
+}
+
+/* Une seule logique de largeur pour toutes les pages membre. */
+.declare-payment-page,
+.ranking-page,
+.qr-page,
+.profile-page,
+.change-password-page,
+.notifications-page {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: var(--pb-page-max) !important;
+  margin: 0 auto !important;
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+}
+
+/* Espacement vertical cohérent sous le header. */
+.declare-payment-page,
+.ranking-page,
+.qr-page,
+.change-password-page,
+.notifications-page {
+  padding-top: 26px !important;
+  padding-bottom: 120px !important;
+}
+
+/* Titres : hiérarchie plus éditoriale, moins "bloc brut". */
+.declare-payment-page h1,
+.ranking-page h1,
+.qr-page h1,
+.change-password-page h1,
+.notifications-page h1 {
+  margin-top: 4px !important;
+  margin-bottom: 10px !important;
+  letter-spacing: -.035em !important;
+  line-height: 1.02 !important;
+}
+
+.declare-payment-page .eyebrow,
+.ranking-page .eyebrow,
+.qr-page .eyebrow,
+.change-password-page .eyebrow,
+.notifications-page .eyebrow {
+  margin-bottom: 8px !important;
+  letter-spacing: .11em !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.declare-payment-page .muted,
+.ranking-page .muted,
+.qr-page .muted,
+.change-password-page .muted,
+.notifications-page .muted,
+.qr-page .qr-intro {
+  line-height: 1.5 !important;
+}
+
+/* Cartes : même langage visuel partout. */
+.declare-payment-page .card,
+.ranking-page .card,
+.qr-page .qr-card,
+.change-password-page .card,
+.notifications-page .card {
+  border-radius: var(--pb-card-radius) !important;
+  border: 1px solid var(--pb-card-border) !important;
+  box-shadow: var(--pb-soft-shadow) !important;
+}
+
+/* ------------------------------------------------------------
+   Déclarer un paiement
+   ------------------------------------------------------------ */
+.declare-payment-page .hero {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: end !important;
+  gap: 18px !important;
+  margin-bottom: 22px !important;
+}
+
+.declare-payment-page .hero > div:first-child {
+  min-width: 0 !important;
+}
+
+.declare-payment-page .hero h1 {
+  margin-bottom: 0 !important;
+}
+
+.declare-payment-page .balance {
+  min-width: 132px !important;
+  text-align: right !important;
+  font-size: 28px !important;
+  line-height: 1 !important;
+  letter-spacing: -.03em !important;
+}
+
+.declare-payment-page .balance small {
+  display: block !important;
+  margin-top: 7px !important;
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+  letter-spacing: .02em !important;
+  opacity: .62 !important;
+}
+
+.declare-payment-page .narrow-pay {
+  width: 100% !important;
+  max-width: 620px !important;
+  margin: 0 auto !important;
+  padding: 24px !important;
+}
+
+.declare-payment-page .payment-recap {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 9px 16px !important;
+  padding: 16px 17px !important;
+  margin-bottom: 26px !important;
+  border-radius: 16px !important;
+  background: rgba(18, 18, 18, .035) !important;
+}
+
+.declare-payment-page .payment-recap span {
+  font-size: 13px !important;
+  opacity: .72 !important;
+}
+
+.declare-payment-page .payment-recap strong {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+.declare-payment-page h2 {
+  margin-top: 24px !important;
+  margin-bottom: 14px !important;
+  font-size: 19px !important;
+  letter-spacing: -.02em !important;
+}
+
+.declare-payment-page label {
+  display: block !important;
+  margin: 15px 0 7px !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+}
+
+.declare-payment-page input {
+  width: 100% !important;
+  min-height: 50px !important;
+  padding: 0 15px !important;
+  border-radius: var(--pb-control-radius) !important;
+  box-sizing: border-box !important;
+}
+
+.declare-payment-page button {
+  min-height: 50px !important;
+  border-radius: var(--pb-control-radius) !important;
+}
+
+.declare-payment-page .secondary {
+  width: 100% !important;
+  margin-top: 10px !important;
+}
+
+.declare-payment-page .paypal-simple-wrap {
+  margin-top: 14px !important;
+}
+
+.declare-payment-page .paypal-direct-button {
+  width: 100% !important;
+  min-height: 56px !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  box-shadow: 0 8px 22px rgba(246, 197, 21, .18) !important;
+}
+
+.declare-payment-page .section-separator {
+  margin: 28px 0 24px !important;
+  opacity: .16 !important;
+}
+
+.declare-payment-page form > button[type="submit"] {
+  width: 100% !important;
+  margin-top: 18px !important;
+}
+
+/* ------------------------------------------------------------
+   Classement
+   ------------------------------------------------------------ */
+.ranking-page .ranking-hero {
+  margin-bottom: 22px !important;
+}
+
+.ranking-page .mobile-podium {
+  gap: 12px !important;
+  margin-bottom: 18px !important;
+}
+
+.ranking-page .mobile-podium-card {
+  border-radius: 20px !important;
+  border: 1px solid var(--pb-card-border) !important;
+  box-shadow: var(--pb-soft-shadow) !important;
+}
+
+.ranking-page .ranking-list-mobile {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.ranking-page .ranking-row-mobile {
+  margin: 0 !important;
+  min-height: 72px !important;
+}
+
+/* ------------------------------------------------------------
+   QR
+   ------------------------------------------------------------ */
+.qr-page .qr-intro {
+  max-width: 620px !important;
+  margin-bottom: 22px !important;
+}
+
+.qr-page .qr-card {
+  max-width: 430px !important;
+  margin: 0 auto 16px !important;
+  padding: 24px !important;
+  text-align: center !important;
+}
+
+.qr-page .qr-card img {
+  display: block !important;
+  width: min(100%, 290px) !important;
+  height: auto !important;
+  margin: 0 auto 18px !important;
+  border-radius: 14px !important;
+}
+
+.qr-page .share-popote-btn,
+.qr-page #copy-popote {
+  width: 100% !important;
+  max-width: 430px !important;
+  display: block !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  min-height: 52px !important;
+  border-radius: var(--pb-control-radius) !important;
+}
+
+.qr-page #copy-popote {
+  margin-top: 10px !important;
+}
+
+/* ------------------------------------------------------------
+   Profil / mot de passe
+   ------------------------------------------------------------ */
+.change-password-page .card {
+  max-width: 590px !important;
+  margin: 0 auto !important;
+  padding: 24px !important;
+}
+
+.change-password-page label {
+  display: block !important;
+  margin: 15px 0 7px !important;
+  font-size: 13px !important;
+  font-weight: 750 !important;
+}
+
+.change-password-page input,
+.change-password-page button {
+  width: 100% !important;
+  min-height: 50px !important;
+  border-radius: var(--pb-control-radius) !important;
+  box-sizing: border-box !important;
+}
+
+/* ------------------------------------------------------------
+   Notifications
+   ------------------------------------------------------------ */
+.notifications-page .management-page-head {
+  align-items: flex-end !important;
+  gap: 16px !important;
+  margin-bottom: 20px !important;
+}
+
+.notifications-page .management-page-head form .secondary {
+  white-space: nowrap !important;
+}
+
+.notifications-page .push-settings-card {
+  padding: 22px !important;
+  margin-bottom: 16px !important;
+}
+
+.notifications-page .notification-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.notifications-page .notification-row {
+  margin: 0 !important;
+  padding: 17px 18px !important;
+}
+
+/* ------------------------------------------------------------
+   Mobile
+   ------------------------------------------------------------ */
+@media (max-width: 680px) {
+  .declare-payment-page,
+  .ranking-page,
+  .qr-page,
+  .profile-page,
+  .change-password-page,
+  .notifications-page {
+    padding-left: var(--pb-mobile-pad) !important;
+    padding-right: var(--pb-mobile-pad) !important;
+    padding-top: 22px !important;
+  }
+
+  .declare-payment-page .hero {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .declare-payment-page .balance {
+    text-align: left !important;
+    min-width: 0 !important;
+  }
+
+  .declare-payment-page .narrow-pay,
+  .change-password-page .card {
+    padding: 20px !important;
+  }
+
+  .notifications-page .management-page-head {
+    align-items: flex-start !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .declare-payment-page,
+  .ranking-page,
+  .qr-page,
+  .profile-page,
+  .change-password-page,
+  .notifications-page {
+    padding-left: var(--pb-small-pad) !important;
+    padding-right: var(--pb-small-pad) !important;
+  }
+
+  .declare-payment-page .narrow-pay,
+  .change-password-page .card,
+  .notifications-page .push-settings-card {
+    padding: 18px !important;
+  }
+}

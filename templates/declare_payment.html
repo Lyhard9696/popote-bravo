@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Payer avec PayPal{% endblock %}
 {% block content %}
+<div class="declare-payment-page">
 <div class="hero">
   <div>
     <p class="eyebrow">PayPal</p>
@@ -71,6 +72,8 @@
   {% endif %}
 </div>
 
+
+</div>
 {% if available > 0 %}
 <script>
 const paypalBase = {{ paypal_me_url|tojson }};
