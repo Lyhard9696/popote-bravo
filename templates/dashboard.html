@@ -97,17 +97,10 @@
            data-name="{{ p['name']|e }}">
 
         <div class="product-media-premium">
-          {% if product["image_path"] %}
-            <img src="{{ url_for('static', filename=product['image_path']) }}" alt="{{ product['name'] }}" loading="lazy">
+          {% if p["image_path"] %}
+            <img src="{{ url_for('static', filename=p['image_path']) }}" alt="{{ p['name'] }}" loading="lazy">
           {% else %}
-            <span>{{ "🥤" if product["category"] == "Boisson" else "🍔" }}</span>
-          {% endif %}
-        </div>
-        <div class="product-media-premium">
-          {% if product["image_path"] %}
-            <img src="{{ url_for('static', filename=product['image_path']) }}" alt="{{ product['name'] }}" loading="lazy">
-          {% else %}
-            <span>{{ "🥤" if product["category"] == "Boisson" else "🍔" }}</span>
+            <span>{{ "🥤" if p["category"] == "Boisson" else "🍔" }}</span>
           {% endif %}
         </div>
         <div class="compact-product-main">

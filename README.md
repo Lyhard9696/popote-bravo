@@ -1,5 +1,5 @@
 
-# Popote Bravo — V6.12
+# Popote Bravo — V6.12.1
 
 Petite web-app mobile pour gérer les consommations d'une popote.
 
@@ -504,3 +504,11 @@ Sur iPhone, Popote Bravo doit être ajouté à l'écran d'accueil et les notific
 
 ### Dépendance
 - Ajout de Pillow pour l'optimisation des images.
+
+
+## V6.12.1 — Correctif dashboard Premium Gold
+
+- Correction du template `dashboard.html`.
+- La boucle produit utilise maintenant correctement la variable `p`.
+- Suppression du bloc photo produit dupliqué.
+- Aucun changement sur la base de données, les comptes, les stocks ou les uploads.
