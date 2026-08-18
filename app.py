@@ -1675,6 +1675,13 @@ def admin():
         WHERE stock <= low_stock_threshold
     """).fetchone()["total"]
 
+    push_subscriber_count = db.execute("""
+        SELECT COUNT(DISTINCT ps.user_id) AS total
+        FROM push_subscriptions ps
+        JOIN users u ON u.id = ps.user_id
+        WHERE u.active = 1
+    """).fetchone()["total"]
+
     db.close()
 
     total_due = sum((m["spent"] - m["paid"]) for m in members)
@@ -1687,7 +1694,85 @@ def admin():
         pending_claims_count=len(pending_claims),
         consumptions_24h=consumptions_24h,
         low_stock_count=low_stock_count,
+        push_subscriber_count=push_subscriber_count,
     )
+
+
+
+@app.post("/admin/notifications/broadcast")
+@admin_required
+def admin_broadcast_notification():
+    """Envoie une notification personnalisable à tous les comptes actifs."""
+    title = request.form.get("title", "").strip()
+    message = request.form.get("message", "").strip()
+
+    if not title or not message:
+        flash("Le titre et le message sont obligatoires.", "error")
+        return redirect(url_for("admin"))
+
+    if len(title) > 80:
+        flash("Le titre est trop long (80 caractères maximum).", "error")
+        return redirect(url_for("admin"))
+
+    if len(message) > 320:
+        flash("Le message est trop long (320 caractères maximum).", "error")
+        return redirect(url_for("admin"))
+
+    db = get_db()
+    recipients = db.execute("""
+        SELECT id, name
+        FROM users
+        WHERE active = 1
+        ORDER BY id
+    """).fetchall()
+
+    if not recipients:
+        db.close()
+        flash("Aucun compte actif à notifier.", "error")
+        return redirect(url_for("admin"))
+
+    prepared = []
+    for recipient in recipients:
+        recipient_title = title.replace("{prenom}", recipient["name"])
+        recipient_message = message.replace("{prenom}", recipient["name"])
+
+        add_notification(
+            db,
+            recipient["id"],
+            recipient_title,
+            recipient_message,
+            "info",
+            "/notifications"
+        )
+        prepared.append((
+            recipient["id"],
+            recipient_title,
+            recipient_message,
+        ))
+
+    db.commit()
+    db.close()
+
+    # Le tag commun évite d'empiler plusieurs copies d'une même campagne
+    # sur un même appareil, tout en gardant une notification par utilisateur.
+    campaign_tag = f"broadcast-{int(datetime.now().timestamp())}"
+    pushed_devices = 0
+
+    for user_id, recipient_title, recipient_message in prepared:
+        pushed_devices += send_push_to_user(
+            user_id,
+            recipient_title,
+            recipient_message,
+            "/notifications",
+            campaign_tag
+        )
+
+    flash(
+        f"Notification envoyée à {len(prepared)} compte(s) actif(s) "
+        f"et poussée sur {pushed_devices} appareil(s).",
+        "success"
+    )
+    return redirect(url_for("admin"))
 
 
 def process_product_image(file_storage):

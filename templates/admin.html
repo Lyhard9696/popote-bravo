@@ -47,6 +47,69 @@
     <div class="stat-card"><span>Stocks faibles / ruptures</span><strong>{{ low_stock_count }}</strong></div>
   </div>
 
+
+  <section class="broadcast-card" aria-labelledby="broadcast-title">
+    <div class="broadcast-head">
+      <span class="broadcast-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M4 13.5V10.5l12-5v13l-12-5Z"></path>
+          <path d="M7 14.8 8.5 20h3l-1.7-4.2"></path>
+          <path d="M19 9.2c.8.8 1.2 1.7 1.2 2.8S19.8 14 19 14.8"></path>
+        </svg>
+      </span>
+      <div>
+        <p class="eyebrow">Communication</p>
+        <h2 id="broadcast-title">Notification générale</h2>
+        <p>
+          Envoie un message à tous les comptes actifs. Les personnes ayant activé
+          les notifications le recevront aussi directement sur leur téléphone.
+        </p>
+      </div>
+    </div>
+
+    <div class="broadcast-status">
+      <span class="broadcast-dot"></span>
+      <strong>{{ push_subscriber_count }}</strong>
+      <span>utilisateur(s) avec notifications push actives</span>
+    </div>
+
+    <form method="post"
+          action="{{ url_for('admin_broadcast_notification') }}"
+          class="broadcast-form"
+          onsubmit="return confirm('Envoyer cette notification à tous les comptes actifs ?');">
+      <div class="broadcast-field">
+        <label for="broadcast-notification-title">Titre</label>
+        <input
+          id="broadcast-notification-title"
+          name="title"
+          maxlength="80"
+          value="✨ Nouvelle mise à jour Popote Bravo !"
+          placeholder="Titre de la notification"
+          required
+        >
+      </div>
+
+      <div class="broadcast-field">
+        <label for="broadcast-notification-message">Message</label>
+        <textarea
+          id="broadcast-notification-message"
+          name="message"
+          maxlength="320"
+          rows="4"
+          placeholder="Écris ton message…"
+          required>Nouveau design, nouvelle interface et plusieurs améliorations sont maintenant disponibles. Bonne popote 🍻</textarea>
+        <small>
+          Astuce : écris <code>{prenom}</code> pour insérer automatiquement le nom de chaque membre.
+        </small>
+      </div>
+
+      <button type="submit" class="broadcast-submit">
+        <span>Envoyer à tout le monde</span>
+        <span aria-hidden="true">→</span>
+      </button>
+    </form>
+  </section>
+
   <h2>Paiements déclarés à vérifier</h2>
   <div class="card table-wrap">
     <table>
