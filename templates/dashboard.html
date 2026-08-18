@@ -2,6 +2,7 @@
 {% block title %}Mon ardoise — Popote Bravo{% endblock %}
 {% block content %}
 <div class="member-home premium-gold-home">
+  <div class="p3-gold-watermark" aria-hidden="true"></div>
 <div class="hero member-hero">
     <div>
       <p class="eyebrow">Mon compte</p>
@@ -11,15 +12,18 @@
   </div>
 
   <div class="member-summary">
-    <div class="member-summary-card">
+    <div class="member-summary-card summary-balance">
+      <span class="summary-icon" aria-hidden="true">▣</span>
       <span>Ardoise actuelle</span>
       <strong>{{ format_eur(balance) }}</strong>
     </div>
-    <div class="member-summary-card">
+    <div class="member-summary-card summary-month">
+      <span class="summary-icon" aria-hidden="true">♧</span>
       <span>Dépensé ce mois</span>
       <strong>{{ format_eur(month_spent) }}</strong>
     </div>
-    <div class="member-summary-card {% if pending_claims %}pending{% endif %}">
+    <div class="member-summary-card summary-pending {% if pending_claims %}pending{% endif %}">
+      <span class="summary-icon" aria-hidden="true">◷</span>
       <span>Paiements en attente</span>
       <strong>{{ format_eur(pending_claims) }}</strong>
     </div>
@@ -68,15 +72,18 @@
       {% if pending_claim_count %}
         <b>{{ pending_claim_count }} en attente</b>
       {% endif %}
+      <span class="payment-arrow" aria-hidden="true">→</span>
     </a>
   </div>
 
   <form method="post" action="{{ url_for('cart_checkout') }}" id="cart-form">
     <div class="catalogue-toolbar">
       <div class="catalogue-search-wrap">
+        <span class="catalogue-search-icon" aria-hidden="true"></span>
         <input id="user-product-search" type="search"
-               placeholder="🔎 Rechercher une consommation…"
+               placeholder="Rechercher une consommation…"
                autocomplete="off">
+        <span class="catalogue-filter-icon" aria-hidden="true"></span>
       </div>
 
       <div class="catalogue-tabs premium-segmented" role="tablist" aria-label="Catégories">

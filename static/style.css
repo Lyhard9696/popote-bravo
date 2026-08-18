@@ -4714,3 +4714,766 @@ main > .profile-wrap {
     padding: 18px !important;
   }
 }
+
+
+/* ============================================================
+   V6.15 — Référence Premium Popote Bravo
+   Fidélisation visuelle de la maquette validée
+   ============================================================ */
+:root {
+  --pb-gold: #d8a11c;
+  --pb-gold-deep: #b77d08;
+  --pb-gold-soft: #f4dfad;
+  --pb-ivory: #f8f6f1;
+  --pb-paper: #fffefa;
+  --pb-ink: #101010;
+  --pb-muted: #737986;
+  --pb-border: rgba(84, 70, 36, .10);
+  --pb-shadow: 0 13px 30px rgba(44, 36, 22, .075);
+}
+
+html, body {
+  background: var(--pb-ivory) !important;
+  color: var(--pb-ink) !important;
+}
+
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Header de référence ---------- */
+.topbar {
+  background: #111212 !important;
+  color: #fff !important;
+  min-height: 88px !important;
+  display: flex !important;
+  align-items: center !important;
+  border: 0 !important;
+}
+
+.topbar .wrap.nav {
+  width: min(900px, calc(100% - 48px)) !important;
+  min-height: 88px !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.topbar .brand {
+  gap: 14px !important;
+  text-decoration: none !important;
+  min-width: 0 !important;
+  max-width: calc(100vw - 120px) !important;
+}
+
+.topbar .brand-round-logo {
+  display: block !important;
+  width: 54px !important;
+  height: 54px !important;
+  min-width: 54px !important;
+  max-width: 54px !important;
+  object-fit: contain !important;
+  border-radius: 50% !important;
+}
+
+.brand-title {
+  display: inline-flex !important;
+  gap: .28em !important;
+  align-items: baseline !important;
+  white-space: nowrap !important;
+  font-size: 20px !important;
+  line-height: 1 !important;
+  font-weight: 850 !important;
+  letter-spacing: .015em !important;
+}
+.brand-popote { color: #fff !important; }
+.brand-bravo { color: #e0a52a !important; }
+
+.notification-bell {
+  position: relative !important;
+  font-size: 27px !important;
+  line-height: 1 !important;
+  padding: 8px !important;
+  margin-left: auto !important;
+  text-decoration: none !important;
+  filter: saturate(.92) brightness(1.02);
+}
+
+.desktop-nav { display: none !important; }
+
+/* ---------- Main / marges ---------- */
+.app-main {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.member-home,
+.ranking-page,
+.qr-page,
+.change-password-page,
+.notifications-page,
+.declare-payment-page {
+  width: min(900px, 100%) !important;
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  padding-left: 28px !important;
+  padding-right: 28px !important;
+}
+
+/* ---------- Filigrane P3 doré ---------- */
+.premium-gold-home,
+.ranking-page {
+  position: relative !important;
+  isolation: isolate !important;
+}
+
+.p3-gold-watermark,
+.ranking-watermark {
+  position: absolute !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  background: url("/static/p3-watermark-gold.png") center / contain no-repeat !important;
+  opacity: .20 !important;
+}
+
+.p3-gold-watermark {
+  width: 500px !important;
+  height: 500px !important;
+  top: 34px !important;
+  right: -145px !important;
+}
+
+.ranking-watermark {
+  width: 410px !important;
+  height: 410px !important;
+  top: 28px !important;
+  right: -115px !important;
+  opacity: .14 !important;
+}
+
+/* ---------- Typographie ---------- */
+.eyebrow {
+  color: #9d7413 !important;
+  font-size: 13px !important;
+  font-weight: 850 !important;
+  letter-spacing: .10em !important;
+  text-transform: uppercase !important;
+}
+
+.member-hero {
+  padding-top: 34px !important;
+  margin-bottom: 26px !important;
+}
+
+.member-hero h1,
+.ranking-hero h1,
+.qr-page h1,
+.change-password-page h1,
+.notifications-page h1,
+.declare-payment-page h1 {
+  color: #111 !important;
+  font-weight: 850 !important;
+  letter-spacing: -.045em !important;
+}
+
+.member-hero h1 {
+  font-size: clamp(34px, 7vw, 46px) !important;
+  line-height: 1.02 !important;
+  margin: 8px 0 12px !important;
+}
+
+.member-hero .muted,
+.ranking-hero .muted,
+.qr-intro,
+.notifications-page .muted,
+.declare-payment-page .muted {
+  color: var(--pb-muted) !important;
+  font-size: 16px !important;
+  line-height: 1.45 !important;
+}
+
+/* ---------- Dashboard : 3 cartes ---------- */
+.member-summary {
+  display: grid !important;
+  grid-template-columns: 1.18fr 1fr 1fr !important;
+  gap: 12px !important;
+  margin: 0 0 22px !important;
+}
+
+.premium-gold-home .member-summary-card {
+  min-width: 0 !important;
+  min-height: 132px !important;
+  padding: 17px 16px !important;
+  border-radius: 20px !important;
+  border: 1px solid var(--pb-border) !important;
+  background: rgba(255,255,255,.92) !important;
+  box-shadow: var(--pb-shadow) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-end !important;
+}
+
+.premium-gold-home .member-summary-card.summary-balance {
+  color: #e0aa28 !important;
+  background: linear-gradient(145deg, #111212, #080909) !important;
+  border-color: rgba(216,161,28,.26) !important;
+}
+
+.member-summary-card .summary-icon {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  margin-bottom: 15px !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  color: #bd8410 !important;
+  font-size: 22px !important;
+  line-height: 1 !important;
+}
+
+.summary-balance .summary-icon {
+  border: 1px solid rgba(216,161,28,.55) !important;
+  color: #d9a31d !important;
+}
+
+.member-summary-card > span:not(.summary-icon) {
+  color: #69707c !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .01em !important;
+  line-height: 1.15 !important;
+}
+
+.summary-balance > span:not(.summary-icon) {
+  color: #d8aa38 !important;
+}
+
+.member-summary-card strong {
+  margin-top: 8px !important;
+  color: #111 !important;
+  font-size: clamp(22px, 5.4vw, 30px) !important;
+  line-height: 1 !important;
+  font-weight: 850 !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-balance strong { color: #efb72c !important; }
+
+/* ---------- Paiement principal ---------- */
+.quick-payment {
+  margin: 22px 0 28px !important;
+}
+
+.paypal-home-button.payment-button-with-badge {
+  position: relative !important;
+  width: 100% !important;
+  min-height: 66px !important;
+  padding: 12px 56px 12px 16px !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, #f2b620, #ffc536) !important;
+  box-shadow: 0 14px 28px rgba(207,149,14,.20) !important;
+  color: #111 !important;
+  border: 1px solid rgba(190,126,0,.08) !important;
+  text-decoration: none !important;
+}
+
+.paypal-home-main {
+  gap: 12px !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+}
+
+.paypal-home-logo {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 9px !important;
+}
+
+.payment-arrow {
+  position: absolute !important;
+  right: 20px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  font-size: 28px !important;
+  font-weight: 500 !important;
+}
+
+/* ---------- Recherche ---------- */
+.catalogue-search-wrap {
+  position: relative !important;
+}
+
+.catalogue-search-wrap input {
+  height: 56px !important;
+  border-radius: 17px !important;
+  border: 1px solid rgba(81,83,88,.12) !important;
+  background: rgba(255,255,255,.90) !important;
+  box-shadow: 0 9px 24px rgba(40,36,30,.055) !important;
+  padding: 0 48px 0 45px !important;
+  font-size: 16px !important;
+  color: #111 !important;
+}
+
+.catalogue-search-icon {
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  width: 16px !important;
+  height: 16px !important;
+  transform: translateY(-54%) !important;
+  border: 2px solid #737b86 !important;
+  border-radius: 50% !important;
+  z-index: 2 !important;
+}
+.catalogue-search-icon::after {
+  content: "" !important;
+  position: absolute !important;
+  width: 7px !important;
+  height: 2px !important;
+  background: #737b86 !important;
+  transform: rotate(45deg) !important;
+  right: -5px !important;
+  bottom: -2px !important;
+  border-radius: 2px !important;
+}
+.catalogue-filter-icon {
+  position: absolute !important;
+  right: 17px !important;
+  top: 50% !important;
+  width: 17px !important;
+  height: 16px !important;
+  transform: translateY(-50%) !important;
+  z-index: 2 !important;
+}
+.catalogue-filter-icon::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-left: 2px solid #7c838c !important;
+  border-right: 2px solid #7c838c !important;
+  border-top: 2px solid #7c838c !important;
+  clip-path: polygon(0 0,100% 0,63% 45%,63% 100%,39% 82%,39% 45%) !important;
+}
+
+/* ---------- Segmented control ---------- */
+.premium-segmented {
+  padding: 3px !important;
+  min-height: 52px !important;
+  border-radius: 17px !important;
+  background: rgba(235,233,228,.72) !important;
+  box-shadow: inset 0 0 0 1px rgba(92,83,64,.04) !important;
+}
+
+.premium-segmented .catalogue-tab {
+  min-height: 46px !important;
+  border-radius: 14px !important;
+  font-size: 16px !important;
+  font-weight: 760 !important;
+}
+
+.premium-segmented .catalogue-tab.active {
+  background: linear-gradient(135deg, #f1b626, #ffc83d) !important;
+  color: #111 !important;
+  box-shadow: 0 8px 18px rgba(197,142,15,.16) !important;
+}
+
+/* ---------- Produits ---------- */
+.products.compact-products {
+  gap: 10px !important;
+}
+
+.premium-gold-home .compact-product-card {
+  min-height: 92px !important;
+  padding: 12px 14px !important;
+  border-radius: 19px !important;
+  border: 1px solid rgba(75,70,59,.055) !important;
+  background: rgba(255,255,255,.93) !important;
+  box-shadow: 0 9px 24px rgba(34,31,26,.055) !important;
+}
+
+.product-media-premium {
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  border-radius: 50% !important;
+  background: #f4f2ed !important;
+  overflow: hidden !important;
+}
+
+.product-media-premium img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  padding: 5px !important;
+}
+
+.compact-product-copy strong {
+  font-size: 18px !important;
+  font-weight: 820 !important;
+  letter-spacing: -.02em !important;
+}
+
+.product-meta {
+  font-size: 14px !important;
+  color: #747b86 !important;
+}
+.product-meta b { color: #b25716 !important; }
+
+.quick-add-btn {
+  border-radius: 13px !important;
+  background: linear-gradient(135deg, #f1b526, #ffc538) !important;
+  color: #111 !important;
+  min-height: 42px !important;
+  padding: 0 14px !important;
+}
+
+.inline-qty-control {
+  border-radius: 13px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(65,65,65,.12) !important;
+  background: #fafafa !important;
+}
+.inline-qty-control button,
+.inline-qty-control input {
+  min-height: 42px !important;
+  background: transparent !important;
+  color: #111 !important;
+}
+
+/* ---------- Classement : référence ---------- */
+.ranking-page {
+  padding-top: 34px !important;
+}
+
+.ranking-hero {
+  margin-bottom: 22px !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.ranking-hero h1 {
+  font-size: clamp(34px, 7.5vw, 48px) !important;
+  margin: 8px 0 12px !important;
+}
+
+.mobile-podium {
+  gap: 12px !important;
+  margin: 22px 0 20px !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.ranking-page .mobile-podium-card {
+  background: rgba(255,255,255,.93) !important;
+  border: 1px solid rgba(126,98,36,.10) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 28px rgba(35,31,25,.07) !important;
+}
+
+.ranking-page .mobile-podium-card.podium-first {
+  background: linear-gradient(145deg, rgba(255,253,244,.98), rgba(255,251,233,.96)) !important;
+  border: 1.5px solid rgba(211,158,31,.72) !important;
+}
+
+.ranking-page .mobile-podium-card.podium-second {
+  border: 1px solid rgba(135,135,135,.14) !important;
+}
+
+.ranking-page .mobile-podium-card.podium-third {
+  border: 1px solid rgba(171,91,24,.14) !important;
+}
+
+.podium-rank-label {
+  font-size: 16px !important;
+  font-weight: 850 !important;
+}
+.podium-first .podium-rank-label { color: #a47717 !important; }
+.podium-third .podium-rank-label { color: #9e4d17 !important; }
+
+.podium-name {
+  letter-spacing: -.025em !important;
+}
+
+.ranking-list-mobile {
+  gap: 10px !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.ranking-page .ranking-row-mobile {
+  min-height: 72px !important;
+  padding: 14px 16px !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(78,72,60,.055) !important;
+  background: rgba(255,255,255,.94) !important;
+  box-shadow: 0 8px 21px rgba(35,31,25,.045) !important;
+}
+
+.ranking-page .ranking-row-mobile.last-rank-row {
+  border: 1.5px solid rgba(211,158,31,.82) !important;
+  border-left: 1.5px solid rgba(211,158,31,.82) !important;
+  background: rgba(255,254,249,.98) !important;
+}
+
+.ranking-page .ranking-row-mobile.my-rank-row:not(.last-rank-row) {
+  border: 1.5px solid rgba(216,161,28,.60) !important;
+  background: #fffaf0 !important;
+}
+
+.crab-badge {
+  background: #fff0d8 !important;
+  color: #a84217 !important;
+  font-size: 11px !important;
+  font-weight: 850 !important;
+  padding: 4px 9px !important;
+}
+
+/* ---------- QR / Profil / Notifications / Paiement ---------- */
+.qr-page,
+.change-password-page,
+.notifications-page,
+.declare-payment-page {
+  padding-top: 34px !important;
+  padding-bottom: 120px !important;
+}
+
+.qr-card,
+.change-password-page .card,
+.notifications-page .card,
+.declare-payment-page .card {
+  background: rgba(255,255,255,.94) !important;
+  border: 1px solid var(--pb-border) !important;
+  box-shadow: var(--pb-shadow) !important;
+}
+
+.qr-card { border-radius: 22px !important; }
+
+.change-password-page .card,
+.declare-payment-page .narrow-pay {
+  border-radius: 22px !important;
+}
+
+.notifications-page .push-settings-card,
+.notifications-page .notification-row {
+  border-radius: 18px !important;
+}
+
+.declare-payment-page .balance {
+  background: #111212 !important;
+  color: #e3ab24 !important;
+}
+
+.declare-payment-page input,
+.change-password-page input {
+  background: #fff !important;
+  border: 1px solid rgba(80,76,67,.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8) !important;
+}
+
+.declare-payment-page button[type="submit"],
+.change-password-page button[type="submit"] {
+  background: #111212 !important;
+  color: #fff !important;
+}
+
+.declare-payment-page .secondary,
+.notifications-page .secondary,
+.qr-page .secondary {
+  background: #f0b82a !important;
+  color: #111 !important;
+}
+
+/* ---------- Bottom bar ---------- */
+.mobile-tabbar:not(.admin-tabbar) {
+  background: linear-gradient(180deg, rgba(25,26,26,.98), rgba(11,12,12,.99)) !important;
+  border: 1px solid rgba(255,255,255,.06) !important;
+  box-shadow: 0 13px 30px rgba(0,0,0,.22) !important;
+}
+
+.mobile-tabbar:not(.admin-tabbar) a {
+  color: #c2c4c6 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+.mobile-tabbar:not(.admin-tabbar) a.active {
+  color: #e9b427 !important;
+}
+
+.mobile-tabbar:not(.admin-tabbar) a.active::after {
+  background: #e9b427 !important;
+  box-shadow: 0 0 10px rgba(233,180,39,.35) !important;
+}
+
+/* ---------- Mobile exact ---------- */
+@media (max-width: 680px) {
+  .topbar {
+    min-height: 82px !important;
+    padding: 0 !important;
+  }
+
+  .topbar .wrap.nav {
+    width: calc(100% - 40px) !important;
+    min-height: 82px !important;
+  }
+
+  .topbar .brand {
+    gap: 11px !important;
+  }
+
+  .topbar .brand-round-logo {
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    max-width: 46px !important;
+  }
+
+  .brand-title {
+    font-size: 18px !important;
+  }
+
+  .notification-bell {
+    font-size: 25px !important;
+  }
+
+  .member-home,
+  .ranking-page,
+  .qr-page,
+  .change-password-page,
+  .notifications-page,
+  .declare-payment-page {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+  .member-hero {
+    padding-top: 30px !important;
+  }
+
+  .member-hero h1 {
+    font-size: clamp(34px, 9.5vw, 42px) !important;
+  }
+
+  .member-hero .muted {
+    font-size: 15px !important;
+  }
+
+  .p3-gold-watermark {
+    width: 370px !important;
+    height: 370px !important;
+    right: -145px !important;
+    top: 44px !important;
+    opacity: .19 !important;
+  }
+
+  .ranking-watermark {
+    width: 320px !important;
+    height: 320px !important;
+    right: -118px !important;
+    top: 58px !important;
+  }
+
+  .member-summary {
+    grid-template-columns: 1.16fr 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .premium-gold-home .member-summary-card {
+    min-height: 122px !important;
+    padding: 13px 11px !important;
+    border-radius: 18px !important;
+  }
+
+  .member-summary-card .summary-icon {
+    width: 28px !important;
+    height: 28px !important;
+    margin-bottom: 11px !important;
+    font-size: 18px !important;
+  }
+
+  .member-summary-card > span:not(.summary-icon) {
+    font-size: 9px !important;
+    line-height: 1.12 !important;
+  }
+
+  .member-summary-card strong {
+    font-size: clamp(19px, 5.7vw, 25px) !important;
+    margin-top: 7px !important;
+  }
+
+  .paypal-home-button.payment-button-with-badge {
+    min-height: 62px !important;
+    border-radius: 17px !important;
+  }
+
+  .paypal-home-main {
+    font-size: 16px !important;
+  }
+
+  .catalogue-search-wrap input {
+    height: 54px !important;
+  }
+
+  .ranking-hero h1 {
+    font-size: clamp(32px, 9vw, 42px) !important;
+  }
+
+  .mobile-podium {
+    gap: 9px !important;
+  }
+
+  .ranking-page .mobile-podium-card {
+    border-radius: 18px !important;
+  }
+
+  .ranking-page .ranking-row-mobile {
+    border-radius: 17px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .brand-title { font-size: 16px !important; }
+  .topbar .brand-round-logo {
+    width: 43px !important;
+    height: 43px !important;
+    min-width: 43px !important;
+    max-width: 43px !important;
+  }
+
+  .member-summary {
+    gap: 7px !important;
+  }
+
+  .premium-gold-home .member-summary-card {
+    padding: 12px 9px !important;
+  }
+
+  .member-summary-card > span:not(.summary-icon) {
+    font-size: 8.5px !important;
+  }
+
+  .member-summary-card strong {
+    font-size: 20px !important;
+  }
+
+  /* Conserve les 2e / 3e côte à côte comme la maquette */
+  .mobile-podium {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-areas:
+      "first first"
+      "second third" !important;
+  }
+
+  .mobile-podium-card .podium-name,
+  .mobile-podium-card.podium-first .podium-name {
+    font-size: 17px !important;
+  }
+}

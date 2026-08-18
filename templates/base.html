@@ -21,7 +21,7 @@
     <a class="brand" href="{{ url_for('admin' if current_user and current_user['is_admin'] else 'dashboard') if current_user else url_for('login') }}">
       <img src="{{ url_for('static', filename='insigne-bravo-rond.png') }}" alt="" class="brand-round-logo">
 
-      <span>POPOTE BRAVO</span>
+      <span class="brand-title"><span class="brand-popote">POPOTE</span> <span class="brand-bravo">BRAVO</span></span>
     </a>
     {% if current_user %}
     <a class="notification-bell" href="{{ url_for('notifications') }}" aria-label="Notifications">
