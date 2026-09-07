@@ -32,6 +32,62 @@
     <span class="rarity-dot legendary"></span> Légendaire
   </div>
 
+
+  {% if profile['unlocked_frames'] %}
+  <section class="frames-section unlocked-frames-section">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Accès rapide</p>
+        <h2>✨ Mes cadres débloqués</h2>
+        <p class="frame-section-help">Tous tes cadres disponibles sont ici. Celui que tu portes actuellement apparaît en premier.</p>
+      </div>
+      <span>{{ profile['unlocked_frames']|length }} débloqué(s)</span>
+    </div>
+
+    <div class="frame-collection-grid unlocked-frame-grid">
+      {% for frame in profile['unlocked_frames'] %}
+        <article class="collection-frame-card unlocked-highlight {% if profile['frame']==frame['key'] %}is-equipped{% endif %} frame-{{ frame['style'] }}"
+                 style="--frame-a:{{ frame['color1'] }};--frame-b:{{ frame['color2'] }};--frame-c:{{ frame['color3'] }};">
+          <div class="collection-frame-visual {% if frame['kind']=='product' %}product-visual{% else %}special-visual{% endif %}">
+            <div class="collection-avatar-ring"><span>{{ profile['user']['name'][:1]|upper }}</span></div>
+            {% for pos in ['top','right','bottom','left'] %}
+              <span class="frame-orbit-emblem {% if frame['kind']=='product' %}product-emblem {% endif %}{{ pos }}">
+                {% if frame['kind']=='product' %}
+                  {% if frame['has_blob'] %}
+                    <img src="{{ url_for('product_image', product_id=frame['product_id']) }}" alt="">
+                  {% elif frame['image_path'] %}
+                    <img src="{{ url_for('static', filename=frame['image_path']) }}" alt="">
+                  {% else %}
+                    {{ frame['icon'] }}
+                  {% endif %}
+                {% else %}
+                  {{ frame['decor'] }}
+                {% endif %}
+              </span>
+            {% endfor %}
+          </div>
+
+          <strong>{{ frame['name'] }}</strong>
+          {% if frame.get('subtitle') %}<span class="product-tier-name">{{ frame['subtitle'] }}</span>{% endif %}
+          <span class="frame-rarity rarity-{{ frame['rarity']|lower|replace('é','e') }}">{{ frame['rarity'] }}</span>
+          {% if frame['kind']=='product' %}
+            <small>{{ frame['current'] }} au total · {{ frame['previous_month_qty'] }} le mois dernier</small>
+          {% else %}
+            <small>{{ frame['note'] }}</small>
+          {% endif %}
+
+          <form method="post" action="{{ url_for('profile_frame') }}">
+            <input type="hidden" name="frame" value="{{ frame['key'] }}">
+            <button {% if profile['frame']==frame['key'] %}disabled{% endif %}>
+              {% if profile['frame']==frame['key'] %}Équipé ✓{% else %}Équiper{% endif %}
+            </button>
+          </form>
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   <section class="frames-section">
     <div class="section-head">
       <div><p class="eyebrow">Collection spéciale</p><h2>Cadres Popote</h2></div>
@@ -73,7 +129,7 @@
       <div>
         <p class="eyebrow">Teams</p>
         <h2>Cadres produits</h2>
-        <p class="frame-section-help">Chaque produit éligible possède Bronze (30), Argent (60), Or (100) et Légendaire (200). Le visuel du produit apparaît directement autour du cadre ; tout nouveau produit crée automatiquement sa collection.</p>
+        <p class="frame-section-help">Chaque produit éligible possède Bronze (30), Argent (60), Or (100) et Légendaire (200). Tout l'historique déjà enregistré compte, y compris le mois dernier — même si un produit a ensuite été recréé dans le catalogue.</p>
       </div>
     </div>
 
@@ -103,6 +159,7 @@
 
           <div class="frame-progress"><span style="width:{{ frame['progress'] }}%"></span></div>
           <b>{{ frame['current'] }} / {{ frame['goal'] }}</b>
+          <small class="frame-history-note">dont {{ frame['previous_month_qty'] }} le mois dernier</small>
 
           {% if frame['unlocked'] %}
           <form method="post" action="{{ url_for('profile_frame') }}">

@@ -7,7 +7,7 @@
   <div class="ranking-hero">
     <p class="eyebrow">Classement · {{ month_label }}</p>
     <h1>🏆 Classement du mois</h1>
-    <p class="muted">Consommations + dettes ajoutées par le Popotier.</p>
+    <p class="muted">Consommations + dettes ajoutées par le Popotier. Touchez un membre pour ouvrir son profil Popote.</p>
   </div>
 
   {% set podium = ranking[:3] %}
@@ -15,6 +15,7 @@
   {% if podium %}
   <div class="mobile-podium">
     {% if podium|length >= 1 %}
+    <a class="ranking-profile-link podium-profile-link" href="{{ url_for('public_profile', user_id=podium[0]['id']) }}" aria-label="Voir le profil de {{ podium[0]['name'] }}">
     <article class="mobile-podium-card podium-first {% if podium[0]['id'] == current_user['id'] %}is-me{% endif %}">
       <div class="podium-card-top">
         <span class="podium-medal">🥇</span>
@@ -23,9 +24,11 @@
       <strong class="podium-name">{{ podium[0]["name"] }}</strong>
       <span class="podium-amount">{{ format_eur(podium[0]["total_cents"]) }}</span>
     </article>
+    </a>
     {% endif %}
 
     {% if podium|length >= 2 %}
+    <a class="ranking-profile-link podium-profile-link" href="{{ url_for('public_profile', user_id=podium[1]['id']) }}" aria-label="Voir le profil de {{ podium[1]['name'] }}">
     <article class="mobile-podium-card podium-second {% if podium[1]['id'] == current_user['id'] %}is-me{% endif %}">
       <div class="podium-card-top">
         <span class="podium-medal">🥈</span>
@@ -34,9 +37,11 @@
       <strong class="podium-name">{{ podium[1]["name"] }}</strong>
       <span class="podium-amount">{{ format_eur(podium[1]["total_cents"]) }}</span>
     </article>
+    </a>
     {% endif %}
 
     {% if podium|length >= 3 %}
+    <a class="ranking-profile-link podium-profile-link" href="{{ url_for('public_profile', user_id=podium[2]['id']) }}" aria-label="Voir le profil de {{ podium[2]['name'] }}">
     <article class="mobile-podium-card podium-third {% if podium[2]['id'] == current_user['id'] %}is-me{% endif %}">
       <div class="podium-card-top">
         <span class="podium-medal">🥉</span>
@@ -45,11 +50,13 @@
       <strong class="podium-name">{{ podium[2]["name"] }}</strong>
       <span class="podium-amount">{{ format_eur(podium[2]["total_cents"]) }}</span>
     </article>
+    </a>
     {% endif %}
   </div>
   {% endif %}
 <div class="ranking-list ranking-list-mobile">
   {% for member in ranking[3:] %}
+    <a class="ranking-profile-link ranking-row-link" href="{{ url_for('public_profile', user_id=member['id']) }}" aria-label="Voir le profil de {{ member['name'] }}">
     <article class="card ranking-row-mobile
                     {% if member['id'] == current_user['id'] %}my-rank-row{% endif %}
                     {% if loop.last and ranking|length > 3 %}last-rank-row{% endif %}">
@@ -73,6 +80,7 @@
         {{ format_eur(member["total_cents"]) }}
       </div>
     </article>
+    </a>
   {% else %}
     <div class="card">Aucun membre à afficher.</div>
   {% endfor %}

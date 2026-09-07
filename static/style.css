@@ -6438,3 +6438,74 @@ body {
     height: 72px !important;
   }
 }
+
+
+/* ============================================================
+   V6.19.1 — Historique cadres + accès rapide + profils classement
+   ============================================================ */
+.unlocked-frames-section {
+  position: relative !important;
+  margin: 4px 0 34px !important;
+  padding: 18px !important;
+  border-radius: 24px !important;
+  background: radial-gradient(circle at 88% 8%, rgba(217,166,39,.14), transparent 34%), rgba(255,255,255,.68) !important;
+  border: 1px solid rgba(194,144,24,.20) !important;
+  box-shadow: 0 14px 34px rgba(65,49,20,.07) !important;
+}
+.unlocked-frames-section .section-head { margin-bottom: 14px !important; }
+.unlocked-highlight { border-color: color-mix(in srgb,var(--frame-b) 44%,rgba(0,0,0,.08)) !important; }
+.unlocked-highlight.is-equipped {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb,var(--frame-b) 66%,transparent), 0 14px 30px color-mix(in srgb,var(--frame-a) 20%,rgba(0,0,0,.08)) !important;
+}
+.unlocked-highlight.is-equipped::before {
+  content: "ÉQUIPÉ" !important;
+  position: absolute !important;
+  top: 9px !important;
+  left: 9px !important;
+  z-index: 6 !important;
+  padding: 3px 7px !important;
+  border-radius: 999px !important;
+  background: #111 !important;
+  color: #e3ad29 !important;
+  font-size: 8px !important;
+  font-weight: 900 !important;
+  letter-spacing: .06em !important;
+}
+.frame-history-note {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #8a7a54 !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+}
+.ranking-profile-link {
+  display: block !important;
+  color: inherit !important;
+  text-decoration: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+.podium-profile-link { min-width: 0 !important; }
+.ranking-profile-link .mobile-podium-card,
+.ranking-profile-link .ranking-row-mobile {
+  cursor: pointer !important;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease !important;
+}
+.ranking-profile-link:active .mobile-podium-card,
+.ranking-profile-link:active .ranking-row-mobile { transform: scale(.985) !important; }
+.ranking-row-link .ranking-row-mobile { width: 100% !important; }
+@media (hover:hover) {
+  .ranking-profile-link:hover .mobile-podium-card,
+  .ranking-profile-link:hover .ranking-row-mobile {
+    transform: translateY(-2px) !important;
+    border-color: rgba(202,151,28,.42) !important;
+    box-shadow: 0 12px 28px rgba(41,34,21,.09) !important;
+  }
+}
+@media (max-width:680px) {
+  .unlocked-frames-section {
+    padding: 14px 10px !important;
+    margin-left: -2px !important;
+    margin-right: -2px !important;
+  }
+}

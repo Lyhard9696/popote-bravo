@@ -54,3 +54,14 @@ Une fois équipé, le cadre est réellement appliqué autour du bloc Profil Popo
 - templates/profile.html
 - templates/profiles.html
 - templates/frames.html
+
+
+## V6.19.1 — Historique cadres & profils depuis le classement
+
+- Les cadres Team utilisent tout l'historique de consommations déjà enregistré, mois dernier inclus.
+- Le rapprochement historique fonctionne aussi par nom de produit : si un produit a été recréé avec un nouvel ID, ses anciennes consommations continuent de compter.
+- La page Cadres affiche tous les cadres débloqués dans une section d'accès rapide tout en haut.
+- Le cadre actuellement équipé est affiché en premier.
+- Les cadres Team affichent le total historique et le nombre de consommations du mois dernier.
+- Chaque membre du classement, podium compris, est cliquable et ouvre directement son profil Popote.
+- Les profils sont visibles par tous les membres connectés de la Popote.

@@ -1366,6 +1366,7 @@ def profile_frame_choices(user_id, badges, metrics=None):
             "style": style,
             "kind": "special",
             "note": note,
+            "previous_month_qty": 0,
             "decor": decor,
             "color1": palette[0],
             "color2": palette[1],
@@ -1380,12 +1381,21 @@ def profile_frame_choices(user_id, badges, metrics=None):
                    WHERE c.user_id=?
                      AND (
                          c.product_id=p.id
-                         OR (c.product_id IS NULL AND lower(c.product_name)=lower(p.name))
+                         OR lower(trim(c.product_name))=lower(trim(p.name))
                      )
-               ),0) AS qty
+               ),0) AS qty,
+               COALESCE((
+                   SELECT COUNT(*) FROM consumptions c
+                   WHERE c.user_id=?
+                     AND (
+                         c.product_id=p.id
+                         OR lower(trim(c.product_name))=lower(trim(p.name))
+                     )
+                     AND strftime('%Y-%m', c.created_at)=?
+               ),0) AS previous_month_qty
         FROM products p
         ORDER BY p.category, p.name COLLATE NOCASE
-    """, (user_id,)).fetchall()
+    """, (user_id, user_id, _previous_month_key())).fetchall()
 
     for row in products:
         name = row["name"]
@@ -1412,6 +1422,7 @@ def profile_frame_choices(user_id, badges, metrics=None):
                 "has_blob": bool(row["has_blob"]),
                 "image_path": row["image_path"],
                 "note": f"{goal} consommations de {name}",
+                "previous_month_qty": int(row["previous_month_qty"] or 0),
                 "decor": "",
                 "color1": palette[0],
                 "color2": palette[1],
@@ -1491,6 +1502,29 @@ def build_profile(user_id, viewer_id=None):
     unlocked_keys = {frame["key"] for frame in unlocked}
     selected_key = settings["frame_key"] if settings and settings["frame_key"] in unlocked_keys else "classic"
     selected_frame = next((f for f in frames if f["key"] == selected_key), frames[0])
+
+    # Accès rapide : le cadre équipé d'abord, puis tous les cadres débloqués,
+    # avec les raretés les plus prestigieuses en premier.
+    rarity_order = {"Légendaire": 0, "Épique": 1, "Rare": 2, "Commun": 3}
+    unlocked = sorted(
+        unlocked,
+        key=lambda f: (
+            0 if f["key"] == selected_key else 1,
+            rarity_order.get(f["rarity"], 9),
+            f["name"].lower(),
+            f.get("subtitle", "")
+        )
+    )
+    frames = sorted(
+        frames,
+        key=lambda f: (
+            0 if f["unlocked"] else 1,
+            0 if f["key"] == selected_key else 1,
+            rarity_order.get(f["rarity"], 9),
+            f["name"].lower(),
+            f.get("subtitle", "")
+        )
+    )
 
     return {
         "user": user,
