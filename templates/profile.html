@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Profil — Popote Bravo{% endblock %}
+{% block content %}
+<div class="social-profile-page">
+  <div class="community-watermark profile-watermark" aria-hidden="true"></div>
+  <section class="profile-identity frame-{{ profile['frame'] }}">
+    <div class="profile-avatar"><span>{{ profile['user']['name'][:1]|upper }}</span></div>
+    <div class="profile-heading"><p class="eyebrow">Profil Popote</p><h1>{{ profile['user']['name'] }}</h1><div class="level-pill">🌟 Niveau Popote {{ profile['level'] }}</div></div>
+    <div class="level-progress"><span style="width:{{ profile['progress'] }}%"></span></div>
+  </section>
+
+  {% if profile['tags'] %}<div class="taste-tags">{% for tag in profile['tags'] %}<span>{{ tag }}</span>{% endfor %}</div>{% endif %}
+
+  <section class="profile-stats-grid">
+    <div><span>💡</span><strong>{{ profile['stats']['ideas'] }}</strong><small>idées</small></div>
+    <div><span>🗳️</span><strong>{{ profile['stats']['votes'] }}</strong><small>votes</small></div>
+    <div><span>✅</span><strong>{{ profile['stats']['validated'] }}</strong><small>validées</small></div>
+  </section>
+
+  <section class="profile-section taste-profile-card">
+    <div class="section-head"><div><p class="eyebrow">Signature</p><h2>🍹 Profil gustatif</h2></div></div>
+    <div class="taste-lines">
+      <div><span>Boisson signature</span><strong>{{ profile['top_drink'] or 'À découvrir' }}</strong></div>
+      <div><span>Produit signature</span><strong>{{ profile['top_product'] or 'À découvrir' }}</strong></div>
+      <div><span>Côté nourriture</span><strong>{{ profile['top_food'] or 'À découvrir' }}</strong></div>
+    </div>
+  </section>
+
+  <section class="profile-section badge-section">
+    <div class="section-head"><div><p class="eyebrow">Collection</p><h2>🏅 Badges</h2></div><span>{{ profile['badges']|length }} débloqué(s)</span></div>
+    <div class="badge-grid">
+      {% for badge in profile['badges'] %}<article class="badge-card rarity-{{ badge['rarity']|lower|replace('é','e') }}"><div class="badge-icon">{{ badge['icon'] }}</div><span class="badge-rarity">{{ badge['rarity'] }}</span><strong>{{ badge['name'] }}</strong>{% if badge['subtitle'] %}<b>{{ badge['subtitle'] }}</b>{% endif %}<small>{{ badge['description'] }}</small></article>
+      {% else %}<div class="badge-empty">Les premiers badges arriveront avec ta participation à la Popote ✨</div>{% endfor %}
+    </div>
+  </section>
+
+  {% if is_owner %}
+  <section class="profile-section frame-picker">
+    <div class="section-head"><div><p class="eyebrow">Personnalisation</p><h2>🎨 Cadre de profil</h2></div></div>
+    <form method="post" action="{{ url_for('profile_frame') }}"><div class="frame-options">{% for frame in profile['frames'] %}<label class="frame-choice frame-{{ frame['key'] }}"><input type="radio" name="frame" value="{{ frame['key'] }}" {% if profile['frame']==frame['key'] %}checked{% endif %}><span>{{ frame['name'] }}</span><small>{{ frame['rarity'] }}</small></label>{% endfor %}</div><button class="community-gold-button">Appliquer ce cadre</button></form>
+  </section>
+  {% endif %}
+
+  <section class="profile-section profile-reaction-card" id="profile-reactions">
+    <div class="section-head"><div><p class="eyebrow">La Popote réagit</p><h2>👀 Réactions au profil</h2></div></div>
+    <div class="reaction-strip profile-reactions">
+      {% for emoji in ['🔥','😂','🍻','👀'] %}
+        {% if is_owner %}<span class="reaction-readonly">{{ emoji }} <b>{{ profile['reactions'][emoji] }}</b></span>
+        {% else %}<form method="post" action="{{ url_for('profile_reaction', user_id=profile['user']['id']) }}"><input type="hidden" name="reaction" value="{{ emoji }}"><button class="{% if profile['my_reaction']==emoji %}selected{% endif %}">{{ emoji }} <span>{{ profile['reactions'][emoji] }}</span></button></form>{% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if is_owner %}
+  <section class="profile-section security-hub">
+    <div class="section-head"><div><p class="eyebrow">Sécurité</p><h2>🔐 Face ID / Passkey</h2></div></div>
+    <p class="profile-help">Après activation, tu pourras te connecter avec Face ID, Touch ID ou l'empreinte de ton téléphone. Ton mot de passe reste disponible.</p>
+    <button type="button" id="passkey-register" class="passkey-button">Activer Face ID / Passkey</button>
+    <p id="passkey-status" class="passkey-status"></p>
+    {% if passkeys %}<div class="passkey-list">{% for key in passkeys %}<div><span><b>{{ key['label'] }}</b><small>Ajoutée le {{ key['created_at'][:10] }}</small></span><form method="post" action="{{ url_for('passkey_delete', credential_id=key['id']) }}"><button>Supprimer</button></form></div>{% endfor %}</div>{% endif %}
+    <div class="profile-security-links"><a href="{{ url_for('change_password') }}">Modifier mon mot de passe</a><a href="{{ url_for('profiles') }}">Voir les profils de la Popote</a><a class="logout-link" href="{{ url_for('logout') }}">Se déconnecter</a></div>
+  </section>
+  {% else %}<a class="profiles-return" href="{{ url_for('profiles') }}">← Tous les profils</a>{% endif %}
+</div>
+{% if is_owner %}
+<script>
+const b64ToBuf = (v) => { v=v.replace(/-/g,'+').replace(/_/g,'/'); while(v.length%4)v+='='; const s=atob(v); return Uint8Array.from(s,c=>c.charCodeAt(0)).buffer; };
+const bufToB64 = (buf) => { let s=''; new Uint8Array(buf).forEach(b=>s+=String.fromCharCode(b)); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); };
+const btn=document.getElementById('passkey-register'), statusEl=document.getElementById('passkey-status');
+if (!window.PublicKeyCredential) { btn.disabled=true; btn.textContent='Passkeys non prises en charge sur ce navigateur'; }
+btn?.addEventListener('click', async () => {
+  try {
+    statusEl.textContent='Préparation de Face ID…';
+    const r=await fetch('{{ url_for("passkey_register_options") }}',{method:'POST'}); const o=await r.json(); if(!r.ok) throw new Error(o.error||'Erreur');
+    o.challenge=b64ToBuf(o.challenge); o.user.id=b64ToBuf(o.user.id); (o.excludeCredentials||[]).forEach(c=>c.id=b64ToBuf(c.id));
+    const cred=await navigator.credentials.create({publicKey:o});
+    const payload={id:cred.id,rawId:bufToB64(cred.rawId),type:cred.type,authenticatorAttachment:cred.authenticatorAttachment,clientExtensionResults:cred.getClientExtensionResults(),response:{attestationObject:bufToB64(cred.response.attestationObject),clientDataJSON:bufToB64(cred.response.clientDataJSON),transports:cred.response.getTransports?cred.response.getTransports():[]}};
+    const vr=await fetch('{{ url_for("passkey_register_verify") }}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const data=await vr.json(); if(!vr.ok) throw new Error(data.error||'Erreur');
+    statusEl.textContent='Face ID / Passkey activée ✅'; setTimeout(()=>location.reload(),800);
+  } catch(e) { statusEl.textContent=e.name==='NotAllowedError'?'Activation annulée.':e.message; }
+});
+</script>
+{% endif %}
+{% endblock %}

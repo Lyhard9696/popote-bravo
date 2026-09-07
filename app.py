@@ -6,6 +6,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 from datetime import datetime
+import base64
+import math
 from io import BytesIO
 import os
 import requests
@@ -15,6 +17,30 @@ import io
 from PIL import Image
 import json
 from pywebpush import webpush, WebPushException
+
+
+# Passkeys / Face ID / empreinte. Le try/except évite de bloquer l'application
+# si la dépendance n'est pas encore installée pendant un test local.
+try:
+    from webauthn import (
+        generate_registration_options,
+        verify_registration_response,
+        generate_authentication_options,
+        verify_authentication_response,
+        options_to_json,
+        base64url_to_bytes,
+    )
+    from webauthn.helpers.structs import (
+        AuthenticatorAttachment,
+        AuthenticatorSelectionCriteria,
+        PublicKeyCredentialDescriptor,
+        ResidentKeyRequirement,
+        UserVerificationRequirement,
+    )
+    WEBAUTHN_AVAILABLE = True
+except ImportError:
+    WEBAUTHN_AVAILABLE = False
+
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -151,6 +177,106 @@ def init_db():
         PRIMARY KEY(month_key, user_id),
         FOREIGN KEY(user_id) REFERENCES users(id)
     );
+
+
+    CREATE TABLE IF NOT EXISTS community_ideas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        category TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        image_blob BLOB,
+        image_mime TEXT,
+        status TEXT NOT NULL DEFAULT 'voting',
+        official_note TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS community_idea_votes (
+        idea_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        vote TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(idea_id, user_id),
+        FOREIGN KEY(idea_id) REFERENCES community_ideas(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS community_idea_reactions (
+        idea_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        reaction TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(idea_id, user_id),
+        FOREIGN KEY(idea_id) REFERENCES community_ideas(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS express_polls (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_by INTEGER NOT NULL,
+        category TEXT NOT NULL DEFAULT 'Nourriture',
+        question TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'open',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS express_poll_votes (
+        poll_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        vote TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(poll_id, user_id),
+        FOREIGN KEY(poll_id) REFERENCES express_polls(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_badges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        badge_key TEXT NOT NULL,
+        period_key TEXT NOT NULL DEFAULT '',
+        metadata_json TEXT,
+        awarded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, badge_key, period_key),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS user_profile_settings (
+        user_id INTEGER PRIMARY KEY,
+        frame_key TEXT NOT NULL DEFAULT 'classic',
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS profile_reactions (
+        target_user_id INTEGER NOT NULL,
+        actor_user_id INTEGER NOT NULL,
+        reaction TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(target_user_id, actor_user_id),
+        FOREIGN KEY(target_user_id) REFERENCES users(id),
+        FOREIGN KEY(actor_user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS passkey_credentials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        credential_id BLOB NOT NULL UNIQUE,
+        public_key BLOB NOT NULL,
+        sign_count INTEGER NOT NULL DEFAULT 0,
+        transports TEXT,
+        label TEXT NOT NULL DEFAULT 'Passkey',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ideas_created_at ON community_ideas(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_idea_votes_idea ON community_idea_votes(idea_id);
+    CREATE INDEX IF NOT EXISTS idx_express_status ON express_polls(status, expires_at);
     """)
     db.commit()
 
@@ -158,6 +284,11 @@ def init_db():
     consumption_cols = {row["name"] for row in db.execute("PRAGMA table_info(consumptions)").fetchall()}
     if "order_id" not in consumption_cols:
         db.execute("ALTER TABLE consumptions ADD COLUMN order_id TEXT")
+        db.commit()
+
+    user_cols = {row["name"] for row in db.execute("PRAGMA table_info(users)").fetchall()}
+    if "passkey_user_handle" not in user_cols:
+        db.execute("ALTER TABLE users ADD COLUMN passkey_user_handle BLOB")
         db.commit()
 
     product_cols = {row["name"] for row in db.execute("PRAGMA table_info(products)").fetchall()}
@@ -470,6 +601,359 @@ def send_push_to_admins(title, body, url="/admin", tag=None):
     return total
 
 
+
+FRENCH_MONTHS = {
+    1: "Janvier", 2: "Février", 3: "Mars", 4: "Avril",
+    5: "Mai", 6: "Juin", 7: "Juillet", 8: "Août",
+    9: "Septembre", 10: "Octobre", 11: "Novembre", 12: "Décembre",
+}
+
+BADGE_DEFINITIONS = {
+    "first_idea_validated": {
+        "name": "Visionnaire", "icon": "💡", "rarity": "Rare",
+        "description": "Première idée validée par la Popote.",
+    },
+    "express_10": {
+        "name": "Décideur express", "icon": "⚡", "rarity": "Rare",
+        "description": "10 votes express enregistrés.",
+    },
+    "product_discovered": {
+        "name": "Explorateur", "icon": "🧭", "rarity": "Commun",
+        "description": "Au moins 5 produits différents découverts.",
+    },
+    "payment_reglo": {
+        "name": "Paiement réglo", "icon": "✅", "rarity": "Commun",
+        "description": "3 paiements validés.",
+    },
+    "idea_month": {
+        "name": "Idée du mois", "icon": "🏆", "rarity": "Épique",
+        "description": "Idée la plus soutenue du mois.",
+    },
+    "pinch_month": {
+        "name": "Pince du mois", "icon": "🦀", "rarity": "Épique",
+        "description": "Dernière place du classement mensuel.",
+    },
+    "consumer_month": {
+        "name": "Consommateur du mois", "icon": "👑", "rarity": "Légendaire",
+        "description": "Première place du classement mensuel.",
+    },
+    "veteran": {
+        "name": "Ancien de la Popote", "icon": "🎖️", "rarity": "Rare",
+        "description": "Plus de 6 mois d'ancienneté.",
+    },
+    "fifty_entries": {
+        "name": "Habitué", "icon": "⭐", "rarity": "Commun",
+        "description": "50 consommations enregistrées.",
+    },
+}
+
+RARITY_WEIGHT = {"Commun": 1, "Rare": 2, "Épique": 3, "Légendaire": 4}
+PROFILE_REACTIONS = {"🔥", "😂", "🍻", "👀"}
+IDEA_REACTIONS = PROFILE_REACTIONS
+
+
+def _period_label(period_key):
+    try:
+        year, month = [int(x) for x in period_key.split("-")]
+        return f"{FRENCH_MONTHS[month]} {year}"
+    except Exception:
+        return period_key
+
+
+def _previous_month_key():
+    now = datetime.now()
+    if now.month == 1:
+        return f"{now.year - 1}-12"
+    return f"{now.year}-{now.month - 1:02d}"
+
+
+def _b64url_encode(raw):
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
+
+
+def _b64url_decode(value):
+    value = value.encode("ascii") if isinstance(value, str) else value
+    return base64.urlsafe_b64decode(value + b"=" * (-len(value) % 4))
+
+
+def webauthn_rp_id():
+    return request.host.split(":", 1)[0]
+
+
+def webauthn_origin():
+    proto = request.headers.get("X-Forwarded-Proto", request.scheme).split(",")[0].strip()
+    return f"{proto}://{request.host}"
+
+
+def notify_all_active(title, message, link, tag, exclude_user_id=None):
+    db = get_db()
+    rows = db.execute(
+        "SELECT id FROM users WHERE active = 1" + (" AND id != ?" if exclude_user_id else ""),
+        ((exclude_user_id,) if exclude_user_id else ())
+    ).fetchall()
+    for row in rows:
+        add_notification(db, row["id"], title, message, "info", link)
+    db.commit()
+    db.close()
+
+    pushed = 0
+    for row in rows:
+        pushed += send_push_to_user(row["id"], title, message, link, tag)
+    return len(rows), pushed
+
+
+def _insert_badge(db, user_id, badge_key, period_key="", metadata=None):
+    if badge_key not in BADGE_DEFINITIONS:
+        return False
+    cur = db.execute(
+        """
+        INSERT OR IGNORE INTO user_badges (user_id, badge_key, period_key, metadata_json)
+        VALUES (?, ?, ?, ?)
+        """,
+        (user_id, badge_key, period_key or "", json.dumps(metadata or {}, ensure_ascii=False))
+    )
+    return cur.rowcount > 0
+
+
+def award_badges(user_id):
+    """Calcule les badges sans faire dépendre le niveau du volume de boissons."""
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not user:
+        db.close()
+        return
+
+    validated_ideas = db.execute(
+        "SELECT COUNT(*) total FROM community_ideas WHERE user_id = ? AND status IN ('testing','available')",
+        (user_id,)
+    ).fetchone()["total"]
+    if validated_ideas >= 1:
+        _insert_badge(db, user_id, "first_idea_validated")
+
+    express_votes = db.execute(
+        "SELECT COUNT(*) total FROM express_poll_votes WHERE user_id = ?",
+        (user_id,)
+    ).fetchone()["total"]
+    if express_votes >= 10:
+        _insert_badge(db, user_id, "express_10")
+
+    distinct_products = db.execute(
+        "SELECT COUNT(DISTINCT COALESCE(product_id, product_name)) total FROM consumptions WHERE user_id = ?",
+        (user_id,)
+    ).fetchone()["total"]
+    if distinct_products >= 5:
+        _insert_badge(db, user_id, "product_discovered")
+
+    total_entries = db.execute(
+        "SELECT COUNT(*) total FROM consumptions WHERE user_id = ?",
+        (user_id,)
+    ).fetchone()["total"]
+    if total_entries >= 50:
+        _insert_badge(db, user_id, "fifty_entries")
+
+    approved_payments = db.execute(
+        "SELECT COUNT(*) total FROM payment_claims WHERE user_id = ? AND status = 'approved'",
+        (user_id,)
+    ).fetchone()["total"]
+    if approved_payments >= 3:
+        _insert_badge(db, user_id, "payment_reglo")
+
+    age_days = db.execute(
+        "SELECT CAST(julianday('now') - julianday(created_at) AS INTEGER) days FROM users WHERE id = ?",
+        (user_id,)
+    ).fetchone()["days"] or 0
+    if age_days >= 180:
+        _insert_badge(db, user_id, "veteran")
+
+    # Palmarès du mois précédent (calculé depuis l'historique existant).
+    prev_key = _previous_month_key()
+    ranking = db.execute("""
+        SELECT u.id,
+               COALESCE((SELECT SUM(c.price_cents) FROM consumptions c
+                         WHERE c.user_id=u.id AND strftime('%Y-%m', c.created_at)=?),0)
+             + COALESCE((SELECT SUM(md.amount_cents) FROM manual_debts md
+                         WHERE md.user_id=u.id AND strftime('%Y-%m', md.created_at)=?),0) total_cents
+        FROM users u
+        WHERE u.is_admin=0 AND u.active=1
+        ORDER BY total_cents DESC, u.name COLLATE NOCASE
+    """, (prev_key, prev_key)).fetchall()
+    if ranking and max(r["total_cents"] for r in ranking) > 0:
+        label = _period_label(prev_key)
+        if ranking[0]["id"] == user_id:
+            _insert_badge(db, user_id, "consumer_month", prev_key, {"period_label": label})
+        if len(ranking) > 1 and ranking[-1]["id"] == user_id:
+            _insert_badge(db, user_id, "pinch_month", prev_key, {"period_label": label})
+
+    # Idée du mois précédent.
+    top_idea = db.execute("""
+        SELECT i.id, i.user_id, i.title,
+               COALESCE(SUM(CASE WHEN v.vote='yes' THEN 1 ELSE 0 END),0) yes_count
+        FROM community_ideas i
+        LEFT JOIN community_idea_votes v ON v.idea_id=i.id
+        WHERE strftime('%Y-%m', i.created_at)=?
+          AND i.status NOT IN ('rejected','archived')
+        GROUP BY i.id
+        ORDER BY yes_count DESC, i.id ASC
+        LIMIT 1
+    """, (prev_key,)).fetchone()
+    if top_idea and top_idea["user_id"] == user_id and top_idea["yes_count"] >= 2:
+        _insert_badge(db, user_id, "idea_month", prev_key, {
+            "period_label": _period_label(prev_key), "idea_title": top_idea["title"]
+        })
+
+    db.commit()
+    db.close()
+
+
+def get_badges(user_id):
+    award_badges(user_id)
+    db = get_db()
+    rows = db.execute("""
+        SELECT badge_key, period_key, metadata_json, awarded_at
+        FROM user_badges WHERE user_id=? ORDER BY id DESC
+    """, (user_id,)).fetchall()
+    db.close()
+    badges = []
+    for row in rows:
+        definition = BADGE_DEFINITIONS.get(row["badge_key"])
+        if not definition:
+            continue
+        item = dict(definition)
+        item.update({"key": row["badge_key"], "period_key": row["period_key"], "awarded_at": row["awarded_at"]})
+        try:
+            metadata = json.loads(row["metadata_json"] or "{}")
+        except Exception:
+            metadata = {}
+        item["metadata"] = metadata
+        if row["period_key"]:
+            item["subtitle"] = metadata.get("period_label") or _period_label(row["period_key"])
+        else:
+            item["subtitle"] = ""
+        badges.append(item)
+    return badges
+
+
+def profile_frame_choices(user_id, badges):
+    choices = [{"key": "classic", "name": "Classique", "rarity": "Commun"}]
+    rare_count = sum(1 for b in badges if RARITY_WEIGHT.get(b["rarity"], 0) >= 2)
+    epic = any(RARITY_WEIGHT.get(b["rarity"], 0) >= 3 for b in badges)
+    legendary = any(RARITY_WEIGHT.get(b["rarity"], 0) >= 4 for b in badges)
+    if rare_count >= 1:
+        choices.append({"key": "bronze", "name": "Bronze", "rarity": "Rare"})
+    if rare_count >= 2:
+        choices.append({"key": "silver", "name": "Argent", "rarity": "Rare"})
+    if epic or legendary:
+        choices.append({"key": "gold", "name": "Or", "rarity": "Épique"})
+    if any(b["key"] == "pinch_month" and b["period_key"] == _previous_month_key() for b in badges):
+        choices.append({"key": "pince", "name": "Pince du mois", "rarity": "Épique"})
+    return choices
+
+
+def build_profile(user_id, viewer_id=None):
+    db = get_db()
+    user = db.execute("SELECT id, name, active, is_admin, created_at FROM users WHERE id=?", (user_id,)).fetchone()
+    if not user:
+        db.close()
+        return None
+
+    badges = get_badges(user_id)
+    # get_badges ouvre sa propre connexion ; on conserve celle-ci pour les stats.
+    vote_count = db.execute("SELECT COUNT(*) total FROM community_idea_votes WHERE user_id=?", (user_id,)).fetchone()["total"]
+    express_count = db.execute("SELECT COUNT(*) total FROM express_poll_votes WHERE user_id=?", (user_id,)).fetchone()["total"]
+    ideas_count = db.execute("SELECT COUNT(*) total FROM community_ideas WHERE user_id=?", (user_id,)).fetchone()["total"]
+    validated_count = db.execute("SELECT COUNT(*) total FROM community_ideas WHERE user_id=? AND status IN ('testing','available')", (user_id,)).fetchone()["total"]
+    payments_count = db.execute("SELECT COUNT(*) total FROM payment_claims WHERE user_id=? AND status='approved'", (user_id,)).fetchone()["total"]
+    received_reactions = db.execute("SELECT COUNT(*) total FROM profile_reactions WHERE target_user_id=?", (user_id,)).fetchone()["total"]
+    age_days = db.execute("SELECT CAST(julianday('now') - julianday(?) AS INTEGER) days", (user["created_at"],)).fetchone()["days"] or 0
+
+    # Le niveau récompense l'implication, pas le fait de consommer davantage.
+    xp = (
+        min(vote_count + express_count, 150) * 6
+        + ideas_count * 24
+        + validated_count * 70
+        + payments_count * 14
+        + len(badges) * 42
+        + min(received_reactions, 100) * 3
+        + min(age_days, 730) // 7 * 4
+    )
+    level = max(1, 1 + xp // 220)
+    level_start = (level - 1) * 220
+    progress = min(100, max(0, round((xp - level_start) / 220 * 100)))
+
+    tastes = db.execute("""
+        SELECT c.product_name name, COALESCE(p.category,'') category, COUNT(*) qty
+        FROM consumptions c
+        LEFT JOIN products p ON p.id=c.product_id
+        WHERE c.user_id=?
+        GROUP BY c.product_name, COALESCE(p.category,'')
+        ORDER BY qty DESC, c.product_name COLLATE NOCASE
+        LIMIT 12
+    """, (user_id,)).fetchall()
+    top_product = tastes[0]["name"] if tastes else None
+    top_drink = next((r["name"] for r in tastes if r["category"] == "Boisson"), None)
+    top_food = next((r["name"] for r in tastes if r["category"] == "Nourriture"), None)
+
+    food_names = " ".join(r["name"].lower() for r in tastes if r["category"] == "Nourriture")
+    salty_words = ("chips", "pizza", "burger", "saucisson", "cacahu", "sandwich", "tacos", "fromage")
+    sweet_words = ("bueno", "kinder", "chocol", "cookie", "bonbon", "biscuit", "oreo", "twix", "mars")
+    salty_score = sum(food_names.count(w) for w in salty_words)
+    sweet_score = sum(food_names.count(w) for w in sweet_words)
+    food_style = "Plutôt salé" if salty_score > sweet_score else ("Plutôt sucré" if sweet_score else None)
+
+    tags = []
+    if top_drink:
+        tags.append(f"Team {top_drink}")
+    if food_style:
+        tags.append(food_style)
+    if top_food:
+        tags.append(f"Fan de {top_food}")
+    for b in badges:
+        if b["key"] in ("pinch_month", "consumer_month") and b.get("subtitle"):
+            tags.append(f"{b['name']} · {b['subtitle']}")
+    tags = tags[:5]
+
+    reaction_rows = db.execute("""
+        SELECT reaction, COUNT(*) total FROM profile_reactions
+        WHERE target_user_id=? GROUP BY reaction
+    """, (user_id,)).fetchall()
+    reactions = {r: 0 for r in ("🔥", "😂", "🍻", "👀")}
+    for row in reaction_rows:
+        reactions[row["reaction"]] = row["total"]
+    my_reaction = None
+    if viewer_id:
+        row = db.execute("SELECT reaction FROM profile_reactions WHERE target_user_id=? AND actor_user_id=?", (user_id, viewer_id)).fetchone()
+        my_reaction = row["reaction"] if row else None
+
+    settings = db.execute("SELECT frame_key FROM user_profile_settings WHERE user_id=?", (user_id,)).fetchone()
+    db.close()
+    frames = profile_frame_choices(user_id, badges)
+    unlocked_keys = {f["key"] for f in frames}
+    selected = settings["frame_key"] if settings and settings["frame_key"] in unlocked_keys else frames[-1]["key"]
+
+    return {
+        "user": user,
+        "badges": badges,
+        "frames": frames,
+        "frame": selected,
+        "xp": xp,
+        "level": level,
+        "progress": progress,
+        "tags": tags,
+        "top_product": top_product,
+        "top_drink": top_drink,
+        "top_food": top_food,
+        "stats": {"ideas": ideas_count, "votes": vote_count + express_count, "validated": validated_count},
+        "reactions": reactions,
+        "my_reaction": my_reaction,
+    }
+
+
+def community_status_label(status):
+    return {
+        "voting": "En vote", "testing": "À tester", "available": "Disponible",
+        "rejected": "Refusée", "archived": "Archivée",
+    }.get(status, status)
+
 def paypal_configured():
     return bool(PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET)
 
@@ -521,6 +1005,8 @@ def inject_helpers():
         "unread_notifications": unread_notifications,
         "vapid_public_key": VAPID_PUBLIC_KEY,
         "push_configured": push_configured(),
+        "webauthn_available": WEBAUTHN_AVAILABLE,
+        "community_status_label": community_status_label,
     }
 
 
@@ -691,6 +1177,451 @@ def classement():
         my_position=my_position,
         my_total_cents=my_total_cents,
     )
+
+
+@app.route("/idees")
+@login_required
+def ideas():
+    user = current_user()
+    db = get_db()
+    db.execute("UPDATE express_polls SET status='closed' WHERE status='open' AND expires_at <= CURRENT_TIMESTAMP")
+    db.commit()
+
+    category = request.args.get("category", "").strip()
+    sort = request.args.get("sort", "popular").strip()
+    params = [user["id"], user["id"]]
+    where = "WHERE i.status != 'archived'"
+    if category in ("Boisson", "Nourriture"):
+        where += " AND i.category = ?"
+        params.append(category)
+    if sort == "recent":
+        order = "i.id DESC"
+    elif sort == "validated":
+        where += " AND i.status IN ('testing','available')"
+        order = "i.id DESC"
+    else:
+        sort = "popular"
+        order = "(yes_count - no_count) DESC, yes_count DESC, i.id DESC"
+
+    rows = db.execute(f"""
+        SELECT i.*, u.name author_name,
+               COALESCE((SELECT COUNT(*) FROM community_idea_votes v WHERE v.idea_id=i.id AND v.vote='yes'),0) yes_count,
+               COALESCE((SELECT COUNT(*) FROM community_idea_votes v WHERE v.idea_id=i.id AND v.vote='no'),0) no_count,
+               (SELECT vote FROM community_idea_votes v WHERE v.idea_id=i.id AND v.user_id=?) my_vote,
+               (SELECT reaction FROM community_idea_reactions r WHERE r.idea_id=i.id AND r.user_id=?) my_reaction
+        FROM community_ideas i
+        JOIN users u ON u.id=i.user_id
+        {where}
+        ORDER BY {order}
+        LIMIT 80
+    """, params).fetchall()
+
+    idea_items = []
+    for row in rows:
+        item = dict(row)
+        reactions = {r: 0 for r in ("🔥", "😂", "🍻", "👀")}
+        for rr in db.execute("SELECT reaction, COUNT(*) total FROM community_idea_reactions WHERE idea_id=? GROUP BY reaction", (row["id"],)).fetchall():
+            reactions[rr["reaction"]] = rr["total"]
+        item["reactions"] = reactions
+        total = item["yes_count"] + item["no_count"]
+        item["percent_yes"] = round(item["yes_count"] / total * 100) if total else 0
+        item["popular"] = item["yes_count"] >= 5 and item["percent_yes"] >= 70
+        idea_items.append(item)
+
+    open_polls = db.execute("""
+        SELECT p.*, u.name author_name,
+               COALESCE((SELECT COUNT(*) FROM express_poll_votes v WHERE v.poll_id=p.id AND v.vote='yes'),0) yes_count,
+               COALESCE((SELECT COUNT(*) FROM express_poll_votes v WHERE v.poll_id=p.id AND v.vote='no'),0) no_count,
+               (SELECT vote FROM express_poll_votes v WHERE v.poll_id=p.id AND v.user_id=?) my_vote,
+               MAX(0, CAST((julianday(p.expires_at)-julianday('now'))*24*60 AS INTEGER)) minutes_left
+        FROM express_polls p JOIN users u ON u.id=p.created_by
+        WHERE p.status='open' AND p.expires_at > CURRENT_TIMESTAMP
+        ORDER BY p.id DESC
+    """, (user["id"],)).fetchall()
+    closed_polls = db.execute("""
+        SELECT p.*,
+               COALESCE((SELECT COUNT(*) FROM express_poll_votes v WHERE v.poll_id=p.id AND v.vote='yes'),0) yes_count,
+               COALESCE((SELECT COUNT(*) FROM express_poll_votes v WHERE v.poll_id=p.id AND v.vote='no'),0) no_count
+        FROM express_polls p
+        WHERE p.status='closed' OR p.expires_at <= CURRENT_TIMESTAMP
+        ORDER BY p.id DESC LIMIT 5
+    """).fetchall()
+    db.close()
+    return render_template("ideas.html", ideas=idea_items, open_polls=open_polls, closed_polls=closed_polls,
+                           category=category, sort=sort)
+
+
+@app.post("/idees/proposer")
+@login_required
+def idea_create():
+    user = current_user()
+    category = request.form.get("category", "").strip()
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    if category not in ("Boisson", "Nourriture"):
+        flash("Choisis Boisson ou Nourriture.", "error")
+        return redirect(url_for("ideas"))
+    if len(title) < 2 or len(title) > 80:
+        flash("Le nom de l'idée doit faire entre 2 et 80 caractères.", "error")
+        return redirect(url_for("ideas"))
+    if len(description) > 320:
+        flash("La description est trop longue.", "error")
+        return redirect(url_for("ideas"))
+
+    db = get_db()
+    duplicate = db.execute("""
+        SELECT id FROM community_ideas
+        WHERE lower(trim(title))=lower(trim(?)) AND status NOT IN ('rejected','archived')
+        LIMIT 1
+    """, (title,)).fetchone()
+    if duplicate:
+        db.close()
+        flash("Cette idée existe déjà : vote directement pour elle 👀", "error")
+        return redirect(url_for("ideas") + f"#idea-{duplicate['id']}")
+
+    try:
+        image_blob, image_mime = process_product_image(request.files.get("image"))
+    except ValueError as exc:
+        db.close()
+        flash(str(exc), "error")
+        return redirect(url_for("ideas"))
+
+    cur = db.execute("""
+        INSERT INTO community_ideas (user_id, category, title, description, image_blob, image_mime)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user["id"], category, title, description, image_blob, image_mime))
+    idea_id = cur.lastrowid
+    db.commit()
+    db.close()
+
+    notify_all_active(
+        "💡 Nouvelle idée Popote",
+        f"{user['name']} propose : {title}",
+        f"/idees#idea-{idea_id}",
+        f"idea-{idea_id}",
+        exclude_user_id=user["id"],
+    )
+    flash("Ton idée est en ligne. À la Popote de voter ✨", "success")
+    return redirect(url_for("ideas") + f"#idea-{idea_id}")
+
+
+@app.get("/idees/<int:idea_id>/image")
+@login_required
+def idea_image(idea_id):
+    db = get_db()
+    row = db.execute("SELECT image_blob, image_mime FROM community_ideas WHERE id=?", (idea_id,)).fetchone()
+    db.close()
+    if not row or not row["image_blob"]:
+        return "", 404
+    return send_file(BytesIO(row["image_blob"]), mimetype=row["image_mime"] or "image/webp", max_age=86400)
+
+
+@app.post("/idees/<int:idea_id>/vote")
+@login_required
+def idea_vote(idea_id):
+    user = current_user()
+    vote = request.form.get("vote", "")
+    if vote not in ("yes", "no"):
+        return redirect(url_for("ideas"))
+    db = get_db()
+    idea = db.execute("SELECT id, status FROM community_ideas WHERE id=?", (idea_id,)).fetchone()
+    if not idea or idea["status"] in ("archived", "rejected"):
+        db.close()
+        flash("Ce vote n'est plus disponible.", "error")
+        return redirect(url_for("ideas"))
+    existing = db.execute("SELECT vote FROM community_idea_votes WHERE idea_id=? AND user_id=?", (idea_id, user["id"])).fetchone()
+    if existing and existing["vote"] == vote:
+        db.execute("DELETE FROM community_idea_votes WHERE idea_id=? AND user_id=?", (idea_id, user["id"]))
+    else:
+        db.execute("""
+            INSERT INTO community_idea_votes (idea_id,user_id,vote) VALUES (?,?,?)
+            ON CONFLICT(idea_id,user_id) DO UPDATE SET vote=excluded.vote, created_at=CURRENT_TIMESTAMP
+        """, (idea_id, user["id"], vote))
+    db.commit(); db.close()
+    return redirect((request.referrer or url_for("ideas")).split("#")[0] + f"#idea-{idea_id}")
+
+
+@app.post("/idees/<int:idea_id>/reaction")
+@login_required
+def idea_reaction(idea_id):
+    user = current_user()
+    reaction = request.form.get("reaction", "")
+    if reaction not in IDEA_REACTIONS:
+        return redirect(url_for("ideas"))
+    db = get_db()
+    existing = db.execute("SELECT reaction FROM community_idea_reactions WHERE idea_id=? AND user_id=?", (idea_id, user["id"])).fetchone()
+    if existing and existing["reaction"] == reaction:
+        db.execute("DELETE FROM community_idea_reactions WHERE idea_id=? AND user_id=?", (idea_id, user["id"]))
+    else:
+        db.execute("""
+            INSERT INTO community_idea_reactions (idea_id,user_id,reaction) VALUES (?,?,?)
+            ON CONFLICT(idea_id,user_id) DO UPDATE SET reaction=excluded.reaction, created_at=CURRENT_TIMESTAMP
+        """, (idea_id, user["id"], reaction))
+    db.commit(); db.close()
+    return redirect((request.referrer or url_for("ideas")).split("#")[0] + f"#idea-{idea_id}")
+
+
+@app.post("/idees/<int:idea_id>/statut")
+@admin_required
+def idea_status(idea_id):
+    status = request.form.get("status", "")
+    note = request.form.get("official_note", "").strip()[:220]
+    allowed = {"voting", "testing", "available", "rejected", "archived"}
+    if status not in allowed:
+        flash("Statut invalide.", "error")
+        return redirect(url_for("ideas"))
+    db = get_db()
+    idea = db.execute("SELECT i.*,u.name author_name FROM community_ideas i JOIN users u ON u.id=i.user_id WHERE i.id=?", (idea_id,)).fetchone()
+    if not idea:
+        db.close(); return redirect(url_for("ideas"))
+    db.execute("UPDATE community_ideas SET status=?, official_note=?, updated_at=CURRENT_TIMESTAMP WHERE id=?", (status, note, idea_id))
+    add_notification(db, idea["user_id"], "💡 Ton idée évolue", f"{idea['title']} : {community_status_label(status)}" + (f" — {note}" if note else ""), "info", f"/idees#idea-{idea_id}")
+    db.commit(); db.close()
+    if status in ("testing", "available"):
+        award_badges(idea["user_id"])
+    if status == "available":
+        notify_all_active("✨ Une idée devient réalité", f"{idea['title']} est maintenant disponible à la Popote.", f"/idees#idea-{idea_id}", f"idea-available-{idea_id}")
+    else:
+        send_push_to_user(idea["user_id"], "💡 Ton idée évolue", f"{idea['title']} : {community_status_label(status)}", f"/idees#idea-{idea_id}", f"idea-status-{idea_id}-{status}")
+    flash("Statut de l'idée mis à jour.", "success")
+    return redirect(url_for("ideas") + f"#idea-{idea_id}")
+
+
+@app.post("/idees/vote-express")
+@admin_required
+def express_create():
+    admin_user = current_user()
+    question = request.form.get("question", "").strip()
+    category = request.form.get("category", "Nourriture")
+    try:
+        minutes = int(request.form.get("minutes", "120"))
+    except ValueError:
+        minutes = 120
+    if category not in ("Boisson", "Nourriture"):
+        category = "Nourriture"
+    if len(question) < 3 or len(question) > 110:
+        flash("Question invalide.", "error")
+        return redirect(url_for("ideas"))
+    if minutes not in (30, 60, 120, 240):
+        minutes = 120
+    db = get_db()
+    cur = db.execute("""
+        INSERT INTO express_polls (created_by, category, question, expires_at)
+        VALUES (?, ?, ?, datetime('now', ?))
+    """, (admin_user["id"], category, question, f"+{minutes} minutes"))
+    poll_id = cur.lastrowid
+    db.commit(); db.close()
+    duration = "2 h" if minutes == 120 else (f"{minutes//60} h" if minutes >= 60 else f"{minutes} min")
+    notify_all_active("⚡ Vote express", f"{question} · Vote ouvert pendant {duration}", f"/idees#express-{poll_id}", f"express-{poll_id}")
+    flash("Vote express lancé et notification envoyée.", "success")
+    return redirect(url_for("ideas") + f"#express-{poll_id}")
+
+
+@app.post("/idees/vote-express/<int:poll_id>/vote")
+@login_required
+def express_vote(poll_id):
+    user = current_user()
+    vote = request.form.get("vote", "")
+    if vote not in ("yes", "no"):
+        return redirect(url_for("ideas"))
+    db = get_db()
+    poll = db.execute("SELECT * FROM express_polls WHERE id=?", (poll_id,)).fetchone()
+    if not poll or poll["status"] != "open" or db.execute("SELECT ? <= CURRENT_TIMESTAMP expired", (poll["expires_at"],)).fetchone()["expired"]:
+        if poll:
+            db.execute("UPDATE express_polls SET status='closed' WHERE id=?", (poll_id,)); db.commit()
+        db.close(); flash("Ce vote express est terminé.", "error")
+        return redirect(url_for("ideas"))
+    existing = db.execute("SELECT vote FROM express_poll_votes WHERE poll_id=? AND user_id=?", (poll_id, user["id"])).fetchone()
+    if existing and existing["vote"] == vote:
+        db.execute("DELETE FROM express_poll_votes WHERE poll_id=? AND user_id=?", (poll_id, user["id"]))
+    else:
+        db.execute("""
+            INSERT INTO express_poll_votes (poll_id,user_id,vote) VALUES (?,?,?)
+            ON CONFLICT(poll_id,user_id) DO UPDATE SET vote=excluded.vote, created_at=CURRENT_TIMESTAMP
+        """, (poll_id, user["id"], vote))
+    db.commit(); db.close(); award_badges(user["id"])
+    return redirect(url_for("ideas") + f"#express-{poll_id}")
+
+
+@app.post("/idees/vote-express/<int:poll_id>/close")
+@admin_required
+def express_close(poll_id):
+    db = get_db(); db.execute("UPDATE express_polls SET status='closed', expires_at=CURRENT_TIMESTAMP WHERE id=?", (poll_id,)); db.commit(); db.close()
+    flash("Vote express clôturé.", "success")
+    return redirect(url_for("ideas") + f"#express-{poll_id}")
+
+
+@app.route("/profil")
+@login_required
+def profile():
+    user = current_user()
+    return redirect(url_for("public_profile", user_id=user["id"]))
+
+
+@app.route("/profil/<int:user_id>")
+@login_required
+def public_profile(user_id):
+    viewer = current_user()
+    profile_data = build_profile(user_id, viewer["id"])
+    if not profile_data or not profile_data["user"]["active"]:
+        flash("Profil introuvable.", "error")
+        return redirect(url_for("profiles"))
+    db = get_db()
+    passkeys = []
+    if viewer["id"] == user_id:
+        passkeys = db.execute("SELECT id,label,created_at FROM passkey_credentials WHERE user_id=? ORDER BY id DESC", (user_id,)).fetchall()
+    db.close()
+    return render_template("profile.html", profile=profile_data, is_owner=viewer["id"] == user_id, passkeys=passkeys)
+
+
+@app.route("/profils")
+@login_required
+def profiles():
+    viewer = current_user()
+    db = get_db(); users = db.execute("SELECT id FROM users WHERE active=1 AND is_admin=0 ORDER BY name COLLATE NOCASE").fetchall(); db.close()
+    cards = [build_profile(row["id"], viewer["id"]) for row in users]
+    return render_template("profiles.html", profiles=[c for c in cards if c])
+
+
+@app.post("/profil/<int:user_id>/reaction")
+@login_required
+def profile_reaction(user_id):
+    viewer = current_user(); reaction = request.form.get("reaction", "")
+    if reaction not in PROFILE_REACTIONS or viewer["id"] == user_id:
+        return redirect(url_for("public_profile", user_id=user_id))
+    db = get_db()
+    target = db.execute("SELECT id FROM users WHERE id=? AND active=1", (user_id,)).fetchone()
+    if not target:
+        db.close(); return redirect(url_for("profiles"))
+    existing = db.execute("SELECT reaction FROM profile_reactions WHERE target_user_id=? AND actor_user_id=?", (user_id, viewer["id"])).fetchone()
+    if existing and existing["reaction"] == reaction:
+        db.execute("DELETE FROM profile_reactions WHERE target_user_id=? AND actor_user_id=?", (user_id, viewer["id"]))
+    else:
+        db.execute("""
+            INSERT INTO profile_reactions(target_user_id,actor_user_id,reaction) VALUES(?,?,?)
+            ON CONFLICT(target_user_id,actor_user_id) DO UPDATE SET reaction=excluded.reaction, created_at=CURRENT_TIMESTAMP
+        """, (user_id, viewer["id"], reaction))
+    db.commit(); db.close()
+    return redirect(url_for("public_profile", user_id=user_id) + "#profile-reactions")
+
+
+@app.post("/profil/cadre")
+@login_required
+def profile_frame():
+    user = current_user(); badges = get_badges(user["id"]); choices = profile_frame_choices(user["id"], badges)
+    frame = request.form.get("frame", "classic")
+    if frame not in {c["key"] for c in choices}:
+        flash("Ce cadre n'est pas encore débloqué.", "error")
+        return redirect(url_for("profile"))
+    db = get_db(); db.execute("""
+        INSERT INTO user_profile_settings(user_id,frame_key) VALUES(?,?)
+        ON CONFLICT(user_id) DO UPDATE SET frame_key=excluded.frame_key
+    """, (user["id"], frame)); db.commit(); db.close()
+    flash("Cadre de profil appliqué ✨", "success")
+    return redirect(url_for("profile"))
+
+
+@app.post("/passkeys/register/options")
+@login_required
+def passkey_register_options():
+    if not WEBAUTHN_AVAILABLE:
+        return {"ok": False, "error": "Passkeys indisponibles sur ce serveur."}, 503
+    user = current_user(); db = get_db()
+    handle = user["passkey_user_handle"] if "passkey_user_handle" in user.keys() else None
+    if not handle:
+        handle = os.urandom(32); db.execute("UPDATE users SET passkey_user_handle=? WHERE id=?", (sqlite3.Binary(handle), user["id"])); db.commit()
+    creds = db.execute("SELECT credential_id FROM passkey_credentials WHERE user_id=?", (user["id"],)).fetchall(); db.close()
+    options = generate_registration_options(
+        rp_id=webauthn_rp_id(), rp_name="Popote Bravo", user_id=bytes(handle),
+        user_name=user["name"], user_display_name=user["name"],
+        exclude_credentials=[PublicKeyCredentialDescriptor(id=bytes(c["credential_id"])) for c in creds],
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+            resident_key=ResidentKeyRequirement.PREFERRED,
+            user_verification=UserVerificationRequirement.REQUIRED,
+        ),
+    )
+    session["webauthn_reg_challenge"] = _b64url_encode(options.challenge)
+    return app.response_class(options_to_json(options), mimetype="application/json")
+
+
+@app.post("/passkeys/register/verify")
+@login_required
+def passkey_register_verify():
+    if not WEBAUTHN_AVAILABLE:
+        return {"ok": False, "error": "Passkeys indisponibles."}, 503
+    user = current_user(); data = request.get_json(silent=True) or {}; challenge = session.pop("webauthn_reg_challenge", None)
+    if not challenge:
+        return {"ok": False, "error": "Session de création expirée."}, 400
+    try:
+        verification = verify_registration_response(
+            credential=data,
+            expected_challenge=_b64url_decode(challenge),
+            expected_origin=webauthn_origin(), expected_rp_id=webauthn_rp_id(), require_user_verification=True,
+        )
+    except Exception as exc:
+        return {"ok": False, "error": f"Impossible d'enregistrer Face ID / passkey : {exc}"}, 400
+    transports = ((data.get("response") or {}).get("transports") or [])
+    db = get_db(); db.execute("""
+        INSERT OR REPLACE INTO passkey_credentials(user_id,credential_id,public_key,sign_count,transports,label)
+        VALUES(?,?,?,?,?,?)
+    """, (user["id"], sqlite3.Binary(verification.credential_id), sqlite3.Binary(verification.credential_public_key), verification.sign_count, json.dumps(transports), "Face ID / Passkey")); db.commit(); db.close()
+    return {"ok": True}
+
+
+@app.post("/passkeys/auth/options")
+def passkey_auth_options():
+    if not WEBAUTHN_AVAILABLE:
+        return {"ok": False, "error": "Passkeys indisponibles."}, 503
+    data = request.get_json(silent=True) or {}; name = (data.get("name") or "").strip()
+    db = get_db(); user = db.execute("SELECT id,name,is_admin FROM users WHERE name=? AND active=1", (name,)).fetchone()
+    if not user:
+        db.close(); return {"ok": False, "error": "Aucune passkey disponible pour ce compte."}, 404
+    creds = db.execute("SELECT credential_id FROM passkey_credentials WHERE user_id=?", (user["id"],)).fetchall(); db.close()
+    if not creds:
+        return {"ok": False, "error": "Aucune passkey enregistrée pour ce compte."}, 404
+    options = generate_authentication_options(
+        rp_id=webauthn_rp_id(),
+        allow_credentials=[PublicKeyCredentialDescriptor(id=bytes(c["credential_id"])) for c in creds],
+        user_verification=UserVerificationRequirement.REQUIRED,
+    )
+    session["webauthn_auth_challenge"] = _b64url_encode(options.challenge); session["webauthn_auth_user_id"] = user["id"]
+    return app.response_class(options_to_json(options), mimetype="application/json")
+
+
+@app.post("/passkeys/auth/verify")
+def passkey_auth_verify():
+    if not WEBAUTHN_AVAILABLE:
+        return {"ok": False, "error": "Passkeys indisponibles."}, 503
+    data = request.get_json(silent=True) or {}; challenge = session.pop("webauthn_auth_challenge", None); user_id = session.pop("webauthn_auth_user_id", None)
+    if not challenge or not user_id:
+        return {"ok": False, "error": "Session Face ID expirée."}, 400
+    try:
+        credential_id = base64url_to_bytes(data.get("id", ""))
+    except Exception:
+        return {"ok": False, "error": "Passkey invalide."}, 400
+    db = get_db(); cred = db.execute("SELECT * FROM passkey_credentials WHERE user_id=? AND credential_id=?", (user_id, sqlite3.Binary(credential_id))).fetchone(); user = db.execute("SELECT id,is_admin,active FROM users WHERE id=?", (user_id,)).fetchone()
+    if not cred or not user or not user["active"]:
+        db.close(); return {"ok": False, "error": "Passkey inconnue."}, 400
+    try:
+        verification = verify_authentication_response(
+            credential=data, expected_challenge=_b64url_decode(challenge), expected_origin=webauthn_origin(),
+            expected_rp_id=webauthn_rp_id(), credential_public_key=bytes(cred["public_key"]),
+            credential_current_sign_count=cred["sign_count"], require_user_verification=True,
+        )
+    except Exception as exc:
+        db.close(); return {"ok": False, "error": f"Authentification refusée : {exc}"}, 400
+    db.execute("UPDATE passkey_credentials SET sign_count=? WHERE id=?", (verification.new_sign_count, cred["id"])); db.commit(); db.close()
+    session.clear(); session["user_id"] = user["id"]
+    return {"ok": True, "redirect": url_for("admin" if user["is_admin"] else "dashboard")}
+
+
+@app.post("/passkeys/<int:credential_id>/delete")
+@login_required
+def passkey_delete(credential_id):
+    user = current_user(); db = get_db(); db.execute("DELETE FROM passkey_credentials WHERE id=? AND user_id=?", (credential_id, user["id"])); db.commit(); db.close()
+    flash("Passkey supprimée.", "success")
+    return redirect(url_for("profile"))
 
 @app.route("/qr")
 def qr_page():

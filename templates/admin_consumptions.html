@@ -14,14 +14,14 @@
   <h2>Ajouter un produit</h2>
   <div class="card">
     <form method="post" enctype="multipart/form-data" action="{{ url_for('add_product') }}" class="product-create-grid">
-      <div><label>Nom</label><input name="name" placeholder="Ex. Coca Zero" required></div>
+      <div><label>Nom</label><input name="name" value="{{ request.args.get('idea', '') }}" placeholder="Ex. Coca Zero" required></div>
       <div><label>Prix (€)</label><input name="price" placeholder="Ex. 1,50" inputmode="decimal" required></div>
       <div><label>Stock initial</label><input name="stock" type="number" min="0" value="0" required></div>
       <div>
         <label>Catégorie</label>
         <select name="category" required>
-          <option value="Boisson">Boisson</option>
-          <option value="Nourriture">Nourriture</option>
+          <option value="Boisson" {% if request.args.get('category') == 'Boisson' %}selected{% endif %}>Boisson</option>
+          <option value="Nourriture" {% if request.args.get('category') == 'Nourriture' %}selected{% endif %}>Nourriture</option>
         </select>
       </div>
       <div><label>Alerte stock faible</label><input name="low_stock_threshold" type="number" min="0" value="5" required></div>

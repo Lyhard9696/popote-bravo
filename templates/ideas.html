@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Vos idées — Popote Bravo{% endblock %}
+{% block content %}
+<div class="community-page">
+  <div class="community-watermark" aria-hidden="true"></div>
+  <section class="community-hero">
+    <p class="eyebrow">La Popote décide</p>
+    <h1>💡 Vos idées</h1>
+    <p>Une nouvelle boisson ? Un repas à tester ? Propose, vote et regarde les idées devenir réalité.</p>
+  </section>
+
+  {% if current_user["is_admin"] %}
+  <details class="express-create-card premium-community-card">
+    <summary><span>⚡ Lancer un vote express</span><span>+</span></summary>
+    <form method="post" action="{{ url_for('express_create') }}">
+      <label>Question</label>
+      <input name="question" maxlength="110" placeholder="Ex. Pizza ce soir ?" required>
+      <div class="community-form-grid">
+        <div><label>Catégorie</label><select name="category"><option>Boisson</option><option selected>Nourriture</option></select></div>
+        <div><label>Durée</label><select name="minutes"><option value="30">30 min</option><option value="60">1 h</option><option value="120" selected>2 h</option><option value="240">4 h</option></select></div>
+      </div>
+      <button type="submit" class="community-gold-button">Envoyer le vote à tout le monde →</button>
+    </form>
+  </details>
+  {% endif %}
+
+  {% for poll in open_polls %}
+  <article class="express-poll-card" id="express-{{ poll['id'] }}">
+    <div class="express-topline"><span>⚡ VOTE EXPRESS</span><b>{{ poll['minutes_left'] }} min restantes</b></div>
+    <h2>{{ poll["question"] }}</h2>
+    <p>{{ '🥤 Boisson' if poll['category']=='Boisson' else '🍔 Nourriture' }} · {{ poll['yes_count'] + poll['no_count'] }} vote(s)</p>
+    <div class="express-results">
+      <span style="--vote: {{ (poll['yes_count'] * 100 / (poll['yes_count'] + poll['no_count']))|round if poll['yes_count'] + poll['no_count'] else 50 }}%"></span>
+    </div>
+    <div class="vote-buttons">
+      <form method="post" action="{{ url_for('express_vote', poll_id=poll['id']) }}"><input type="hidden" name="vote" value="yes"><button class="vote-yes {% if poll['my_vote']=='yes' %}selected{% endif %}">👍 Oui <b>{{ poll['yes_count'] }}</b></button></form>
+      <form method="post" action="{{ url_for('express_vote', poll_id=poll['id']) }}"><input type="hidden" name="vote" value="no"><button class="vote-no {% if poll['my_vote']=='no' %}selected{% endif %}">👎 Non <b>{{ poll['no_count'] }}</b></button></form>
+    </div>
+    {% if current_user['is_admin'] %}<form method="post" action="{{ url_for('express_close', poll_id=poll['id']) }}"><button class="express-close">Clôturer maintenant</button></form>{% endif %}
+  </article>
+  {% endfor %}
+
+  <details class="idea-create-card premium-community-card">
+    <summary><span>＋ Proposer une idée</span><span>Boisson ou nourriture</span></summary>
+    <form method="post" action="{{ url_for('idea_create') }}" enctype="multipart/form-data">
+      <div class="community-form-grid">
+        <div><label>Catégorie</label><select name="category" required><option value="Boisson">🥤 Boisson</option><option value="Nourriture">🍔 Nourriture</option></select></div>
+        <div><label>Nom</label><input name="title" maxlength="80" placeholder="Ex. Monster Mango" required></div>
+      </div>
+      <label>Pourquoi cette idée ? <span class="muted">(optionnel)</span></label>
+      <textarea name="description" maxlength="320" rows="3" placeholder="Ex. Ça changerait un peu du classique."></textarea>
+      <label>Photo <span class="muted">(optionnel)</span></label>
+      <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+      <button class="community-gold-button" type="submit">Publier l'idée →</button>
+    </form>
+  </details>
+
+  <nav class="idea-filters" aria-label="Filtres des idées">
+    <a class="{% if not category %}active{% endif %}" href="{{ url_for('ideas', sort=sort) }}">Tout</a>
+    <a class="{% if category=='Boisson' %}active{% endif %}" href="{{ url_for('ideas', category='Boisson', sort=sort) }}">🥤 Boissons</a>
+    <a class="{% if category=='Nourriture' %}active{% endif %}" href="{{ url_for('ideas', category='Nourriture', sort=sort) }}">🍔 Nourriture</a>
+  </nav>
+  <nav class="idea-sort" aria-label="Tri des idées">
+    <a class="{% if sort=='popular' %}active{% endif %}" href="{{ url_for('ideas', category=category, sort='popular') }}">🔥 Populaires</a>
+    <a class="{% if sort=='recent' %}active{% endif %}" href="{{ url_for('ideas', category=category, sort='recent') }}">🆕 Récentes</a>
+    <a class="{% if sort=='validated' %}active{% endif %}" href="{{ url_for('ideas', category=category, sort='validated') }}">✅ Validées</a>
+  </nav>
+
+  <section class="idea-feed">
+  {% for idea in ideas %}
+    <article class="idea-card status-{{ idea['status'] }}" id="idea-{{ idea['id'] }}">
+      {% if idea['image_blob'] %}<a class="idea-photo" href="{{ url_for('idea_image', idea_id=idea['id']) }}"><img src="{{ url_for('idea_image', idea_id=idea['id']) }}" alt="{{ idea['title'] }}" loading="lazy"></a>{% endif %}
+      <div class="idea-card-body">
+        <div class="idea-meta">
+          <span class="idea-category">{{ '🥤 Boisson' if idea['category']=='Boisson' else '🍔 Nourriture' }}</span>
+          <span class="idea-status">{% if idea['status']=='testing' %}🧪{% elif idea['status']=='available' %}✅{% endif %} {{ community_status_label(idea['status']) }}</span>
+        </div>
+        <h2>{{ idea["title"] }}</h2>
+        <p class="idea-author">Proposé par <a href="{{ url_for('public_profile', user_id=idea['user_id']) }}">{{ idea['author_name'] }}</a> · {{ idea['created_at'][:10] }}</p>
+        {% if idea['description'] %}<p class="idea-description">{{ idea['description'] }}</p>{% endif %}
+        {% if idea['popular'] %}<span class="popular-badge">🔥 Très populaire · {{ idea['percent_yes'] }} % pour</span>{% endif %}
+        {% if idea['official_note'] %}<div class="official-note"><b>Popotier</b><span>{{ idea['official_note'] }}</span></div>{% endif %}
+
+        <div class="idea-vote-summary"><strong>{{ idea['yes_count'] }} Oui</strong><span>·</span><strong>{{ idea['no_count'] }} Non</strong><span>· {{ idea['yes_count'] + idea['no_count'] }} votant(s)</span></div>
+        <div class="idea-progress"><span style="width: {{ idea['percent_yes'] }}%"></span></div>
+        <div class="vote-buttons">
+          <form method="post" action="{{ url_for('idea_vote', idea_id=idea['id']) }}"><input type="hidden" name="vote" value="yes"><button class="vote-yes {% if idea['my_vote']=='yes' %}selected{% endif %}">👍 Oui <b>{{ idea['yes_count'] }}</b></button></form>
+          <form method="post" action="{{ url_for('idea_vote', idea_id=idea['id']) }}"><input type="hidden" name="vote" value="no"><button class="vote-no {% if idea['my_vote']=='no' %}selected{% endif %}">👎 Non <b>{{ idea['no_count'] }}</b></button></form>
+        </div>
+        <div class="reaction-strip" aria-label="Réactions">
+          {% for emoji in ['🔥','😂','🍻','👀'] %}<form method="post" action="{{ url_for('idea_reaction', idea_id=idea['id']) }}"><input type="hidden" name="reaction" value="{{ emoji }}"><button class="{% if idea['my_reaction']==emoji %}selected{% endif %}">{{ emoji }} <span>{{ idea['reactions'][emoji] }}</span></button></form>{% endfor %}
+        </div>
+
+        {% if current_user['is_admin'] %}
+        <details class="idea-admin-panel"><summary>Gestion Popotier</summary>
+          <form method="post" action="{{ url_for('idea_status', idea_id=idea['id']) }}">
+            <label>Réponse officielle</label><input name="official_note" maxlength="220" value="{{ idea['official_note'] or '' }}" placeholder="Ex. J'en prends au prochain réassort.">
+            <div class="idea-admin-actions">
+              <button name="status" value="voting">En vote</button><button name="status" value="testing">🧪 À tester</button><button name="status" value="available">✅ Disponible</button><button name="status" value="rejected">Refuser</button><button name="status" value="archived">Archiver</button>
+            </div>
+          </form>
+          {% if idea['status'] in ['testing','available'] %}<a class="catalog-prefill" href="{{ url_for('admin_consumptions', idea=idea['title'], category=idea['category']) }}">＋ Préparer l'ajout au catalogue</a>{% endif %}
+        </details>
+        {% endif %}
+      </div>
+    </article>
+  {% else %}<div class="premium-community-card empty-community">Aucune idée ici pour le moment. Sois le premier à proposer quelque chose 👀</div>{% endfor %}
+  </section>
+
+  {% if closed_polls %}
+  <details class="express-archive premium-community-card"><summary>Archives des votes express</summary>
+    {% for poll in closed_polls %}<div><span>{{ poll['question'] }}</span><b>👍 {{ poll['yes_count'] }} · 👎 {{ poll['no_count'] }}</b></div>{% endfor %}
+  </details>
+  {% endif %}
+</div>
+{% endblock %}

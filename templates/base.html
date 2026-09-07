@@ -41,8 +41,9 @@
           <a href="{{ url_for('dashboard') }}">Mon ardoise</a>
         {% endif %}
         <a href="{{ url_for('classement') }}">Classement</a>
+        <a href="{{ url_for('ideas') }}">Vos idées</a>
         <a href="{{ url_for('qr_page') }}">QR Code</a>
-        <a href="{{ url_for('change_password') }}">Mot de passe</a>
+        <a href="{{ url_for('profile') }}">Profil</a>
         <a href="{{ url_for('logout') }}">Déconnexion</a>
       </div>
     {% endif %}
@@ -82,6 +83,14 @@
     </span>
     <span>Classement</span>
   </a>
+  {% if not current_user["is_admin"] %}
+  <a href="{{ url_for('ideas') }}" class="{% if request.endpoint in ['ideas','idea_create','idea_vote','idea_reaction'] %}active{% endif %}">
+    <span class="tab-icon tab-icon-svg" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M8.3 14.5A7 7 0 1 1 15.7 14.5c-1.1.8-1.7 1.7-1.7 2.5h-4c0-.8-.6-1.7-1.7-2.5Z"/></svg>
+    </span>
+    <span>Idées</span>
+  </a>
+  {% endif %}
   <a href="{{ url_for('qr_page') }}" class="{% if request.endpoint in ['qr_page','qr_image'] %}active{% endif %}">
     <span class="tab-icon tab-icon-svg qr-nav-icon" aria-hidden="true">
       <svg viewBox="0 0 24 24">
@@ -91,7 +100,7 @@
     </span>
     <span>QR</span>
   </a>
-  <a href="{{ url_for('change_password') }}" class="{% if request.endpoint == 'change_password' %}active{% endif %}">
+  <a href="{{ url_for('profile') }}" class="{% if request.endpoint in ['profile','public_profile','profiles','change_password'] %}active{% endif %}">
     <span class="tab-icon tab-icon-svg" aria-hidden="true">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>
     </span>

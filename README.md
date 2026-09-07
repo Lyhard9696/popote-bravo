@@ -1,17 +1,34 @@
-# Popote Bravo — V6.16.1
+# Popote Bravo — V6.17 Communauté Premium
 
-## Correctif validation des paiements déclarés
+## Nouveautés
 
-Correction d'un bug lors de la validation d'un paiement par le Popotier.
+- Vos idées : propositions Boisson / Nourriture par tous les membres.
+- Votes Oui / Non visibles avec compteurs et pourcentage.
+- Photos facultatives, détection des doublons, filtres Populaires / Récentes / Validées.
+- Réactions rapides 🔥 😂 🍻 👀 sans commentaires.
+- Cycle Popotier : En vote → À tester → Disponible / Refusée / Archivée.
+- Préremplissage du catalogue depuis une idée validée.
+- Vote express Popotier (30 min, 1 h, 2 h, 4 h) avec push immédiat à tous et archivage.
+- Profils publics avec profil gustatif, produit signature et statistiques communautaires.
+- Badges Commun / Rare / Épique / Légendaire.
+- Badges : Visionnaire, Décideur express, Explorateur, Paiement réglo, Idée du mois, Pince du mois, Consommateur du mois, Ancien de la Popote, Habitué.
+- Niveau Popote basé sur participation, votes, idées, paiements validés, ancienneté, badges et réactions — pas uniquement sur la consommation.
+- Réactions aux profils.
+- Cadres de profil Classique / Bronze / Argent / Or / Pince du mois selon badges débloqués.
+- Face ID / Touch ID / empreinte via Passkeys (WebAuthn) en plus du mot de passe.
+- Nouvelle entrée Idées dans la barre mobile membre et raccourci dans Gestion Popotier, tout en gardant le style noir / or actuel.
 
-Avant :
-- la validation comparait le paiement uniquement aux consommations moins les paiements déjà validés ;
-- les dettes manuelles ajoutées par le Popotier étaient oubliées ;
-- un membre pouvait donc voir 15 € d'ardoise, déclarer 15 €, puis obtenir à tort le message « le montant dépasse la dette officielle restante ».
+## Fichiers à copier
 
-Maintenant :
-- la validation utilise exactement le même calcul d'ardoise que le reste de l'application :
-  consommations + dettes manuelles - paiements validés.
+- app.py
+- requirements.txt
+- static/style.css
+- templates/base.html
+- templates/login.html
+- templates/ideas.html (nouveau)
+- templates/profile.html (nouveau)
+- templates/profiles.html (nouveau)
+- templates/admin_consumptions.html
+- templates/admin.html
 
-Fichier à copier dans `popote_bravo_v5_render` :
-- `app.py`
+Les nouvelles tables SQLite sont créées automatiquement au redémarrage. Aucune suppression des données existantes.
