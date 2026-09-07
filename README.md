@@ -1,34 +1,48 @@
-# Popote Bravo — V6.17 Communauté Premium
+# Popote Bravo — V6.18 Cadres & Niveaux
 
-## Nouveautés
+## Niveaux Popote
+Le niveau est calculé rétroactivement à partir de l'historique déjà présent en base.
 
-- Vos idées : propositions Boisson / Nourriture par tous les membres.
-- Votes Oui / Non visibles avec compteurs et pourcentage.
-- Photos facultatives, détection des doublons, filtres Populaires / Récentes / Validées.
-- Réactions rapides 🔥 😂 🍻 👀 sans commentaires.
-- Cycle Popotier : En vote → À tester → Disponible / Refusée / Archivée.
-- Préremplissage du catalogue depuis une idée validée.
-- Vote express Popotier (30 min, 1 h, 2 h, 4 h) avec push immédiat à tous et archivage.
-- Profils publics avec profil gustatif, produit signature et statistiques communautaires.
-- Badges Commun / Rare / Épique / Légendaire.
-- Badges : Visionnaire, Décideur express, Explorateur, Paiement réglo, Idée du mois, Pince du mois, Consommateur du mois, Ancien de la Popote, Habitué.
-- Niveau Popote basé sur participation, votes, idées, paiements validés, ancienneté, badges et réactions — pas uniquement sur la consommation.
-- Réactions aux profils.
-- Cadres de profil Classique / Bronze / Argent / Or / Pince du mois selon badges débloqués.
-- Face ID / Touch ID / empreinte via Passkeys (WebAuthn) en plus du mot de passe.
-- Nouvelle entrée Idées dans la barre mobile membre et raccourci dans Gestion Popotier, tout en gardant le style noir / or actuel.
+Les consommations des mois précédents, y compris le mois dernier, sont donc immédiatement prises en compte après déploiement.
 
-## Fichiers à copier
+XP :
+- consommations historiques : +2 XP, avec plafond de 10 consommations/jour pour l'XP ;
+- vote à une idée : +5 XP ;
+- vote express : +8 XP ;
+- idée proposée : +20 XP ;
+- idée validée : +60 XP supplémentaires ;
+- paiement validé : +20 XP ;
+- badges : +20 / +40 / +80 / +140 XP selon la rareté ;
+- réaction reçue : +2 XP (100 maximum comptabilisées) ;
+- ancienneté : +3 XP par semaine (plafond 3 ans).
 
+50 niveaux sont disponibles, avec une courbe de progression qui devient progressivement plus exigeante.
+
+## Cadres
+Nouvelle page `/profil/cadres`.
+
+- Tous les cadres sont visibles.
+- Les cadres verrouillés sont grisés avec cadenas + progression.
+- Un cadre débloqué peut être équipé depuis la collection.
+- Les cadres déjà débloqués restent disponibles.
+
+### Cadres Team automatiques
+Pour chaque produit éligible de la Popote :
+- Bronze : 30 consommations
+- Argent : 60
+- Or : 100
+- Légendaire : 200
+
+Les nouveaux produits ajoutés au catalogue génèrent automatiquement leurs 4 cadres Team.
+Les produits clairement alcoolisés sont exclus des objectifs de volume.
+
+### Cadres spéciaux
+Niveaux, votes, idées validées, ancienneté, badges, Passkey, réactions, Pince du mois, Consommateur du mois, etc.
+
+## Fichiers à copier dans popote_bravo_v5_render
+- README.md
 - app.py
-- requirements.txt
 - static/style.css
-- templates/base.html
-- templates/login.html
-- templates/ideas.html (nouveau)
-- templates/profile.html (nouveau)
-- templates/profiles.html (nouveau)
-- templates/admin_consumptions.html
-- templates/admin.html
-
-Les nouvelles tables SQLite sont créées automatiquement au redémarrage. Aucune suppression des données existantes.
+- templates/profile.html
+- templates/profiles.html
+- templates/frames.html (nouveau)

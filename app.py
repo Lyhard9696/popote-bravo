@@ -833,20 +833,302 @@ def get_badges(user_id):
     return badges
 
 
-def profile_frame_choices(user_id, badges):
-    choices = [{"key": "classic", "name": "Classique", "rarity": "Commun"}]
-    rare_count = sum(1 for b in badges if RARITY_WEIGHT.get(b["rarity"], 0) >= 2)
-    epic = any(RARITY_WEIGHT.get(b["rarity"], 0) >= 3 for b in badges)
-    legendary = any(RARITY_WEIGHT.get(b["rarity"], 0) >= 4 for b in badges)
-    if rare_count >= 1:
-        choices.append({"key": "bronze", "name": "Bronze", "rarity": "Rare"})
-    if rare_count >= 2:
-        choices.append({"key": "silver", "name": "Argent", "rarity": "Rare"})
-    if epic or legendary:
-        choices.append({"key": "gold", "name": "Or", "rarity": "Épique"})
-    if any(b["key"] == "pinch_month" and b["period_key"] == _previous_month_key() for b in badges):
-        choices.append({"key": "pince", "name": "Pince du mois", "rarity": "Épique"})
-    return choices
+PRODUCT_FRAME_TIERS = (
+    ("bronze", "Bronze", 30, "Commun"),
+    ("silver", "Argent", 60, "Rare"),
+    ("gold", "Or", 100, "Épique"),
+    ("legendary", "Légendaire", 200, "Légendaire"),
+)
+
+XP_RARITY = {"Commun": 20, "Rare": 40, "Épique": 80, "Légendaire": 140}
+
+# On évite volontairement de transformer les boissons alcoolisées en objectifs de volume.
+FRAME_EXCLUDED_PRODUCT_WORDS = (
+    "bière", "biere", "beer", "vin", "wine", "whisky", "whiskey", "vodka",
+    "rhum", "rum", "gin", "pastis", "ricard", "tequila", "champagne", "cidre",
+    "cognac", "armagnac",
+)
+
+
+def level_threshold(level):
+    """XP total requis pour atteindre le niveau demandé (1 à 50)."""
+    level = max(1, min(50, int(level)))
+    if level <= 1:
+        return 0
+    # Courbe progressive : niveau 12 = 2200 XP, niveau 20 = 5320 XP, niveau 50 = 28420 XP.
+    return 10 * (level - 1) * (level + 8)
+
+
+def level_title(level):
+    if level >= 50:
+        return "Mythe de la Popote"
+    if level >= 40:
+        return "Institution"
+    if level >= 30:
+        return "Légende de la Popote"
+    if level >= 20:
+        return "Patron de la Popote"
+    if level >= 15:
+        return "Figure de la Popote"
+    if level >= 10:
+        return "Pilier de la Popote"
+    if level >= 5:
+        return "Habitué"
+    return "Recrue"
+
+
+def level_from_xp(xp):
+    level = 1
+    while level < 50 and xp >= level_threshold(level + 1):
+        level += 1
+    current_threshold = level_threshold(level)
+    if level >= 50:
+        next_threshold = current_threshold
+        progress = 100
+        into = 0
+        needed = 0
+    else:
+        next_threshold = level_threshold(level + 1)
+        into = max(0, xp - current_threshold)
+        needed = max(1, next_threshold - current_threshold)
+        progress = min(100, max(0, round(into / needed * 100)))
+    return {
+        "level": level,
+        "title": level_title(level),
+        "current_threshold": current_threshold,
+        "next_threshold": next_threshold,
+        "into": into,
+        "needed": needed,
+        "progress": progress,
+    }
+
+
+def _consumption_xp(db, user_id):
+    """
+    Toutes les consommations historiques sont prises en compte,
+    y compris celles des mois précédents. Pour garder une progression saine,
+    l'XP de consommation est plafonnée à 10 consommations par jour.
+    """
+    rows = db.execute("""
+        SELECT date(created_at) AS day, COUNT(*) AS qty
+        FROM consumptions
+        WHERE user_id = ?
+        GROUP BY date(created_at)
+    """, (user_id,)).fetchall()
+    return sum(min(int(row["qty"] or 0), 10) * 2 for row in rows)
+
+
+def profile_metrics(db, user_id, user, badges):
+    idea_votes = db.execute(
+        "SELECT COUNT(*) total FROM community_idea_votes WHERE user_id=?",
+        (user_id,)
+    ).fetchone()["total"]
+    express_votes = db.execute(
+        "SELECT COUNT(*) total FROM express_poll_votes WHERE user_id=?",
+        (user_id,)
+    ).fetchone()["total"]
+    ideas_count = db.execute(
+        "SELECT COUNT(*) total FROM community_ideas WHERE user_id=?",
+        (user_id,)
+    ).fetchone()["total"]
+    validated_count = db.execute(
+        "SELECT COUNT(*) total FROM community_ideas WHERE user_id=? AND status IN ('testing','available')",
+        (user_id,)
+    ).fetchone()["total"]
+    payments_count = db.execute(
+        "SELECT COUNT(*) total FROM payment_claims WHERE user_id=? AND status='approved'",
+        (user_id,)
+    ).fetchone()["total"]
+    received_reactions = db.execute(
+        "SELECT COUNT(*) total FROM profile_reactions WHERE target_user_id=?",
+        (user_id,)
+    ).fetchone()["total"]
+    age_days = db.execute(
+        "SELECT CAST(julianday('now') - julianday(?) AS INTEGER) days",
+        (user["created_at"],)
+    ).fetchone()["days"] or 0
+    distinct_products = db.execute(
+        "SELECT COUNT(DISTINCT COALESCE(product_id, product_name)) total FROM consumptions WHERE user_id=?",
+        (user_id,)
+    ).fetchone()["total"]
+    food_distinct = db.execute("""
+        SELECT COUNT(DISTINCT c.product_name) total
+        FROM consumptions c LEFT JOIN products p ON p.id=c.product_id
+        WHERE c.user_id=? AND COALESCE(p.category,'')='Nourriture'
+    """, (user_id,)).fetchone()["total"]
+    drink_distinct = db.execute("""
+        SELECT COUNT(DISTINCT c.product_name) total
+        FROM consumptions c LEFT JOIN products p ON p.id=c.product_id
+        WHERE c.user_id=? AND COALESCE(p.category,'')='Boisson'
+    """, (user_id,)).fetchone()["total"]
+    passkey_count = db.execute(
+        "SELECT COUNT(*) total FROM passkey_credentials WHERE user_id=?",
+        (user_id,)
+    ).fetchone()["total"]
+
+    consumption_xp = _consumption_xp(db, user_id)
+    badge_xp = sum(XP_RARITY.get(b["rarity"], 20) for b in badges)
+
+    breakdown = {
+        "consumptions": consumption_xp,
+        "idea_votes": int(idea_votes) * 5,
+        "express_votes": int(express_votes) * 8,
+        "ideas": int(ideas_count) * 20,
+        "validated_ideas": int(validated_count) * 60,
+        "payments": int(payments_count) * 20,
+        "badges": badge_xp,
+        "reactions": min(int(received_reactions), 100) * 2,
+        "seniority": min(int(age_days) // 7, 156) * 3,
+    }
+    xp = sum(breakdown.values())
+    level_info = level_from_xp(xp)
+
+    prev_key = _previous_month_key()
+    previous_month_consumptions = db.execute("""
+        SELECT COUNT(*) total FROM consumptions
+        WHERE user_id=? AND strftime('%Y-%m', created_at)=?
+    """, (user_id, prev_key)).fetchone()["total"]
+
+    return {
+        "idea_votes": int(idea_votes),
+        "express_votes": int(express_votes),
+        "ideas": int(ideas_count),
+        "validated": int(validated_count),
+        "payments": int(payments_count),
+        "received_reactions": int(received_reactions),
+        "age_days": int(age_days),
+        "distinct_products": int(distinct_products),
+        "food_distinct": int(food_distinct),
+        "drink_distinct": int(drink_distinct),
+        "passkeys": int(passkey_count),
+        "xp": xp,
+        "xp_breakdown": breakdown,
+        "previous_month_consumptions": int(previous_month_consumptions),
+        **level_info,
+    }
+
+
+def _product_frame_allowed(name):
+    lowered = (name or "").lower()
+    return not any(word in lowered for word in FRAME_EXCLUDED_PRODUCT_WORDS)
+
+
+def _frame_progress(value, goal):
+    if not goal:
+        return 100
+    return min(100, max(0, round((value / goal) * 100)))
+
+
+def profile_frame_choices(user_id, badges, metrics=None):
+    """
+    Retourne toute la collection, y compris les cadres verrouillés.
+    Les cadres Team sont générés automatiquement pour chaque produit éligible.
+    """
+    db = get_db()
+    if metrics is None:
+        user = db.execute("SELECT id,name,created_at FROM users WHERE id=?", (user_id,)).fetchone()
+        metrics = profile_metrics(db, user_id, user, badges)
+
+    badge_keys = {b["key"] for b in badges}
+    collection = []
+
+    def special(key, name, rarity, icon, unlocked, current=0, goal=1, style=None, note=""):
+        collection.append({
+            "key": key, "name": name, "rarity": rarity, "icon": icon,
+            "unlocked": bool(unlocked), "current": int(current), "goal": int(goal),
+            "progress": _frame_progress(current, goal),
+            "style": style or key, "kind": "special", "note": note,
+        })
+
+    # Cadres généraux / communautaires
+    special("classic", "Classique P3", "Commun", "P3", True, 1, 1, "classic", "Disponible dès le départ")
+    special("bronze", "Bronze", "Commun", "◈", metrics["level"] >= 3, metrics["level"], 3, "bronze", "Atteindre le niveau 3")
+    special("silver", "Argent", "Rare", "✦", metrics["level"] >= 6, metrics["level"], 6, "silver", "Atteindre le niveau 6")
+    special("gold", "Or", "Épique", "♛", metrics["level"] >= 10, metrics["level"], 10, "gold", "Atteindre le niveau 10")
+    special("legendary", "Légendaire", "Légendaire", "★", metrics["level"] >= 20, metrics["level"], 20, "legendary", "Atteindre le niveau 20")
+    special("community", "Communauté", "Rare", "👥", metrics["idea_votes"] + metrics["express_votes"] >= 20,
+            metrics["idea_votes"] + metrics["express_votes"], 20, "community", "Participer à 20 votes")
+    special("express", "Décideur express", "Épique", "⚡", metrics["express_votes"] >= 10,
+            metrics["express_votes"], 10, "express", "Participer à 10 votes express")
+    special("visionary", "Visionnaire", "Rare", "💡", metrics["validated"] >= 1,
+            metrics["validated"], 1, "visionary", "Faire valider une idée")
+    special("idea-month", "Idée du mois", "Épique", "🏆", "idea_month" in badge_keys,
+            1 if "idea_month" in badge_keys else 0, 1, "idea-month", "Remporter l'Idée du mois")
+    special("explorer", "Explorateur", "Rare", "🧭", metrics["distinct_products"] >= 5,
+            metrics["distinct_products"], 5, "explorer", "Découvrir 5 produits différents")
+    special("gourmet", "Gourmet", "Rare", "🍽️", metrics["food_distinct"] >= 8,
+            metrics["food_distinct"], 8, "gourmet", "Découvrir 8 nourritures différentes")
+    special("soft", "Team Soft", "Rare", "🥤", metrics["drink_distinct"] >= 8,
+            metrics["drink_distinct"], 8, "soft", "Découvrir 8 boissons différentes")
+    special("reglo", "Paiement réglo", "Commun", "✓", metrics["payments"] >= 3,
+            metrics["payments"], 3, "reglo", "Faire valider 3 paiements")
+    special("veteran", "Ancien de la Popote", "Rare", "P3", metrics["age_days"] >= 180,
+            metrics["age_days"], 180, "veteran", "180 jours d'ancienneté")
+    special("veteran-year", "Pilier historique", "Épique", "🎖️", metrics["age_days"] >= 365,
+            metrics["age_days"], 365, "veteran-year", "1 an d'ancienneté")
+    special("pince", "Pince du mois", "Épique", "🦀", "pinch_month" in badge_keys,
+            1 if "pinch_month" in badge_keys else 0, 1, "pince", "Obtenir le titre Pince du mois")
+    special("consumer", "Consommateur du mois", "Légendaire", "👑", "consumer_month" in badge_keys,
+            1 if "consumer_month" in badge_keys else 0, 1, "consumer", "Finir premier du classement mensuel")
+    special("collector", "Collectionneur", "Rare", "🏅", len(badges) >= 5,
+            len(badges), 5, "collector", "Débloquer 5 badges")
+    special("master-collector", "Maître collectionneur", "Légendaire", "🏛️", len(badges) >= 10,
+            len(badges), 10, "master-collector", "Débloquer 10 badges")
+    special("popular", "Apprécié de la Popote", "Rare", "🔥", metrics["received_reactions"] >= 20,
+            metrics["received_reactions"], 20, "popular", "Recevoir 20 réactions sur son profil")
+    special("proposer", "Force de proposition", "Rare", "✎", metrics["ideas"] >= 5,
+            metrics["ideas"], 5, "proposer", "Proposer 5 idées")
+    special("all-rounder", "Pilier communautaire", "Légendaire", "✪",
+            metrics["validated"] >= 1 and metrics["payments"] >= 3 and (metrics["idea_votes"] + metrics["express_votes"]) >= 10,
+            min(metrics["validated"], 1) + min(metrics["payments"], 3) + min(metrics["idea_votes"] + metrics["express_votes"], 10),
+            14, "all-rounder", "Idée validée + 3 paiements + 10 votes")
+    special("passkey", "Accès Premium", "Rare", "🔐", metrics["passkeys"] >= 1,
+            metrics["passkeys"], 1, "passkey", "Activer Face ID / Passkey")
+
+    # Cadres Team automatiques : 4 niveaux pour CHAQUE produit éligible.
+    products = db.execute("""
+        SELECT p.id, p.name, p.category, p.image_path,
+               CASE WHEN p.image_blob IS NOT NULL THEN 1 ELSE 0 END AS has_blob,
+               COALESCE((
+                   SELECT COUNT(*) FROM consumptions c
+                   WHERE c.user_id=?
+                     AND (
+                         c.product_id=p.id
+                         OR (c.product_id IS NULL AND lower(c.product_name)=lower(p.name))
+                     )
+               ),0) AS qty
+        FROM products p
+        ORDER BY p.category, p.name COLLATE NOCASE
+    """, (user_id,)).fetchall()
+
+    for row in products:
+        name = row["name"]
+        if not _product_frame_allowed(name):
+            continue
+        qty = int(row["qty"] or 0)
+        for tier_key, tier_label, goal, rarity in PRODUCT_FRAME_TIERS:
+            collection.append({
+                "key": f"product-{row['id']}-{tier_key}",
+                "name": f"Team {name}",
+                "subtitle": tier_label,
+                "rarity": rarity,
+                "icon": "🥤" if row["category"] == "Boisson" else "🍴",
+                "unlocked": qty >= goal,
+                "current": qty,
+                "goal": goal,
+                "progress": _frame_progress(qty, goal),
+                "style": f"product-{tier_key}",
+                "kind": "product",
+                "product_id": row["id"],
+                "product_name": name,
+                "category": row["category"],
+                "has_blob": bool(row["has_blob"]),
+                "image_path": row["image_path"],
+                "note": f"{goal} consommations de {name}",
+            })
+
+    db.close()
+    return collection
 
 
 def build_profile(user_id, viewer_id=None):
@@ -857,28 +1139,7 @@ def build_profile(user_id, viewer_id=None):
         return None
 
     badges = get_badges(user_id)
-    # get_badges ouvre sa propre connexion ; on conserve celle-ci pour les stats.
-    vote_count = db.execute("SELECT COUNT(*) total FROM community_idea_votes WHERE user_id=?", (user_id,)).fetchone()["total"]
-    express_count = db.execute("SELECT COUNT(*) total FROM express_poll_votes WHERE user_id=?", (user_id,)).fetchone()["total"]
-    ideas_count = db.execute("SELECT COUNT(*) total FROM community_ideas WHERE user_id=?", (user_id,)).fetchone()["total"]
-    validated_count = db.execute("SELECT COUNT(*) total FROM community_ideas WHERE user_id=? AND status IN ('testing','available')", (user_id,)).fetchone()["total"]
-    payments_count = db.execute("SELECT COUNT(*) total FROM payment_claims WHERE user_id=? AND status='approved'", (user_id,)).fetchone()["total"]
-    received_reactions = db.execute("SELECT COUNT(*) total FROM profile_reactions WHERE target_user_id=?", (user_id,)).fetchone()["total"]
-    age_days = db.execute("SELECT CAST(julianday('now') - julianday(?) AS INTEGER) days", (user["created_at"],)).fetchone()["days"] or 0
-
-    # Le niveau récompense l'implication, pas le fait de consommer davantage.
-    xp = (
-        min(vote_count + express_count, 150) * 6
-        + ideas_count * 24
-        + validated_count * 70
-        + payments_count * 14
-        + len(badges) * 42
-        + min(received_reactions, 100) * 3
-        + min(age_days, 730) // 7 * 4
-    )
-    level = max(1, 1 + xp // 220)
-    level_start = (level - 1) * 220
-    progress = min(100, max(0, round((xp - level_start) / 220 * 100)))
+    metrics = profile_metrics(db, user_id, user, badges)
 
     tastes = db.execute("""
         SELECT c.product_name name, COALESCE(p.category,'') category, COUNT(*) qty
@@ -921,28 +1182,52 @@ def build_profile(user_id, viewer_id=None):
         reactions[row["reaction"]] = row["total"]
     my_reaction = None
     if viewer_id:
-        row = db.execute("SELECT reaction FROM profile_reactions WHERE target_user_id=? AND actor_user_id=?", (user_id, viewer_id)).fetchone()
+        row = db.execute(
+            "SELECT reaction FROM profile_reactions WHERE target_user_id=? AND actor_user_id=?",
+            (user_id, viewer_id)
+        ).fetchone()
         my_reaction = row["reaction"] if row else None
 
     settings = db.execute("SELECT frame_key FROM user_profile_settings WHERE user_id=?", (user_id,)).fetchone()
+    total_consumptions = db.execute(
+        "SELECT COUNT(*) total FROM consumptions WHERE user_id=?",
+        (user_id,)
+    ).fetchone()["total"]
     db.close()
-    frames = profile_frame_choices(user_id, badges)
-    unlocked_keys = {f["key"] for f in frames}
-    selected = settings["frame_key"] if settings and settings["frame_key"] in unlocked_keys else frames[-1]["key"]
+
+    frames = profile_frame_choices(user_id, badges, metrics)
+    unlocked = [frame for frame in frames if frame["unlocked"]]
+    unlocked_keys = {frame["key"] for frame in unlocked}
+    selected_key = settings["frame_key"] if settings and settings["frame_key"] in unlocked_keys else "classic"
+    selected_frame = next((f for f in frames if f["key"] == selected_key), frames[0])
 
     return {
         "user": user,
         "badges": badges,
         "frames": frames,
-        "frame": selected,
-        "xp": xp,
-        "level": level,
-        "progress": progress,
+        "unlocked_frames": unlocked,
+        "frame": selected_key,
+        "frame_style": selected_frame["style"],
+        "selected_frame": selected_frame,
+        "xp": metrics["xp"],
+        "xp_breakdown": metrics["xp_breakdown"],
+        "level": metrics["level"],
+        "level_title": metrics["title"],
+        "level_progress": metrics["progress"],
+        "level_into": metrics["into"],
+        "level_needed": metrics["needed"],
+        "next_level_xp": metrics["next_threshold"],
+        "previous_month_consumptions": metrics["previous_month_consumptions"],
         "tags": tags,
         "top_product": top_product,
         "top_drink": top_drink,
         "top_food": top_food,
-        "stats": {"ideas": ideas_count, "votes": vote_count + express_count, "validated": validated_count},
+        "stats": {
+            "ideas": metrics["ideas"],
+            "votes": metrics["idea_votes"] + metrics["express_votes"],
+            "validated": metrics["validated"],
+            "consumptions": int(total_consumptions),
+        },
         "reactions": reactions,
         "my_reaction": my_reaction,
     }
@@ -1505,20 +1790,32 @@ def profile_reaction(user_id):
     return redirect(url_for("public_profile", user_id=user_id) + "#profile-reactions")
 
 
+
+@app.get("/profil/cadres")
+@login_required
+def profile_frames():
+    user = current_user()
+    profile_data = build_profile(user["id"], user["id"])
+    return render_template("frames.html", profile=profile_data)
+
+
 @app.post("/profil/cadre")
 @login_required
 def profile_frame():
-    user = current_user(); badges = get_badges(user["id"]); choices = profile_frame_choices(user["id"], badges)
+    user = current_user()
+    profile_data = build_profile(user["id"], user["id"])
+    choices = profile_data["frames"]
     frame = request.form.get("frame", "classic")
-    if frame not in {c["key"] for c in choices}:
+    allowed = {c["key"] for c in choices if c["unlocked"]}
+    if frame not in allowed:
         flash("Ce cadre n'est pas encore débloqué.", "error")
-        return redirect(url_for("profile"))
+        return redirect(url_for("profile_frames"))
     db = get_db(); db.execute("""
         INSERT INTO user_profile_settings(user_id,frame_key) VALUES(?,?)
         ON CONFLICT(user_id) DO UPDATE SET frame_key=excluded.frame_key
     """, (user["id"], frame)); db.commit(); db.close()
     flash("Cadre de profil appliqué ✨", "success")
-    return redirect(url_for("profile"))
+    return redirect(url_for("profile_frames"))
 
 
 @app.post("/passkeys/register/options")

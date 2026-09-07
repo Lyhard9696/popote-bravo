@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Cadres — Popote Bravo{% endblock %}
+{% block content %}
+<div class="frames-page">
+  <div class="community-watermark profile-watermark" aria-hidden="true"></div>
+
+  <div class="community-hero frames-hero">
+    <p class="eyebrow">Personnalisation</p>
+    <h1>Cadres Popote</h1>
+    <p>Collectionne des cadres selon ta progression. Les cadres verrouillés restent visibles pour suivre tes objectifs.</p>
+  </div>
+
+  <section class="frames-summary">
+    <div>
+      <span>Collection</span>
+      <strong>{{ profile['unlocked_frames']|length }} / {{ profile['frames']|length }}</strong>
+    </div>
+    <div>
+      <span>Niveau Popote</span>
+      <strong>{{ profile['level'] }}</strong>
+    </div>
+    <div>
+      <span>XP total</span>
+      <strong>{{ profile['xp'] }}</strong>
+    </div>
+  </section>
+
+  <div class="frame-tier-legend">
+    <span class="rarity-dot common"></span> Commun
+    <span class="rarity-dot rare"></span> Rare
+    <span class="rarity-dot epic"></span> Épique
+    <span class="rarity-dot legendary"></span> Légendaire
+  </div>
+
+  <section class="frames-section">
+    <div class="section-head">
+      <div><p class="eyebrow">Collection spéciale</p><h2>Cadres Popote</h2></div>
+    </div>
+
+    <div class="frame-collection-grid">
+      {% for frame in profile['frames'] if frame['kind'] == 'special' %}
+        <article class="collection-frame-card {% if not frame['unlocked'] %}locked{% endif %} frame-{{ frame['style'] }}">
+          <div class="collection-frame-visual">
+            <div class="collection-avatar-ring"><span>{{ profile['user']['name'][:1]|upper }}</span></div>
+            {% if not frame['unlocked'] %}<span class="frame-lock">🔒</span>{% endif %}
+          </div>
+          <strong>{{ frame['name'] }}</strong>
+          <span class="frame-rarity rarity-{{ frame['rarity']|lower|replace('é','e') }}">{{ frame['rarity'] }}</span>
+          <small>{{ frame['note'] }}</small>
+          {% if frame['goal'] > 1 %}
+          <div class="frame-progress"><span style="width:{{ frame['progress'] }}%"></span></div>
+          <b>{{ frame['current'] }} / {{ frame['goal'] }}</b>
+          {% endif %}
+          {% if frame['unlocked'] %}
+          <form method="post" action="{{ url_for('profile_frame') }}">
+            <input type="hidden" name="frame" value="{{ frame['key'] }}">
+            <button {% if profile['frame']==frame['key'] %}disabled{% endif %}>
+              {% if profile['frame']==frame['key'] %}Équipé ✓{% else %}Équiper{% endif %}
+            </button>
+          </form>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="frames-section">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Teams</p>
+        <h2>Cadres produits</h2>
+        <p class="frame-section-help">Chaque produit possède Bronze (30), Argent (60), Or (100) et Légendaire (200). Les nouveaux produits créent automatiquement leurs propres cadres.</p>
+      </div>
+    </div>
+
+    <div class="frame-collection-grid product-frame-grid">
+      {% for frame in profile['frames'] if frame['kind'] == 'product' %}
+        <article class="collection-frame-card product-frame-card {% if not frame['unlocked'] %}locked{% endif %} frame-{{ frame['style'] }}">
+          <div class="collection-frame-visual">
+            <div class="collection-avatar-ring">
+              {% if frame['has_blob'] %}
+                <img src="{{ url_for('product_image', product_id=frame['product_id']) }}" alt="">
+              {% elif frame['image_path'] %}
+                <img src="{{ url_for('static', filename=frame['image_path']) }}" alt="">
+              {% else %}
+                <span>{{ frame['icon'] }}</span>
+              {% endif %}
+            </div>
+            {% if not frame['unlocked'] %}<span class="frame-lock">🔒</span>{% endif %}
+          </div>
+
+          <strong>{{ frame['name'] }}</strong>
+          <span class="product-tier-name">{{ frame['subtitle'] }}</span>
+          <span class="frame-rarity rarity-{{ frame['rarity']|lower|replace('é','e') }}">{{ frame['rarity'] }}</span>
+
+          <div class="frame-progress"><span style="width:{{ frame['progress'] }}%"></span></div>
+          <b>{{ frame['current'] }} / {{ frame['goal'] }}</b>
+
+          {% if frame['unlocked'] %}
+          <form method="post" action="{{ url_for('profile_frame') }}">
+            <input type="hidden" name="frame" value="{{ frame['key'] }}">
+            <button {% if profile['frame']==frame['key'] %}disabled{% endif %}>
+              {% if profile['frame']==frame['key'] %}Équipé ✓{% else %}Équiper{% endif %}
+            </button>
+          </form>
+          {% endif %}
+        </article>
+      {% else %}
+        <div class="badge-empty">Les cadres Team apparaîtront dès que des produits seront disponibles dans la Popote.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <a href="{{ url_for('profile') }}" class="profiles-return">← Retour à mon profil</a>
+</div>
+{% endblock %}

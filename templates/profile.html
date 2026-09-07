@@ -3,13 +3,67 @@
 {% block content %}
 <div class="social-profile-page">
   <div class="community-watermark profile-watermark" aria-hidden="true"></div>
-  <section class="profile-identity frame-{{ profile['frame'] }}">
-    <div class="profile-avatar"><span>{{ profile['user']['name'][:1]|upper }}</span></div>
-    <div class="profile-heading"><p class="eyebrow">Profil Popote</p><h1>{{ profile['user']['name'] }}</h1><div class="level-pill">🌟 Niveau Popote {{ profile['level'] }}</div></div>
-    <div class="level-progress"><span style="width:{{ profile['progress'] }}%"></span></div>
+  <section class="profile-identity frame-{{ profile['frame_style'] }}">
+    <div class="profile-avatar">
+      <span>{{ profile['user']['name'][:1]|upper }}</span>
+      {% if profile['selected_frame']['kind'] == 'product' %}
+        <span class="equipped-product-mark">
+          {% if profile['selected_frame']['has_blob'] %}
+            <img src="{{ url_for('product_image', product_id=profile['selected_frame']['product_id']) }}" alt="">
+          {% elif profile['selected_frame']['image_path'] %}
+            <img src="{{ url_for('static', filename=profile['selected_frame']['image_path']) }}" alt="">
+          {% else %}
+            {{ profile['selected_frame']['icon'] }}
+          {% endif %}
+        </span>
+      {% endif %}
+    </div>
+    <div class="profile-heading">
+      <p class="eyebrow">Profil Popote</p>
+      <h1>{{ profile['user']['name'] }}</h1>
+      <div class="profile-title-row">
+        <div class="level-pill">🌟 Niveau Popote {{ profile['level'] }}</div>
+        <span class="level-title">{{ profile['level_title'] }}</span>
+      </div>
+      <div class="equipped-frame-label">
+        Cadre : <strong>{{ profile['selected_frame']['name'] }}</strong>
+        {% if profile['selected_frame'].get('subtitle') %} · {{ profile['selected_frame']['subtitle'] }}{% endif %}
+      </div>
+    </div>
+    <div class="level-progress"><span style="width:{{ profile['level_progress'] }}%"></span></div>
+    <div class="level-progress-copy">
+      {% if profile['level'] < 50 %}
+        <span>{{ profile['level_into'] }} / {{ profile['level_needed'] }} XP vers le niveau {{ profile['level'] + 1 }}</span>
+      {% else %}
+        <span>Niveau maximum atteint ✨</span>
+      {% endif %}
+      <strong>{{ profile['xp'] }} XP au total</strong>
+    </div>
   </section>
 
   {% if profile['tags'] %}<div class="taste-tags">{% for tag in profile['tags'] %}<span>{{ tag }}</span>{% endfor %}</div>{% endif %}
+
+  <details class="xp-details">
+    <summary>
+      <span>✨ Comment mes XP sont calculés ?</span>
+      <strong>{{ profile['xp'] }} XP</strong>
+    </summary>
+    <div class="xp-breakdown-grid">
+      <div><span>🥤 Consommations historiques</span><strong>+{{ profile['xp_breakdown']['consumptions'] }} XP</strong></div>
+      <div><span>👍 Votes aux idées</span><strong>+{{ profile['xp_breakdown']['idea_votes'] }} XP</strong></div>
+      <div><span>⚡ Votes express</span><strong>+{{ profile['xp_breakdown']['express_votes'] }} XP</strong></div>
+      <div><span>💡 Idées proposées</span><strong>+{{ profile['xp_breakdown']['ideas'] }} XP</strong></div>
+      <div><span>✅ Idées validées</span><strong>+{{ profile['xp_breakdown']['validated_ideas'] }} XP</strong></div>
+      <div><span>💳 Paiements validés</span><strong>+{{ profile['xp_breakdown']['payments'] }} XP</strong></div>
+      <div><span>🏅 Badges</span><strong>+{{ profile['xp_breakdown']['badges'] }} XP</strong></div>
+      <div><span>👀 Réactions reçues</span><strong>+{{ profile['xp_breakdown']['reactions'] }} XP</strong></div>
+      <div><span>🎖️ Ancienneté</span><strong>+{{ profile['xp_breakdown']['seniority'] }} XP</strong></div>
+    </div>
+    <p class="retro-xp-note">
+      ✅ L'historique est rétroactif : {{ profile['previous_month_consumptions'] }} consommation(s)
+      du mois dernier sont déjà prises en compte dans ton niveau.
+    </p>
+  </details>
 
   <section class="profile-stats-grid">
     <div><span>💡</span><strong>{{ profile['stats']['ideas'] }}</strong><small>idées</small></div>
@@ -35,9 +89,21 @@
   </section>
 
   {% if is_owner %}
-  <section class="profile-section frame-picker">
-    <div class="section-head"><div><p class="eyebrow">Personnalisation</p><h2>🎨 Cadre de profil</h2></div></div>
-    <form method="post" action="{{ url_for('profile_frame') }}"><div class="frame-options">{% for frame in profile['frames'] %}<label class="frame-choice frame-{{ frame['key'] }}"><input type="radio" name="frame" value="{{ frame['key'] }}" {% if profile['frame']==frame['key'] %}checked{% endif %}><span>{{ frame['name'] }}</span><small>{{ frame['rarity'] }}</small></label>{% endfor %}</div><button class="community-gold-button">Appliquer ce cadre</button></form>
+  <section class="profile-section frame-collection-teaser">
+    <div class="section-head">
+      <div><p class="eyebrow">Personnalisation</p><h2>🎨 Cadres de profil</h2></div>
+      <span>{{ profile['unlocked_frames']|length }} / {{ profile['frames']|length }} débloqués</span>
+    </div>
+    <div class="frame-teaser-row">
+      {% for frame in profile['frames'] if frame['unlocked'] %}
+        {% if loop.index <= 4 %}
+          <span class="mini-frame-orb frame-{{ frame['style'] }}">{{ frame['icon'] }}</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <a href="{{ url_for('profile_frames') }}" class="community-gold-button frame-gallery-link">
+      Voir toute ma collection →
+    </a>
   </section>
   {% endif %}
 
