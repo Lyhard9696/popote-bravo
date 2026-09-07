@@ -3,20 +3,27 @@
 {% block content %}
 <div class="social-profile-page">
   <div class="community-watermark profile-watermark" aria-hidden="true"></div>
-  <section class="profile-identity frame-{{ profile['frame_style'] }}">
-    <div class="profile-avatar">
-      <span>{{ profile['user']['name'][:1]|upper }}</span>
-      {% if profile['selected_frame']['kind'] == 'product' %}
-        <span class="equipped-product-mark">
-          {% if profile['selected_frame']['has_blob'] %}
-            <img src="{{ url_for('product_image', product_id=profile['selected_frame']['product_id']) }}" alt="">
-          {% elif profile['selected_frame']['image_path'] %}
-            <img src="{{ url_for('static', filename=profile['selected_frame']['image_path']) }}" alt="">
+  <section class="profile-identity frame-equipped frame-{{ profile['frame_style'] }}"
+           style="--frame-a:{{ profile['selected_frame']['color1'] }};--frame-b:{{ profile['selected_frame']['color2'] }};--frame-c:{{ profile['selected_frame']['color3'] }};">
+    <div class="equipped-frame-ornaments" aria-hidden="true">
+      {% for pos in ['tl','tr','bl','br'] %}
+        <span class="profile-frame-emblem {{ pos }}">
+          {% if profile['selected_frame']['kind'] == 'product' %}
+            {% if profile['selected_frame']['has_blob'] %}
+              <img src="{{ url_for('product_image', product_id=profile['selected_frame']['product_id']) }}" alt="">
+            {% elif profile['selected_frame']['image_path'] %}
+              <img src="{{ url_for('static', filename=profile['selected_frame']['image_path']) }}" alt="">
+            {% else %}
+              {{ profile['selected_frame']['icon'] }}
+            {% endif %}
           {% else %}
-            {{ profile['selected_frame']['icon'] }}
+            {{ profile['selected_frame']['decor'] }}
           {% endif %}
         </span>
-      {% endif %}
+      {% endfor %}
+    </div>
+    <div class="profile-avatar">
+      <span>{{ profile['user']['name'][:1]|upper }}</span>
     </div>
     <div class="profile-heading">
       <p class="eyebrow">Profil Popote</p>
@@ -49,7 +56,7 @@
       <strong>{{ profile['xp'] }} XP</strong>
     </summary>
     <div class="xp-breakdown-grid">
-      <div><span>🥤 Consommations historiques</span><strong>+{{ profile['xp_breakdown']['consumptions'] }} XP</strong></div>
+      <div><span>🍽️ Consommations historiques</span><strong>+{{ profile['xp_breakdown']['consumptions'] }} XP</strong></div>
       <div><span>👍 Votes aux idées</span><strong>+{{ profile['xp_breakdown']['idea_votes'] }} XP</strong></div>
       <div><span>⚡ Votes express</span><strong>+{{ profile['xp_breakdown']['express_votes'] }} XP</strong></div>
       <div><span>💡 Idées proposées</span><strong>+{{ profile['xp_breakdown']['ideas'] }} XP</strong></div>
@@ -60,8 +67,9 @@
       <div><span>🎖️ Ancienneté</span><strong>+{{ profile['xp_breakdown']['seniority'] }} XP</strong></div>
     </div>
     <p class="retro-xp-note">
-      ✅ L'historique est rétroactif : {{ profile['previous_month_consumptions'] }} consommation(s)
-      du mois dernier sont déjà prises en compte dans ton niveau.
+      ✅ XP rétroactifs : tout ton historique compte déjà, dont
+      {{ profile['previous_month_consumptions'] }} consommation(s) le mois dernier
+      et {{ profile['current_month_consumptions'] }} ce mois-ci.
     </p>
   </details>
 

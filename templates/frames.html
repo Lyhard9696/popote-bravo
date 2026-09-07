@@ -39,9 +39,13 @@
 
     <div class="frame-collection-grid">
       {% for frame in profile['frames'] if frame['kind'] == 'special' %}
-        <article class="collection-frame-card {% if not frame['unlocked'] %}locked{% endif %} frame-{{ frame['style'] }}">
-          <div class="collection-frame-visual">
+        <article class="collection-frame-card {% if not frame['unlocked'] %}locked{% endif %} frame-{{ frame['style'] }}"
+                 style="--frame-a:{{ frame['color1'] }};--frame-b:{{ frame['color2'] }};--frame-c:{{ frame['color3'] }};">
+          <div class="collection-frame-visual special-visual">
             <div class="collection-avatar-ring"><span>{{ profile['user']['name'][:1]|upper }}</span></div>
+            {% for pos in ['top','right','bottom','left'] %}
+              <span class="frame-orbit-emblem {{ pos }}">{{ frame['decor'] }}</span>
+            {% endfor %}
             {% if not frame['unlocked'] %}<span class="frame-lock">🔒</span>{% endif %}
           </div>
           <strong>{{ frame['name'] }}</strong>
@@ -69,23 +73,27 @@
       <div>
         <p class="eyebrow">Teams</p>
         <h2>Cadres produits</h2>
-        <p class="frame-section-help">Chaque produit possède Bronze (30), Argent (60), Or (100) et Légendaire (200). Les nouveaux produits créent automatiquement leurs propres cadres.</p>
+        <p class="frame-section-help">Chaque produit éligible possède Bronze (30), Argent (60), Or (100) et Légendaire (200). Le visuel du produit apparaît directement autour du cadre ; tout nouveau produit crée automatiquement sa collection.</p>
       </div>
     </div>
 
     <div class="frame-collection-grid product-frame-grid">
       {% for frame in profile['frames'] if frame['kind'] == 'product' %}
-        <article class="collection-frame-card product-frame-card {% if not frame['unlocked'] %}locked{% endif %} frame-{{ frame['style'] }}">
-          <div class="collection-frame-visual">
-            <div class="collection-avatar-ring">
-              {% if frame['has_blob'] %}
-                <img src="{{ url_for('product_image', product_id=frame['product_id']) }}" alt="">
-              {% elif frame['image_path'] %}
-                <img src="{{ url_for('static', filename=frame['image_path']) }}" alt="">
-              {% else %}
-                <span>{{ frame['icon'] }}</span>
-              {% endif %}
-            </div>
+        <article class="collection-frame-card product-frame-card {% if not frame['unlocked'] %}locked{% endif %} frame-{{ frame['style'] }}"
+                 style="--frame-a:{{ frame['color1'] }};--frame-b:{{ frame['color2'] }};--frame-c:{{ frame['color3'] }};">
+          <div class="collection-frame-visual product-visual">
+            <div class="collection-avatar-ring"><span>{{ profile['user']['name'][:1]|upper }}</span></div>
+            {% for pos in ['top','right','bottom','left'] %}
+              <span class="frame-orbit-emblem product-emblem {{ pos }}">
+                {% if frame['has_blob'] %}
+                  <img src="{{ url_for('product_image', product_id=frame['product_id']) }}" alt="">
+                {% elif frame['image_path'] %}
+                  <img src="{{ url_for('static', filename=frame['image_path']) }}" alt="">
+                {% else %}
+                  {{ frame['icon'] }}
+                {% endif %}
+              </span>
+            {% endfor %}
             {% if not frame['unlocked'] %}<span class="frame-lock">🔒</span>{% endif %}
           </div>
 

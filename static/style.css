@@ -6148,3 +6148,293 @@ body {
 @media (max-width:380px) {
   .frame-collection-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
 }
+
+
+/* ============================================================
+   V6.19 — Cadres Signature + XP final
+   ============================================================ */
+
+/* ===== Cadre réellement posé autour du PROFIL ===== */
+.profile-identity.frame-equipped {
+  position: relative !important;
+  overflow: visible !important;
+  border: 5px solid var(--frame-a) !important;
+  box-shadow:
+    0 0 0 2px var(--frame-b),
+    0 0 0 5px color-mix(in srgb, var(--frame-c) 34%, transparent),
+    0 18px 40px color-mix(in srgb, var(--frame-a) 22%, rgba(0,0,0,.10)) !important;
+}
+
+.profile-identity.frame-equipped::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: -9px !important;
+  z-index: -1 !important;
+  border-radius: 30px !important;
+  padding: 2px !important;
+  background:
+    conic-gradient(
+      from 25deg,
+      var(--frame-a),
+      var(--frame-b),
+      var(--frame-c),
+      var(--frame-a),
+      var(--frame-b),
+      var(--frame-a)
+    ) !important;
+  opacity: .72 !important;
+  filter: saturate(1.08) !important;
+}
+
+.equipped-frame-ornaments {
+  position: absolute !important;
+  inset: -16px !important;
+  z-index: 5 !important;
+  pointer-events: none !important;
+}
+
+.profile-frame-emblem {
+  position: absolute !important;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,.28), transparent 30%),
+    #111 !important;
+  border: 3px solid var(--frame-b) !important;
+  box-shadow:
+    0 0 0 2px var(--frame-a),
+    0 7px 16px rgba(0,0,0,.18) !important;
+  color: var(--frame-c) !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+}
+.profile-frame-emblem img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  padding: 4px !important;
+  background: #faf8f2 !important;
+}
+.profile-frame-emblem.tl { left: -5px !important; top: -5px !important; }
+.profile-frame-emblem.tr { right: -5px !important; top: -5px !important; }
+.profile-frame-emblem.bl { left: -5px !important; bottom: -5px !important; }
+.profile-frame-emblem.br { right: -5px !important; bottom: -5px !important; }
+
+/* ===== Galerie : anneaux beaucoup plus épais ===== */
+.collection-frame-card {
+  --frame-a: #111;
+  --frame-b: #c89418;
+  --frame-c: #f4d57d;
+}
+
+.collection-frame-visual {
+  width: 104px !important;
+  height: 104px !important;
+  margin-bottom: 12px !important;
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: visible !important;
+}
+
+.collection-avatar-ring {
+  width: 78px !important;
+  height: 78px !important;
+  border-radius: 50% !important;
+  display: grid !important;
+  place-items: center !important;
+  color: #f0c24d !important;
+  font-size: 26px !important;
+  font-weight: 900 !important;
+  background:
+    linear-gradient(#171717,#171717) padding-box,
+    conic-gradient(
+      from 20deg,
+      var(--frame-a),
+      var(--frame-b),
+      var(--frame-c),
+      var(--frame-a),
+      var(--frame-b),
+      var(--frame-c),
+      var(--frame-a)
+    ) border-box !important;
+  border: 9px solid transparent !important;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--frame-b) 54%, transparent),
+    inset 0 0 14px rgba(255,255,255,.06),
+    0 10px 24px color-mix(in srgb, var(--frame-a) 28%, rgba(0,0,0,.15)) !important;
+}
+
+.collection-frame-visual::before {
+  content: "" !important;
+  position: absolute !important;
+  width: 94px !important;
+  height: 94px !important;
+  border-radius: 50% !important;
+  border: 2px dashed color-mix(in srgb, var(--frame-c) 58%, transparent) !important;
+  transform: rotate(12deg) !important;
+  opacity: .72 !important;
+}
+
+.frame-orbit-emblem {
+  position: absolute !important;
+  z-index: 3 !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  display: grid !important;
+  place-items: center !important;
+  overflow: hidden !important;
+  background: #101010 !important;
+  color: var(--frame-c) !important;
+  border: 2px solid var(--frame-b) !important;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--frame-a) 75%, transparent),
+    0 5px 11px rgba(0,0,0,.18) !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+}
+.frame-orbit-emblem.top { top: 0 !important; left: 50% !important; transform: translateX(-50%) !important; }
+.frame-orbit-emblem.right { right: 0 !important; top: 50% !important; transform: translateY(-50%) !important; }
+.frame-orbit-emblem.bottom { bottom: 0 !important; left: 50% !important; transform: translateX(-50%) !important; }
+.frame-orbit-emblem.left { left: 0 !important; top: 50% !important; transform: translateY(-50%) !important; }
+
+.product-emblem {
+  width: 31px !important;
+  height: 31px !important;
+  background: #fff !important;
+}
+.product-emblem img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  padding: 2px !important;
+}
+
+/* Les 4 paliers Team ont des silhouettes différentes. */
+.frame-product-bronze .collection-avatar-ring {
+  border-width: 8px !important;
+  filter: saturate(.82) !important;
+}
+.frame-product-silver .collection-avatar-ring {
+  border-width: 9px !important;
+  box-shadow: 0 0 0 4px rgba(222,228,235,.30), 0 10px 22px rgba(0,0,0,.13) !important;
+}
+.frame-product-gold .collection-avatar-ring {
+  border-width: 10px !important;
+  box-shadow: 0 0 0 4px rgba(231,178,45,.32), 0 0 28px color-mix(in srgb,var(--frame-b) 32%,transparent) !important;
+}
+.frame-product-legendary .collection-avatar-ring {
+  border-width: 11px !important;
+  box-shadow:
+    0 0 0 5px color-mix(in srgb,var(--frame-c) 33%,transparent),
+    0 0 35px color-mix(in srgb,var(--frame-b) 42%,transparent) !important;
+}
+.frame-product-legendary .collection-frame-visual::before {
+  border-style: solid !important;
+  border-width: 3px !important;
+  animation: pbFramePulse 2.2s ease-in-out infinite !important;
+}
+
+@keyframes pbFramePulse {
+  0%,100% { opacity:.40; transform:rotate(0deg) scale(.98); }
+  50% { opacity:.90; transform:rotate(18deg) scale(1.03); }
+}
+
+/* Verrouillé = parfaitement visible mais grisé. */
+.collection-frame-card.locked {
+  filter: grayscale(1) !important;
+  opacity: .58 !important;
+}
+.collection-frame-card.locked:hover {
+  opacity: .72 !important;
+}
+.collection-frame-card.locked .frame-progress span {
+  background: linear-gradient(90deg,#8b8b8b,#bcbcbc) !important;
+}
+
+/* Cartes plus généreuses pour mieux montrer le cadre. */
+.frame-collection-grid {
+  grid-template-columns: repeat(3,minmax(0,1fr)) !important;
+  gap: 13px !important;
+}
+.collection-frame-card {
+  padding: 15px 10px 13px !important;
+  min-height: 242px !important;
+}
+.collection-frame-card > strong {
+  min-height: 32px !important;
+  font-size: 12px !important;
+}
+
+/* Cadres spéciaux : différenciation par palette + texture */
+.special-visual::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 16px !important;
+  border-radius: 50% !important;
+  background:
+    radial-gradient(circle at 50% 15%, color-mix(in srgb,var(--frame-c) 30%,transparent), transparent 42%),
+    repeating-conic-gradient(from 0deg, transparent 0 14deg, color-mix(in srgb,var(--frame-b) 8%,transparent) 14deg 17deg) !important;
+  pointer-events: none !important;
+}
+
+/* Liste des profils : le cadre choisi est visible immédiatement. */
+.profile-mini-card.frame-equipped-mini {
+  border: 3px solid var(--frame-a) !important;
+  box-shadow:
+    0 0 0 2px var(--frame-b),
+    0 8px 22px color-mix(in srgb,var(--frame-a) 18%,rgba(0,0,0,.08)) !important;
+}
+.profile-mini-card.frame-equipped-mini .mini-avatar {
+  border: 4px solid var(--frame-b) !important;
+  box-shadow: 0 0 0 2px var(--frame-c) !important;
+}
+
+/* XP : affiche clairement le nouveau barème. */
+.retro-xp-note {
+  background: linear-gradient(90deg,rgba(217,164,37,.07),transparent) !important;
+}
+
+/* Cadres produit : nom de tier plus marqué */
+.product-tier-name {
+  font-size: 11px !important;
+  letter-spacing: .02em !important;
+}
+
+@media (max-width:680px) {
+  .profile-identity.frame-equipped {
+    border-width: 4px !important;
+    margin-left: 4px !important;
+    margin-right: 4px !important;
+  }
+
+  .profile-frame-emblem {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .frame-collection-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    gap: 9px !important;
+  }
+
+  .collection-frame-card {
+    min-height: 232px !important;
+    padding: 13px 7px 11px !important;
+  }
+
+  .collection-frame-visual {
+    width: 96px !important;
+    height: 96px !important;
+  }
+
+  .collection-avatar-ring {
+    width: 72px !important;
+    height: 72px !important;
+  }
+}

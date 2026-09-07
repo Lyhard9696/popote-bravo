@@ -1,43 +1,51 @@
-# Popote Bravo — V6.18 Cadres & Niveaux
+# Popote Bravo — V6.19 Cadres Signature & XP final
 
-## Niveaux Popote
-Le niveau est calculé rétroactivement à partir de l'historique déjà présent en base.
+## XP Popote
+Le niveau est recalculé automatiquement à partir des données déjà présentes en base.
 
-Les consommations des mois précédents, y compris le mois dernier, sont donc immédiatement prises en compte après déploiement.
+Barème :
+- Boisson non alcoolisée : 5 XP par consommation.
+- Nourriture : 6 XP par consommation.
+- Vote à une idée : 2 XP.
+- Vote express : 2 XP.
+- Idée proposée : 5 XP.
+- Idée validée : +15 XP.
+- Paiement validé : 4 XP.
+- Badge Commun / Rare / Épique / Légendaire : +5 / +10 / +20 / +35 XP.
+- Réactions reçues : +1 XP, plafonné à 100 réactions.
+- Ancienneté : +4 XP par mois, plafonné à 36 mois.
 
-XP :
-- consommations historiques : +2 XP, avec plafond de 10 consommations/jour pour l'XP ;
-- vote à une idée : +5 XP ;
-- vote express : +8 XP ;
-- idée proposée : +20 XP ;
-- idée validée : +60 XP supplémentaires ;
-- paiement validé : +20 XP ;
-- badges : +20 / +40 / +80 / +140 XP selon la rareté ;
-- réaction reçue : +2 XP (100 maximum comptabilisées) ;
-- ancienneté : +3 XP par semaine (plafond 3 ans).
+Tout l'historique de consommations est rétroactif : le mois dernier et les mois antérieurs sont pris en compte dès le déploiement.
 
-50 niveaux sont disponibles, avec une courbe de progression qui devient progressivement plus exigeante.
+Les produits clairement alcoolisés sont exclus des objectifs de volume et de l'XP de consommation.
 
-## Cadres
-Nouvelle page `/profil/cadres`.
+## 50 niveaux Popote
+La progression est rapide au début puis devient plus prestigieuse.
+Titres : Recrue, Connu au comptoir, Habitué, Régulier, Pilier, Figure, Patron, Légende, Institution, Mythe.
 
-- Tous les cadres sont visibles.
-- Les cadres verrouillés sont grisés avec cadenas + progression.
-- Un cadre débloqué peut être équipé depuis la collection.
-- Les cadres déjà débloqués restent disponibles.
+## 25 badges
+Ajout de nombreux badges : premier vote, premier express, première idée, Visionnaire, Démocrate, Grand explorateur, premier paiement, Toujours réglo, Centurion, Archive vivante, Pilier historique, Top 3 du mois, etc.
 
-### Cadres Team automatiques
-Pour chaque produit éligible de la Popote :
-- Bronze : 30 consommations
-- Argent : 60
-- Or : 100
-- Légendaire : 200
+## 40 cadres spéciaux
+Quarante cadres spéciaux visibles dans la collection, chacun avec :
+- palette propre ;
+- ornement propre ;
+- rareté ;
+- condition de déblocage ;
+- barre de progression ;
+- état verrouillé grisé.
 
-Les nouveaux produits ajoutés au catalogue génèrent automatiquement leurs 4 cadres Team.
-Les produits clairement alcoolisés sont exclus des objectifs de volume.
+## Cadres Team produits
+Chaque produit éligible génère automatiquement 4 cadres :
+- Bronze : 30 consommations ;
+- Argent : 60 ;
+- Or : 100 ;
+- Légendaire : 200.
 
-### Cadres spéciaux
-Niveaux, votes, idées validées, ancienneté, badges, Passkey, réactions, Pince du mois, Consommateur du mois, etc.
+Le visuel/photo du produit apparaît à quatre endroits autour du cadre.
+Les grandes marques reconnues (Coca, Red Bull, Ice Tea, Oasis, Monster, Bueno, Fanta, Orangina, etc.) reçoivent automatiquement une palette dédiée.
+
+Une fois équipé, le cadre est réellement appliqué autour du bloc Profil Popote, avec quatre ornements/visuels aux coins.
 
 ## Fichiers à copier dans popote_bravo_v5_render
 - README.md
@@ -45,4 +53,4 @@ Niveaux, votes, idées validées, ancienneté, badges, Passkey, réactions, Pinc
 - static/style.css
 - templates/profile.html
 - templates/profiles.html
-- templates/frames.html (nouveau)
+- templates/frames.html
