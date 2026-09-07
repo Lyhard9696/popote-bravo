@@ -1,180 +1,146 @@
 {% extends "base.html" %}
 {% block title %}Cadres — Popote Bravo{% endblock %}
 {% block content %}
-<div class="frames-page">
+<div class="frames-page compact-frames-page">
   <div class="community-watermark profile-watermark" aria-hidden="true"></div>
 
   <div class="community-hero frames-hero">
     <p class="eyebrow">Personnalisation</p>
     <h1>Cadres Popote</h1>
-    <p>Collectionne des cadres selon ta progression. Les cadres verrouillés restent visibles pour suivre tes objectifs.</p>
+    <p>Un seul cadre par Team : il évolue automatiquement avec ton historique de consommations.</p>
   </div>
 
   <section class="frames-summary">
-    <div>
-      <span>Collection</span>
-      <strong>{{ profile['unlocked_frames']|length }} / {{ profile['frames']|length }}</strong>
-    </div>
-    <div>
-      <span>Niveau Popote</span>
-      <strong>{{ profile['level'] }}</strong>
-    </div>
-    <div>
-      <span>XP total</span>
-      <strong>{{ profile['xp'] }}</strong>
-    </div>
+    <div><span>Débloqués</span><strong>{{ profile['unlocked_frames']|length }}</strong></div>
+    <div><span>Niveau Popote</span><strong>{{ profile['level'] }}</strong></div>
+    <div><span>XP total</span><strong>{{ profile['xp'] }}</strong></div>
   </section>
 
-  <div class="frame-tier-legend">
-    <span class="rarity-dot common"></span> Commun
-    <span class="rarity-dot rare"></span> Rare
-    <span class="rarity-dot epic"></span> Épique
-    <span class="rarity-dot legendary"></span> Légendaire
+  <div class="evolution-rule-card">
+    <strong>Évolution des Teams</strong>
+    <div class="evolution-steps">
+      <span><b>20</b> Normal</span>
+      <span><b>40</b> Bronze</span>
+      <span><b>50</b> Argent</span>
+      <span><b>60</b> Or</span>
+      <span><b>100</b> Légendaire</span>
+    </div>
+    <small>Tout l'historique compte, y compris le mois dernier. Les variantes d'une même marque sont regroupées : Red Bull / Redbull / Red Bull Zero → une seule Team Red Bull.</small>
   </div>
 
-
-  {% if profile['unlocked_frames'] %}
-  <section class="frames-section unlocked-frames-section">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">Accès rapide</p>
-        <h2>✨ Mes cadres débloqués</h2>
-        <p class="frame-section-help">Tous tes cadres disponibles sont ici. Celui que tu portes actuellement apparaît en premier.</p>
+  {% macro frame_card(frame, unlocked_copy=false) %}
+    <article class="collection-frame-card compact-frame-card {% if not frame['unlocked'] %}locked{% endif %} {% if profile['frame']==frame['key'] %}is-equipped{% endif %} frame-{{ frame['style'] }}"
+             style="--frame-a:{{ frame['color1'] }};--frame-b:{{ frame['color2'] }};--frame-c:{{ frame['color3'] }};">
+      <div class="collection-frame-visual {% if frame['kind']=='product' %}product-visual{% else %}special-visual{% endif %}">
+        <div class="collection-avatar-ring"><span>{{ profile['user']['name'][:1]|upper }}</span></div>
+        {% for pos in ['top','right','bottom','left'] %}
+          <span class="frame-orbit-emblem {% if frame['kind']=='product' %}product-emblem {% endif %}{{ pos }}">
+            {% if frame['kind']=='product' %}
+              {% if frame['has_blob'] and frame['product_id'] %}
+                <img src="{{ url_for('product_image', product_id=frame['product_id']) }}" alt="">
+              {% elif frame['image_path'] %}
+                <img src="{{ url_for('static', filename=frame['image_path']) }}" alt="">
+              {% else %}
+                {{ frame['icon'] }}
+              {% endif %}
+            {% else %}
+              {{ frame['decor'] }}
+            {% endif %}
+          </span>
+        {% endfor %}
+        {% if not frame['unlocked'] %}<span class="frame-lock">🔒</span>{% endif %}
       </div>
-      <span>{{ profile['unlocked_frames']|length }} débloqué(s)</span>
+
+      <div class="compact-frame-copy">
+        <strong>{{ frame['name'] }}</strong>
+        {% if frame.get('subtitle') %}
+          <span class="product-tier-name tier-{{ frame.get('tier_key','special') }}">{{ frame['subtitle'] }}</span>
+        {% endif %}
+        <span class="frame-rarity rarity-{{ frame['rarity']|lower|replace('é','e') }}">{{ frame['rarity'] }}</span>
+      </div>
+
+      {% if frame['kind']=='product' %}
+        <div class="team-count-row">
+          <strong>{{ frame['current'] }} consommée(s)</strong>
+          <span>{{ frame['previous_month_qty'] }} le mois dernier</span>
+        </div>
+      {% else %}
+        <small class="special-frame-note">{{ frame['note'] }}</small>
+      {% endif %}
+
+      {% if frame['kind']=='product' or frame['goal'] > 1 %}
+        <div class="frame-progress"><span style="width:{{ frame['progress'] }}%"></span></div>
+        {% if frame['kind']=='product' %}
+          <small class="frame-next-step">{{ frame['note'] }}</small>
+        {% else %}
+          <b>{{ frame['current'] }} / {{ frame['goal'] }}</b>
+        {% endif %}
+      {% endif %}
+
+      {% if frame['unlocked'] %}
+        <form method="post" action="{{ url_for('profile_frame') }}">
+          <input type="hidden" name="frame" value="{{ frame['key'] }}">
+          <button {% if profile['frame']==frame['key'] %}disabled{% endif %}>
+            {% if profile['frame']==frame['key'] %}Équipé ✓{% else %}Équiper{% endif %}
+          </button>
+        </form>
+      {% endif %}
+    </article>
+  {% endmacro %}
+
+  <details class="frames-accordion unlocked-accordion" open>
+    <summary>
+      <div><span class="accordion-kicker">Accès rapide</span><strong>✨ Mes cadres débloqués</strong></div>
+      <span class="accordion-count">{{ profile['unlocked_frames']|length }}</span>
+    </summary>
+    <div class="accordion-body">
+      <p class="accordion-help">Le cadre équipé est placé en premier. Plus besoin de le chercher dans toute la collection.</p>
+      <div class="frame-collection-grid compact-frame-grid">
+        {% for frame in profile['unlocked_frames'] %}{{ frame_card(frame, true) }}{% endfor %}
+      </div>
     </div>
+  </details>
 
-    <div class="frame-collection-grid unlocked-frame-grid">
-      {% for frame in profile['unlocked_frames'] %}
-        <article class="collection-frame-card unlocked-highlight {% if profile['frame']==frame['key'] %}is-equipped{% endif %} frame-{{ frame['style'] }}"
-                 style="--frame-a:{{ frame['color1'] }};--frame-b:{{ frame['color2'] }};--frame-c:{{ frame['color3'] }};">
-          <div class="collection-frame-visual {% if frame['kind']=='product' %}product-visual{% else %}special-visual{% endif %}">
-            <div class="collection-avatar-ring"><span>{{ profile['user']['name'][:1]|upper }}</span></div>
-            {% for pos in ['top','right','bottom','left'] %}
-              <span class="frame-orbit-emblem {% if frame['kind']=='product' %}product-emblem {% endif %}{{ pos }}">
-                {% if frame['kind']=='product' %}
-                  {% if frame['has_blob'] %}
-                    <img src="{{ url_for('product_image', product_id=frame['product_id']) }}" alt="">
-                  {% elif frame['image_path'] %}
-                    <img src="{{ url_for('static', filename=frame['image_path']) }}" alt="">
-                  {% else %}
-                    {{ frame['icon'] }}
-                  {% endif %}
-                {% else %}
-                  {{ frame['decor'] }}
-                {% endif %}
-              </span>
-            {% endfor %}
-          </div>
-
-          <strong>{{ frame['name'] }}</strong>
-          {% if frame.get('subtitle') %}<span class="product-tier-name">{{ frame['subtitle'] }}</span>{% endif %}
-          <span class="frame-rarity rarity-{{ frame['rarity']|lower|replace('é','e') }}">{{ frame['rarity'] }}</span>
-          {% if frame['kind']=='product' %}
-            <small>{{ frame['current'] }} au total · {{ frame['previous_month_qty'] }} le mois dernier</small>
-          {% else %}
-            <small>{{ frame['note'] }}</small>
-          {% endif %}
-
-          <form method="post" action="{{ url_for('profile_frame') }}">
-            <input type="hidden" name="frame" value="{{ frame['key'] }}">
-            <button {% if profile['frame']==frame['key'] %}disabled{% endif %}>
-              {% if profile['frame']==frame['key'] %}Équipé ✓{% else %}Équiper{% endif %}
-            </button>
-          </form>
-        </article>
-      {% endfor %}
+  <details class="frames-accordion">
+    <summary>
+      <div><span class="accordion-kicker">Teams</span><strong>🥤 Boissons</strong></div>
+      <span class="accordion-count">{{ profile['drink_frames']|length }}</span>
+    </summary>
+    <div class="accordion-body">
+      <p class="accordion-help">Une seule carte par boisson/marque. Le même cadre passe automatiquement de Normal → Bronze → Argent → Or → Légendaire.</p>
+      <div class="frame-collection-grid compact-frame-grid product-frame-grid">
+        {% for frame in profile['drink_frames'] %}{{ frame_card(frame) }}
+        {% else %}<div class="badge-empty">Aucune Team boisson disponible.</div>{% endfor %}
+      </div>
     </div>
-  </section>
+  </details>
+
+  {% if profile['food_frames'] %}
+  <details class="frames-accordion">
+    <summary>
+      <div><span class="accordion-kicker">Teams</span><strong>🍴 Nourriture</strong></div>
+      <span class="accordion-count">{{ profile['food_frames']|length }}</span>
+    </summary>
+    <div class="accordion-body">
+      <div class="frame-collection-grid compact-frame-grid product-frame-grid">
+        {% for frame in profile['food_frames'] %}{{ frame_card(frame) }}{% endfor %}
+      </div>
+    </div>
+  </details>
   {% endif %}
 
-  <section class="frames-section">
-    <div class="section-head">
-      <div><p class="eyebrow">Collection spéciale</p><h2>Cadres Popote</h2></div>
-    </div>
-
-    <div class="frame-collection-grid">
-      {% for frame in profile['frames'] if frame['kind'] == 'special' %}
-        <article class="collection-frame-card {% if not frame['unlocked'] %}locked{% endif %} frame-{{ frame['style'] }}"
-                 style="--frame-a:{{ frame['color1'] }};--frame-b:{{ frame['color2'] }};--frame-c:{{ frame['color3'] }};">
-          <div class="collection-frame-visual special-visual">
-            <div class="collection-avatar-ring"><span>{{ profile['user']['name'][:1]|upper }}</span></div>
-            {% for pos in ['top','right','bottom','left'] %}
-              <span class="frame-orbit-emblem {{ pos }}">{{ frame['decor'] }}</span>
-            {% endfor %}
-            {% if not frame['unlocked'] %}<span class="frame-lock">🔒</span>{% endif %}
-          </div>
-          <strong>{{ frame['name'] }}</strong>
-          <span class="frame-rarity rarity-{{ frame['rarity']|lower|replace('é','e') }}">{{ frame['rarity'] }}</span>
-          <small>{{ frame['note'] }}</small>
-          {% if frame['goal'] > 1 %}
-          <div class="frame-progress"><span style="width:{{ frame['progress'] }}%"></span></div>
-          <b>{{ frame['current'] }} / {{ frame['goal'] }}</b>
-          {% endif %}
-          {% if frame['unlocked'] %}
-          <form method="post" action="{{ url_for('profile_frame') }}">
-            <input type="hidden" name="frame" value="{{ frame['key'] }}">
-            <button {% if profile['frame']==frame['key'] %}disabled{% endif %}>
-              {% if profile['frame']==frame['key'] %}Équipé ✓{% else %}Équiper{% endif %}
-            </button>
-          </form>
-          {% endif %}
-        </article>
-      {% endfor %}
-    </div>
-  </section>
-
-  <section class="frames-section">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">Teams</p>
-        <h2>Cadres produits</h2>
-        <p class="frame-section-help">Chaque produit éligible possède Bronze (30), Argent (60), Or (100) et Légendaire (200). Tout l'historique déjà enregistré compte, y compris le mois dernier — même si un produit a ensuite été recréé dans le catalogue.</p>
+  <details class="frames-accordion">
+    <summary>
+      <div><span class="accordion-kicker">Récompenses</span><strong>🏆 Collection spéciale</strong></div>
+      <span class="accordion-count">{{ profile['special_frames']|length }}</span>
+    </summary>
+    <div class="accordion-body">
+      <p class="accordion-help">Cadres de niveau, paiements, idées, classement, ancienneté et récompenses communautaires.</p>
+      <div class="frame-collection-grid compact-frame-grid">
+        {% for frame in profile['special_frames'] %}{{ frame_card(frame) }}{% endfor %}
       </div>
     </div>
-
-    <div class="frame-collection-grid product-frame-grid">
-      {% for frame in profile['frames'] if frame['kind'] == 'product' %}
-        <article class="collection-frame-card product-frame-card {% if not frame['unlocked'] %}locked{% endif %} frame-{{ frame['style'] }}"
-                 style="--frame-a:{{ frame['color1'] }};--frame-b:{{ frame['color2'] }};--frame-c:{{ frame['color3'] }};">
-          <div class="collection-frame-visual product-visual">
-            <div class="collection-avatar-ring"><span>{{ profile['user']['name'][:1]|upper }}</span></div>
-            {% for pos in ['top','right','bottom','left'] %}
-              <span class="frame-orbit-emblem product-emblem {{ pos }}">
-                {% if frame['has_blob'] %}
-                  <img src="{{ url_for('product_image', product_id=frame['product_id']) }}" alt="">
-                {% elif frame['image_path'] %}
-                  <img src="{{ url_for('static', filename=frame['image_path']) }}" alt="">
-                {% else %}
-                  {{ frame['icon'] }}
-                {% endif %}
-              </span>
-            {% endfor %}
-            {% if not frame['unlocked'] %}<span class="frame-lock">🔒</span>{% endif %}
-          </div>
-
-          <strong>{{ frame['name'] }}</strong>
-          <span class="product-tier-name">{{ frame['subtitle'] }}</span>
-          <span class="frame-rarity rarity-{{ frame['rarity']|lower|replace('é','e') }}">{{ frame['rarity'] }}</span>
-
-          <div class="frame-progress"><span style="width:{{ frame['progress'] }}%"></span></div>
-          <b>{{ frame['current'] }} / {{ frame['goal'] }}</b>
-          <small class="frame-history-note">dont {{ frame['previous_month_qty'] }} le mois dernier</small>
-
-          {% if frame['unlocked'] %}
-          <form method="post" action="{{ url_for('profile_frame') }}">
-            <input type="hidden" name="frame" value="{{ frame['key'] }}">
-            <button {% if profile['frame']==frame['key'] %}disabled{% endif %}>
-              {% if profile['frame']==frame['key'] %}Équipé ✓{% else %}Équiper{% endif %}
-            </button>
-          </form>
-          {% endif %}
-        </article>
-      {% else %}
-        <div class="badge-empty">Les cadres Team apparaîtront dès que des produits seront disponibles dans la Popote.</div>
-      {% endfor %}
-    </div>
-  </section>
+  </details>
 
   <a href="{{ url_for('profile') }}" class="profiles-return">← Retour à mon profil</a>
 </div>

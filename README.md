@@ -65,3 +65,16 @@ Une fois équipé, le cadre est réellement appliqué autour du bloc Profil Popo
 - Les cadres Team affichent le total historique et le nombre de consommations du mois dernier.
 - Chaque membre du classement, podium compris, est cliquable et ouvre directement son profil Popote.
 - Les profils sont visibles par tous les membres connectés de la Popote.
+
+
+## V6.19.2 — Cadres Team évolutifs et page compacte
+
+- Une seule carte par Team produit : aucune duplication Normal/Bronze/Argent/Or.
+- Évolution automatique : 20 Normal, 40 Bronze, 50 Argent, 60 Or, 100 Légendaire.
+- Le cadre équipé évolue tout seul quand le compteur franchit un palier.
+- Historique complet conservé, mois dernier inclus.
+- Regroupement robuste des variantes de marques : Red Bull, Redbull, Red Bull Zero, etc. alimentent une seule Team Red Bull.
+- Les produits historiques supprimés du catalogue restent comptabilisés dans la collection.
+- Menus déroulants : Mes cadres débloqués, Teams boissons, Teams nourriture, Collection spéciale.
+- Les cadres débloqués restent en accès rapide tout en haut, avec le cadre équipé en premier.
+- Le clic depuis le classement vers les profils publics de V6.19.1 est conservé.

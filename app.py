@@ -16,6 +16,7 @@ import uuid
 import io
 from PIL import Image
 import json
+import unicodedata
 from pywebpush import webpush, WebPushException
 
 
@@ -955,10 +956,12 @@ def get_badges(user_id):
 
 
 PRODUCT_FRAME_TIERS = (
-    ("bronze", "Bronze", 30, "Commun"),
-    ("silver", "Argent", 60, "Rare"),
-    ("gold", "Or", 100, "Épique"),
-    ("legendary", "Légendaire", 200, "Légendaire"),
+    # key, label, minimum consumptions, rarity
+    ("normal", "Normal", 20, "Commun"),
+    ("bronze", "Bronze", 40, "Commun"),
+    ("silver", "Argent", 50, "Rare"),
+    ("gold", "Or", 60, "Épique"),
+    ("legendary", "Légendaire", 100, "Légendaire"),
 )
 
 # Bonus XP volontairement plus sobres que les consommations.
@@ -1343,6 +1346,112 @@ def _special_unlock(key, m, badge_keys):
     return conditions[key]
 
 
+
+# Familles de produits : une seule Team par marque/produit, même si plusieurs
+# variantes ont existé dans le catalogue. C'est notamment ce qui permet de
+# retrouver correctement tout l'historique Red Bull / Coca / Ice Tea, etc.
+PRODUCT_FAMILY_ALIASES = (
+    ("redbull", "redbull", "Red Bull"),
+    ("cocacola", "coca", "Coca"),
+    ("cocazero", "coca", "Coca"),
+    ("cocacherry", "coca", "Coca"),
+    ("coca", "coca", "Coca"),
+    ("liptonicetea", "icetea", "Ice Tea"),
+    ("lipton", "icetea", "Ice Tea"),
+    ("icetea", "icetea", "Ice Tea"),
+    ("oasis", "oasis", "Oasis"),
+    ("monster", "monster", "Monster"),
+    ("kinderbueno", "bueno", "Bueno"),
+    ("bueno", "bueno", "Bueno"),
+    ("sanpellegrino", "sanpellegrino", "San Pellegrino"),
+    ("pellegrino", "sanpellegrino", "San Pellegrino"),
+    ("schweppes", "schweppes", "Schweppes"),
+    ("orangina", "orangina", "Orangina"),
+    ("fanta", "fanta", "Fanta"),
+    ("sprite", "sprite", "Sprite"),
+    ("pringles", "pringles", "Pringles"),
+    ("twix", "twix", "Twix"),
+    ("snickers", "snickers", "Snickers"),
+    ("mm", "mm", "M&M's"),
+)
+
+
+def _compact_product_name(name):
+    normalized = unicodedata.normalize("NFKD", str(name or ""))
+    normalized = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return "".join(ch.lower() for ch in normalized if ch.isalnum())
+
+
+def _product_family_key(name):
+    compact = _compact_product_name(name)
+    for needle, key, _display in PRODUCT_FAMILY_ALIASES:
+        if needle and needle in compact:
+            return key
+    return compact or "produit"
+
+
+def _product_family_display(name):
+    compact = _compact_product_name(name)
+    for needle, _key, display in PRODUCT_FAMILY_ALIASES:
+        if needle and needle in compact:
+            return display
+    return str(name or "Produit").strip()
+
+
+def _evolving_product_tier(qty):
+    """Un seul cadre par Team. Son apparence évolue automatiquement."""
+    qty = int(qty or 0)
+    current = None
+    next_tier = PRODUCT_FRAME_TIERS[0]
+    for tier in PRODUCT_FRAME_TIERS:
+        if qty >= tier[2]:
+            current = tier
+        elif next_tier is None or tier[2] > qty:
+            next_tier = tier
+            break
+    else:
+        next_tier = None
+
+    if current is None:
+        key, label, minimum, rarity = ("normal", "À débloquer", 20, "Commun")
+        next_goal = 20
+        next_label = "Normal"
+        unlocked = False
+    else:
+        key, label, minimum, rarity = current
+        unlocked = True
+        following = next((t for t in PRODUCT_FRAME_TIERS if t[2] > minimum), None)
+        if following:
+            next_goal = following[2]
+            next_label = following[1]
+        else:
+            next_goal = minimum
+            next_label = None
+
+    progress_goal = max(1, next_goal)
+    return {
+        "tier_key": key,
+        "tier_label": label,
+        "rarity": rarity,
+        "unlocked": unlocked,
+        "next_goal": next_goal,
+        "next_label": next_label,
+        "progress": 100 if unlocked and next_label is None else _frame_progress(qty, progress_goal),
+    }
+
+
+def _tier_palette(base_palette, tier_key):
+    a, b, c = base_palette
+    if tier_key == "bronze":
+        return (a, "#b97949", c)
+    if tier_key == "silver":
+        return (a, "#c8d0d7", "#f3f6f8")
+    if tier_key == "gold":
+        return (a, "#e0aa23", "#ffeba0")
+    if tier_key == "legendary":
+        return (a, b, "#f6d45d")
+    return (a, b, c)
+
 def profile_frame_choices(user_id, badges, metrics=None):
     db = get_db()
     if metrics is None:
@@ -1352,6 +1461,7 @@ def profile_frame_choices(user_id, badges, metrics=None):
     badge_keys = {b["key"] for b in badges}
     collection = []
 
+    # Cadres spéciaux : inchangés, un cadre = une récompense.
     for key, name, rarity, icon, style, decor, palette in SPECIAL_FRAMES:
         unlocked, current, goal, note = _special_unlock(key, metrics, badge_keys)
         collection.append({
@@ -1371,63 +1481,142 @@ def profile_frame_choices(user_id, badges, metrics=None):
             "color1": palette[0],
             "color2": palette[1],
             "color3": palette[2],
+            "legacy_keys": [],
         })
 
+    # Catalogue actuel : sert pour le nom, la catégorie et surtout la photo.
     products = db.execute("""
-        SELECT p.id, p.name, p.category, p.image_path,
-               CASE WHEN p.image_blob IS NOT NULL THEN 1 ELSE 0 END AS has_blob,
-               COALESCE((
-                   SELECT COUNT(*) FROM consumptions c
-                   WHERE c.user_id=?
-                     AND (
-                         c.product_id=p.id
-                         OR lower(trim(c.product_name))=lower(trim(p.name))
-                     )
-               ),0) AS qty,
-               COALESCE((
-                   SELECT COUNT(*) FROM consumptions c
-                   WHERE c.user_id=?
-                     AND (
-                         c.product_id=p.id
-                         OR lower(trim(c.product_name))=lower(trim(p.name))
-                     )
-                     AND strftime('%Y-%m', c.created_at)=?
-               ),0) AS previous_month_qty
+        SELECT p.id, p.name, p.category, p.active, p.image_path,
+               CASE WHEN p.image_blob IS NOT NULL THEN 1 ELSE 0 END AS has_blob
         FROM products p
-        ORDER BY p.category, p.name COLLATE NOCASE
-    """, (user_id, user_id, _previous_month_key())).fetchall()
+        ORDER BY p.active DESC,
+                 CASE WHEN p.image_blob IS NOT NULL THEN 0 ELSE 1 END,
+                 p.name COLLATE NOCASE
+    """).fetchall()
 
+    families = {}
     for row in products:
         name = row["name"]
         if not _product_frame_allowed(name):
             continue
-        qty = int(row["qty"] or 0)
-        palette = _product_palette(name, row["id"])
-        for tier_key, tier_label, goal, rarity in PRODUCT_FRAME_TIERS:
-            collection.append({
-                "key": f"product-{row['id']}-{tier_key}",
-                "name": f"Team {name}",
-                "subtitle": tier_label,
-                "rarity": rarity,
-                "icon": "🥤" if row["category"] == "Boisson" else "🍴",
-                "unlocked": qty >= goal,
-                "current": qty,
-                "goal": goal,
-                "progress": _frame_progress(qty, goal),
-                "style": f"product-{tier_key}",
-                "kind": "product",
+        family_key = _product_family_key(name)
+        entry = families.get(family_key)
+        candidate_score = (2 if row["has_blob"] else 0) + (1 if row["active"] else 0)
+        if entry is None:
+            entry = {
+                "family_key": family_key,
+                "display_name": _product_family_display(name),
+                "category": row["category"] or "Boisson",
                 "product_id": row["id"],
-                "product_name": name,
-                "category": row["category"],
                 "has_blob": bool(row["has_blob"]),
                 "image_path": row["image_path"],
-                "note": f"{goal} consommations de {name}",
-                "previous_month_qty": int(row["previous_month_qty"] or 0),
-                "decor": "",
-                "color1": palette[0],
-                "color2": palette[1],
-                "color3": palette[2],
-            })
+                "representative_score": candidate_score,
+                "product_ids": [],
+                "qty": 0,
+                "previous_month_qty": 0,
+            }
+            families[family_key] = entry
+        entry["product_ids"].append(int(row["id"]))
+        if candidate_score > entry["representative_score"]:
+            entry["display_name"] = _product_family_display(name)
+            entry["category"] = row["category"] or entry["category"]
+            entry["product_id"] = row["id"]
+            entry["has_blob"] = bool(row["has_blob"])
+            entry["image_path"] = row["image_path"]
+            entry["representative_score"] = candidate_score
+
+    # Historique utilisateur : on regroupe par famille normalisée, PAS seulement
+    # par product_id. Ainsi "Redbull", "Red Bull 25cl", "Red Bull Zero", etc.
+    # nourrissent tous le même cadre Team Red Bull.
+    prev_key = _previous_month_key()
+    consumptions = db.execute("""
+        SELECT c.product_id, c.product_name, c.created_at,
+               COALESCE(p.category,'') AS category
+        FROM consumptions c
+        LEFT JOIN products p ON p.id=c.product_id
+        WHERE c.user_id=?
+        ORDER BY c.id
+    """, (user_id,)).fetchall()
+
+    for row in consumptions:
+        name = row["product_name"] or "Produit"
+        if not _product_frame_allowed(name):
+            continue
+        family_key = _product_family_key(name)
+        entry = families.get(family_key)
+        if entry is None:
+            # Un ancien produit supprimé du catalogue reste visible dans la collection.
+            entry = {
+                "family_key": family_key,
+                "display_name": _product_family_display(name),
+                "category": row["category"] or "Boisson",
+                "product_id": None,
+                "has_blob": False,
+                "image_path": None,
+                "representative_score": 0,
+                "product_ids": [],
+                "qty": 0,
+                "previous_month_qty": 0,
+            }
+            families[family_key] = entry
+        entry["qty"] += 1
+        if str(row["created_at"] or "")[:7] == prev_key:
+            entry["previous_month_qty"] += 1
+
+    # UNE SEULE carte par produit/famille. Elle évolue automatiquement.
+    for family_key, entry in sorted(
+        families.items(),
+        key=lambda item: (item[1]["category"] != "Boisson", item[1]["display_name"].lower())
+    ):
+        qty = int(entry["qty"] or 0)
+        tier = _evolving_product_tier(qty)
+        product_id_for_palette = entry["product_id"] or (sum((i + 1) * ord(ch) for i, ch in enumerate(family_key)) % 997 + 1)
+        base_palette = _product_palette(entry["display_name"], product_id_for_palette)
+        palette = _tier_palette(base_palette, tier["tier_key"])
+
+        legacy_keys = []
+        for product_id in entry["product_ids"]:
+            for old_tier_key, _label, _goal, _rarity in (
+                ("bronze", "Bronze", 30, "Commun"),
+                ("silver", "Argent", 60, "Rare"),
+                ("gold", "Or", 100, "Épique"),
+                ("legendary", "Légendaire", 200, "Légendaire"),
+            ):
+                legacy_keys.append(f"product-{product_id}-{old_tier_key}")
+
+        if tier["next_label"]:
+            note = f"Prochaine évolution : {tier['next_label']} à {tier['next_goal']} consommations"
+            goal = tier["next_goal"]
+        else:
+            note = "Évolution maximale atteinte ✨"
+            goal = max(1, qty)
+
+        collection.append({
+            "key": f"team-{family_key}",
+            "name": f"Team {entry['display_name']}",
+            "subtitle": tier["tier_label"],
+            "rarity": tier["rarity"],
+            "icon": "🥤" if entry["category"] == "Boisson" else "🍴",
+            "unlocked": bool(tier["unlocked"]),
+            "current": qty,
+            "goal": int(goal),
+            "progress": int(tier["progress"]),
+            "style": f"product-{tier['tier_key']}",
+            "tier_key": tier["tier_key"],
+            "kind": "product",
+            "product_id": entry["product_id"],
+            "product_name": entry["display_name"],
+            "category": entry["category"],
+            "has_blob": bool(entry["has_blob"]),
+            "image_path": entry["image_path"],
+            "note": note,
+            "previous_month_qty": int(entry["previous_month_qty"] or 0),
+            "decor": "",
+            "color1": palette[0],
+            "color2": palette[1],
+            "color3": palette[2],
+            "legacy_keys": legacy_keys,
+        })
 
     db.close()
     return collection
@@ -1500,7 +1689,22 @@ def build_profile(user_id, viewer_id=None):
     frames = profile_frame_choices(user_id, badges, metrics)
     unlocked = [frame for frame in frames if frame["unlocked"]]
     unlocked_keys = {frame["key"] for frame in unlocked}
-    selected_key = settings["frame_key"] if settings and settings["frame_key"] in unlocked_keys else "classic"
+
+    stored_key = settings["frame_key"] if settings else None
+    selected_key = stored_key if stored_key in unlocked_keys else None
+
+    # Migration transparente V6.19 -> V6.19.2 : un ancien cadre
+    # product-12-gold devient automatiquement le cadre évolutif Team correspondant.
+    if not selected_key and stored_key:
+        legacy_match = next(
+            (frame for frame in unlocked if stored_key in frame.get("legacy_keys", [])),
+            None
+        )
+        if legacy_match:
+            selected_key = legacy_match["key"]
+
+    if not selected_key:
+        selected_key = "classic"
     selected_frame = next((f for f in frames if f["key"] == selected_key), frames[0])
 
     # Accès rapide : le cadre équipé d'abord, puis tous les cadres débloqués,
@@ -1531,6 +1735,9 @@ def build_profile(user_id, viewer_id=None):
         "badges": badges,
         "frames": frames,
         "unlocked_frames": unlocked,
+        "special_frames": [f for f in frames if f["kind"] == "special"],
+        "drink_frames": [f for f in frames if f["kind"] == "product" and f["category"] == "Boisson"],
+        "food_frames": [f for f in frames if f["kind"] == "product" and f["category"] == "Nourriture"],
         "frame": selected_key,
         "frame_style": selected_frame["style"],
         "selected_frame": selected_frame,
