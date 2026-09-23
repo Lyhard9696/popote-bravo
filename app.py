@@ -5,7 +5,7 @@ from pathlib import Path
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
-from datetime import datetime
+from datetime import datetime, timedelta
 import base64
 import math
 from io import BytesIO
@@ -17,6 +17,7 @@ import io
 from PIL import Image
 import json
 import unicodedata
+import secrets
 from pywebpush import webpush, WebPushException
 
 
@@ -58,6 +59,7 @@ app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "CHANGE-MOI-AVANT-MISE-EN-LIG
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_SECURE"] = os.getenv("APP_ENV", "").lower() == "production"
+app.permanent_session_lifetime = timedelta(days=3650)
 PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID", "")
 PAYPAL_CLIENT_SECRET = os.getenv("PAYPAL_CLIENT_SECRET", "")
 PAYPAL_MODE = os.getenv("PAYPAL_MODE", "sandbox").lower()
@@ -83,6 +85,9 @@ def init_db():
         password_hash TEXT NOT NULL,
         is_admin INTEGER NOT NULL DEFAULT 0,
         active INTEGER NOT NULL DEFAULT 1,
+        is_guest INTEGER NOT NULL DEFAULT 0,
+        guest_device_token TEXT,
+        guest_last_seen TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -291,6 +296,21 @@ def init_db():
     if "passkey_user_handle" not in user_cols:
         db.execute("ALTER TABLE users ADD COLUMN passkey_user_handle BLOB")
         db.commit()
+    if "is_guest" not in user_cols:
+        db.execute("ALTER TABLE users ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 0")
+        db.commit()
+    if "guest_device_token" not in user_cols:
+        db.execute("ALTER TABLE users ADD COLUMN guest_device_token TEXT")
+        db.commit()
+    if "guest_last_seen" not in user_cols:
+        db.execute("ALTER TABLE users ADD COLUMN guest_last_seen TEXT")
+        db.commit()
+    db.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_guest_device_token
+        ON users(guest_device_token)
+        WHERE guest_device_token IS NOT NULL
+    """)
+    db.commit()
 
     product_cols = {row["name"] for row in db.execute("PRAGMA table_info(products)").fetchall()}
     if "stock" not in product_cols:
@@ -333,12 +353,36 @@ def init_db():
     db.close()
 
 def login_required(view):
+    """Accès réservé aux vrais comptes membres (pas aux invités)."""
     @wraps(view)
     def wrapped(*args, **kwargs):
         if "user_id" not in session:
             return redirect(url_for("login"))
+        user = current_user()
+        if not user:
+            session.clear()
+            return redirect(url_for("login"))
+        if user["is_guest"]:
+            return redirect(url_for("guest_dashboard"))
         return view(*args, **kwargs)
     return wrapped
+
+
+def guest_required(view):
+    """Accès réservé aux comptes invités."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if "user_id" not in session:
+            return redirect(url_for("guest_access"))
+        user = current_user()
+        if not user:
+            session.clear()
+            return redirect(url_for("guest_access"))
+        if not user["is_guest"]:
+            return redirect(url_for("admin" if user["is_admin"] else "dashboard"))
+        return view(*args, **kwargs)
+    return wrapped
+
 
 def admin_required(view):
     @wraps(view)
@@ -348,7 +392,12 @@ def admin_required(view):
         db = get_db()
         user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
         db.close()
-        if not user or not user["is_admin"]:
+        if not user:
+            session.clear()
+            return redirect(url_for("login"))
+        if user["is_guest"]:
+            return redirect(url_for("guest_dashboard"))
+        if not user["is_admin"]:
             flash("Accès réservé au gestionnaire.", "error")
             return redirect(url_for("dashboard"))
         return view(*args, **kwargs)
@@ -363,6 +412,64 @@ def current_user():
     user = db.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
     db.close()
     return user
+
+
+GUEST_DEVICE_COOKIE = "pb_guest_device"
+GUEST_DEVICE_MAX_AGE = 60 * 60 * 24 * 3650
+
+
+def normalize_guest_name(value):
+    return " ".join((value or "").strip().split())
+
+
+def _set_guest_session(user_id):
+    session.clear()
+    session.permanent = True
+    session["user_id"] = int(user_id)
+    session["guest_mode"] = True
+
+
+def _guest_cookie_response(response, token):
+    response.set_cookie(
+        GUEST_DEVICE_COOKIE,
+        token,
+        max_age=GUEST_DEVICE_MAX_AGE,
+        httponly=True,
+        secure=app.config["SESSION_COOKIE_SECURE"],
+        samesite="Lax",
+    )
+    return response
+
+
+@app.before_request
+def restore_guest_from_device():
+    """Reconnecte automatiquement l'invité reconnu par son téléphone."""
+    if "user_id" in session:
+        return None
+
+    token = request.cookies.get(GUEST_DEVICE_COOKIE, "").strip()
+    if not token:
+        return None
+
+    db = get_db()
+    user = db.execute("""
+        SELECT id
+        FROM users
+        WHERE is_guest=1 AND active=1 AND guest_device_token=?
+        LIMIT 1
+    """, (token,)).fetchone()
+
+    if user:
+        db.execute(
+            "UPDATE users SET guest_last_seen=CURRENT_TIMESTAMP WHERE id=?",
+            (user["id"],)
+        )
+        db.commit()
+    db.close()
+
+    if user:
+        _set_guest_session(user["id"])
+    return None
 
 def user_balance_cents(user_id):
     db = get_db()
@@ -481,7 +588,7 @@ def send_previous_month_ranking_notifications():
                   AND md.created_at < ?
             ), 0) AS total_cents
         FROM users u
-        WHERE u.is_admin = 0 AND u.active = 1
+        WHERE u.is_admin = 0 AND COALESCE(u.is_guest,0)=0 AND u.active = 1
         ORDER BY total_cents DESC, u.name COLLATE NOCASE
     """, (
         start_txt, end_txt,
@@ -753,7 +860,7 @@ def webauthn_origin():
 def notify_all_active(title, message, link, tag, exclude_user_id=None):
     db = get_db()
     rows = db.execute(
-        "SELECT id FROM users WHERE active = 1" + (" AND id != ?" if exclude_user_id else ""),
+        "SELECT id FROM users WHERE active = 1 AND COALESCE(is_guest,0)=0" + (" AND id != ?" if exclude_user_id else ""),
         ((exclude_user_id,) if exclude_user_id else ())
     ).fetchall()
     for row in rows:
@@ -891,7 +998,7 @@ def award_badges(user_id):
              + COALESCE((SELECT SUM(md.amount_cents) FROM manual_debts md
                          WHERE md.user_id=u.id AND strftime('%Y-%m', md.created_at)=?),0) total_cents
         FROM users u
-        WHERE u.is_admin=0 AND u.active=1
+        WHERE u.is_admin=0 AND COALESCE(u.is_guest,0)=0 AND u.active=1
         ORDER BY total_cents DESC, u.name COLLATE NOCASE
     """, (prev_key, prev_key)).fetchall()
 
@@ -1624,8 +1731,8 @@ def profile_frame_choices(user_id, badges, metrics=None):
 
 def build_profile(user_id, viewer_id=None):
     db = get_db()
-    user = db.execute("SELECT id,name,active,is_admin,created_at FROM users WHERE id=?", (user_id,)).fetchone()
-    if not user:
+    user = db.execute("SELECT id,name,active,is_admin,is_guest,created_at FROM users WHERE id=?", (user_id,)).fetchone()
+    if not user or user["is_guest"]:
         db.close()
         return None
 
@@ -1959,6 +2066,7 @@ def classement():
         SELECT
             u.id,
             u.name,
+            COALESCE(u.is_guest,0) AS is_guest,
             COALESCE((
                 SELECT SUM(c.price_cents)
                 FROM consumptions c
@@ -1994,6 +2102,55 @@ def classement():
         month_label=month_label,
         my_position=my_position,
         my_total_cents=my_total_cents,
+        guest_mode=False,
+    )
+
+
+@app.route("/invite/classement")
+@guest_required
+def guest_classement():
+    user = current_user()
+    db = get_db()
+
+    full_ranking = db.execute("""
+        SELECT
+            u.id,
+            u.name,
+            COALESCE(u.is_guest,0) AS is_guest,
+            COALESCE((
+                SELECT SUM(c.price_cents)
+                FROM consumptions c
+                WHERE c.user_id=u.id
+                  AND strftime('%Y-%m',c.created_at)=strftime('%Y-%m','now')
+            ),0)
+            +
+            COALESCE((
+                SELECT SUM(md.amount_cents)
+                FROM manual_debts md
+                WHERE md.user_id=u.id
+                  AND strftime('%Y-%m',md.created_at)=strftime('%Y-%m','now')
+            ),0) AS total_cents
+        FROM users u
+        WHERE u.is_admin=0 AND u.active=1
+        ORDER BY total_cents DESC, u.name COLLATE NOCASE
+    """).fetchall()
+
+    my_position = None
+    my_total_cents = 0
+    for position, row in enumerate(full_ranking, start=1):
+        if row["id"] == user["id"]:
+            my_position = position
+            my_total_cents = row["total_cents"]
+            break
+
+    db.close()
+    return render_template(
+        "classement.html",
+        ranking=full_ranking,
+        month_label=datetime.now().strftime("%m/%Y"),
+        my_position=my_position,
+        my_total_cents=my_total_cents,
+        guest_mode=True,
     )
 
 
@@ -2296,7 +2453,7 @@ def public_profile(user_id):
 @login_required
 def profiles():
     viewer = current_user()
-    db = get_db(); users = db.execute("SELECT id FROM users WHERE active=1 AND is_admin=0 ORDER BY name COLLATE NOCASE").fetchall(); db.close()
+    db = get_db(); users = db.execute("SELECT id FROM users WHERE active=1 AND is_admin=0 AND COALESCE(is_guest,0)=0 ORDER BY name COLLATE NOCASE").fetchall(); db.close()
     cards = [build_profile(row["id"], viewer["id"]) for row in users]
     return render_template("profiles.html", profiles=[c for c in cards if c])
 
@@ -2404,7 +2561,7 @@ def passkey_auth_options():
     if not WEBAUTHN_AVAILABLE:
         return {"ok": False, "error": "Passkeys indisponibles."}, 503
     data = request.get_json(silent=True) or {}; name = (data.get("name") or "").strip()
-    db = get_db(); user = db.execute("SELECT id,name,is_admin FROM users WHERE name=? AND active=1", (name,)).fetchone()
+    db = get_db(); user = db.execute("SELECT id,name,is_admin FROM users WHERE name=? AND active=1 AND COALESCE(is_guest,0)=0", (name,)).fetchone()
     if not user:
         db.close(); return {"ok": False, "error": "Aucune passkey disponible pour ce compte."}, 404
     creds = db.execute("SELECT credential_id FROM passkey_credentials WHERE user_id=?", (user["id"],)).fetchall(); db.close()
@@ -2486,7 +2643,12 @@ def health():
 
 @app.route("/")
 def index():
-    return redirect(url_for("dashboard" if "user_id" in session else "login"))
+    user = current_user()
+    if not user:
+        return redirect(url_for("login"))
+    if user["is_guest"]:
+        return redirect(url_for("guest_dashboard"))
+    return redirect(url_for("admin" if user["is_admin"] else "dashboard"))
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -2518,11 +2680,17 @@ def register():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    existing = current_user()
+    if existing:
+        if existing["is_guest"]:
+            return redirect(url_for("guest_dashboard"))
+        return redirect(url_for("admin" if existing["is_admin"] else "dashboard"))
+
     if request.method == "POST":
         name = request.form["name"].strip()
         password = request.form["password"]
         db = get_db()
-        user = db.execute("SELECT * FROM users WHERE name = ? AND active = 1", (name,)).fetchone()
+        user = db.execute("SELECT * FROM users WHERE name = ? AND active = 1 AND COALESCE(is_guest,0)=0", (name,)).fetchone()
         db.close()
         if not user or not check_password_hash(user["password_hash"], password):
             flash("Identifiants incorrects.", "error")
@@ -2531,6 +2699,322 @@ def login():
         session["user_id"] = user["id"]
         return redirect(url_for("admin" if user["is_admin"] else "dashboard"))
     return render_template("login.html")
+
+
+@app.route("/invite", methods=["GET", "POST"])
+def guest_access():
+    existing = current_user()
+    if existing:
+        if existing["is_guest"]:
+            return redirect(url_for("guest_dashboard"))
+        return redirect(url_for("admin" if existing["is_admin"] else "dashboard"))
+
+    if request.method == "POST":
+        name = normalize_guest_name(request.form.get("name", ""))
+
+        if len(name) < 3 or len(name) > 60:
+            flash("Entre ton prénom et ton nom.", "error")
+            return render_template("guest_access.html")
+
+        db = get_db()
+        user = db.execute(
+            "SELECT * FROM users WHERE name = ? COLLATE NOCASE LIMIT 1",
+            (name,)
+        ).fetchone()
+
+        if user and not user["is_guest"]:
+            db.close()
+            flash("Ce nom est déjà utilisé par un compte membre.", "error")
+            return render_template("guest_access.html")
+
+        if user and user["is_guest"]:
+            token = user["guest_device_token"] or secrets.token_urlsafe(32)
+            db.execute("""
+                UPDATE users
+                SET guest_device_token=?, active=1, guest_last_seen=CURRENT_TIMESTAMP
+                WHERE id=?
+            """, (token, user["id"]))
+            user_id = user["id"]
+        else:
+            token = secrets.token_urlsafe(32)
+            placeholder_password = generate_password_hash(secrets.token_urlsafe(32))
+            try:
+                cur = db.execute("""
+                    INSERT INTO users
+                        (name, password_hash, is_admin, active, is_guest, guest_device_token, guest_last_seen)
+                    VALUES (?, ?, 0, 1, 1, ?, CURRENT_TIMESTAMP)
+                """, (name, placeholder_password, token))
+                user_id = cur.lastrowid
+            except sqlite3.IntegrityError:
+                db.close()
+                flash("Ce nom est déjà utilisé. Retape exactement ton ancien nom si tu avais déjà un compte invité.", "error")
+                return render_template("guest_access.html")
+
+        db.commit()
+        db.close()
+
+        _set_guest_session(user_id)
+        response = redirect(url_for("guest_dashboard"))
+        return _guest_cookie_response(response, token)
+
+    return render_template("guest_access.html")
+
+
+@app.route("/invite/ardoise")
+@guest_required
+def guest_dashboard():
+    user = current_user()
+    db = get_db()
+
+    db.execute(
+        "UPDATE users SET guest_last_seen=CURRENT_TIMESTAMP WHERE id=?",
+        (user["id"],)
+    )
+    db.commit()
+
+    products = db.execute("""
+        SELECT *
+        FROM products
+        WHERE active = 1 OR stock = 0
+        ORDER BY category COLLATE NOCASE,
+                 CASE WHEN stock = 0 THEN 1 ELSE 0 END,
+                 name COLLATE NOCASE
+    """).fetchall()
+
+    raw_history = db.execute("""
+        SELECT id, product_id, product_name, price_cents, order_id, created_at
+        FROM consumptions
+        WHERE user_id=?
+        ORDER BY id DESC
+        LIMIT 80
+    """, (user["id"],)).fetchall()
+
+    grouped = []
+    groups = {}
+    order_sequence = []
+    for row in raw_history:
+        key = row["order_id"] or f"legacy:{row['created_at']}"
+        if key not in groups:
+            groups[key] = {
+                "order_id": row["order_id"],
+                "created_at": row["created_at"],
+                "items": {},
+                "total_cents": 0,
+                "can_cancel": False,
+            }
+            order_sequence.append(key)
+
+        item = groups[key]["items"].setdefault(
+            row["product_name"],
+            {"name": row["product_name"], "quantity": 0, "total_cents": 0}
+        )
+        item["quantity"] += 1
+        item["total_cents"] += row["price_cents"]
+        groups[key]["total_cents"] += row["price_cents"]
+
+    for key in order_sequence[:12]:
+        group = groups[key]
+        group["items"] = list(group["items"].values())
+        if group["order_id"]:
+            can_cancel = db.execute("""
+                SELECT CASE WHEN MIN(created_at) >= datetime('now','-30 seconds') THEN 1 ELSE 0 END ok
+                FROM consumptions
+                WHERE user_id=? AND order_id=?
+            """, (user["id"], group["order_id"])).fetchone()["ok"]
+            group["can_cancel"] = bool(can_cancel)
+        grouped.append(group)
+
+    month_spent = db.execute("""
+        SELECT COALESCE(SUM(price_cents),0) total
+        FROM consumptions
+        WHERE user_id=?
+          AND strftime('%Y-%m',created_at)=strftime('%Y-%m','now')
+    """, (user["id"],)).fetchone()["total"]
+
+    total_consumptions = db.execute(
+        "SELECT COUNT(*) total FROM consumptions WHERE user_id=?",
+        (user["id"],)
+    ).fetchone()["total"]
+
+    last_order = None
+    last_order_id = session.pop("last_order_id", None)
+    if last_order_id:
+        rows = db.execute("""
+            SELECT product_name, COUNT(*) quantity,
+                   SUM(price_cents) total_cents,
+                   MIN(created_at) created_at
+            FROM consumptions
+            WHERE user_id=? AND order_id=?
+            GROUP BY product_name
+            ORDER BY product_name COLLATE NOCASE
+        """, (user["id"], last_order_id)).fetchall()
+        if rows:
+            can_cancel = db.execute("""
+                SELECT CASE WHEN MIN(created_at) >= datetime('now','-30 seconds') THEN 1 ELSE 0 END ok
+                FROM consumptions WHERE user_id=? AND order_id=?
+            """, (user["id"], last_order_id)).fetchone()["ok"]
+            last_order = {
+                "order_id": last_order_id,
+                "items": rows,
+                "total_cents": sum(r["total_cents"] for r in rows),
+                "can_cancel": bool(can_cancel),
+            }
+
+    db.close()
+
+    return render_template(
+        "dashboard.html",
+        guest_mode=True,
+        products=products,
+        history_groups=grouped,
+        claims=[],
+        balance=user_balance_cents(user["id"]),
+        pending_claims=0,
+        pending_claim_count=0,
+        estimated_balance=0,
+        month_spent=month_spent,
+        total_consumptions=total_consumptions,
+        last_order=last_order,
+    )
+
+
+@app.post("/invite/cart/checkout")
+@guest_required
+def guest_cart_checkout():
+    user = current_user()
+
+    requested = {}
+    for key, value in request.form.items():
+        if not key.startswith("qty_"):
+            continue
+        try:
+            product_id = int(key.split("_", 1)[1])
+            quantity = int(value)
+        except (ValueError, IndexError):
+            continue
+        if quantity > 0:
+            requested[product_id] = quantity
+
+    if not requested:
+        flash("Ton panier est vide.", "error")
+        return redirect(url_for("guest_dashboard"))
+
+    db = get_db()
+    placeholders = ",".join("?" for _ in requested)
+    products = db.execute(
+        f"SELECT * FROM products WHERE id IN ({placeholders})",
+        tuple(requested.keys())
+    ).fetchall()
+    product_map = {p["id"]: p for p in products}
+
+    for product_id, quantity in requested.items():
+        product = product_map.get(product_id)
+        if not product or not product["active"] or product["stock"] <= 0:
+            db.close()
+            flash("Un produit du panier n'est plus disponible.", "error")
+            return redirect(url_for("guest_dashboard"))
+        if quantity > product["stock"]:
+            db.close()
+            flash(
+                f"Stock insuffisant pour {product['name']} : {product['stock']} disponible(s).",
+                "error"
+            )
+            return redirect(url_for("guest_dashboard"))
+
+    order_id = uuid.uuid4().hex
+    total_cents = 0
+    total_articles = 0
+
+    for product_id, quantity in requested.items():
+        product = product_map[product_id]
+
+        for _ in range(quantity):
+            db.execute("""
+                INSERT INTO consumptions
+                    (user_id, product_id, product_name, price_cents, order_id)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                user["id"], product["id"], product["name"],
+                product["price_cents"], order_id
+            ))
+
+        new_stock = product["stock"] - quantity
+        db.execute(
+            "UPDATE products SET stock=?, active=CASE WHEN ? <= 0 THEN 0 ELSE active END WHERE id=?",
+            (new_stock, new_stock, product["id"])
+        )
+
+        if new_stock <= product["low_stock_threshold"]:
+            title = "Rupture de stock" if new_stock == 0 else "Stock faible"
+            notify_admins(
+                db,
+                title,
+                f"{product['name']} : {new_stock} restant(s).",
+                "danger" if new_stock == 0 else "warning",
+                "/admin/stock",
+                f"stock:{product['id']}:{'zero' if new_stock == 0 else 'low'}"
+            )
+
+        total_cents += product["price_cents"] * quantity
+        total_articles += quantity
+
+    db.execute(
+        "UPDATE users SET guest_last_seen=CURRENT_TIMESTAMP WHERE id=?",
+        (user["id"],)
+    )
+    db.commit()
+    db.close()
+
+    session["last_order_id"] = order_id
+    flash(
+        f"✓ {total_articles} article(s) ajouté(s) — {total_cents/100:.2f} €".replace(".", ","),
+        "success"
+    )
+    return redirect(url_for("guest_dashboard"))
+
+
+@app.post("/invite/orders/<order_id>/cancel")
+@guest_required
+def guest_cancel_order(order_id):
+    user = current_user()
+    db = get_db()
+
+    rows = db.execute("""
+        SELECT product_id, product_name, COUNT(*) quantity
+        FROM consumptions
+        WHERE user_id=? AND order_id=?
+          AND created_at >= datetime('now','-30 seconds')
+        GROUP BY product_id, product_name
+    """, (user["id"], order_id)).fetchall()
+
+    total_rows = db.execute(
+        "SELECT COUNT(*) total FROM consumptions WHERE user_id=? AND order_id=?",
+        (user["id"], order_id)
+    ).fetchone()["total"]
+
+    eligible = sum(r["quantity"] for r in rows)
+    if total_rows == 0 or eligible != total_rows:
+        db.close()
+        flash("Cette commande ne peut plus être annulée.", "error")
+        return redirect(url_for("guest_dashboard"))
+
+    for row in rows:
+        if row["product_id"] is not None:
+            db.execute(
+                "UPDATE products SET stock=stock+?, active=1 WHERE id=?",
+                (row["quantity"], row["product_id"])
+            )
+
+    db.execute(
+        "DELETE FROM consumptions WHERE user_id=? AND order_id=?",
+        (user["id"], order_id)
+    )
+    db.commit()
+    db.close()
+
+    flash("Commande annulée.", "success")
+    return redirect(url_for("guest_dashboard"))
+
 
 
 @app.route("/change-password", methods=["GET", "POST"])
@@ -2574,6 +3058,9 @@ def change_password():
 
 @app.route("/logout")
 def logout():
+    user = current_user()
+    if user and user["is_guest"]:
+        return redirect(url_for("guest_dashboard"))
     session.clear()
     return redirect(url_for("login"))
 
@@ -3277,7 +3764,7 @@ def paypal_webhook():
             (capture_id,)
         ).fetchone()
         user_exists = db.execute(
-            "SELECT id FROM users WHERE id = ? AND is_admin = 0",
+            "SELECT id FROM users WHERE id = ? AND is_admin = 0 AND COALESCE(is_guest,0)=0",
             (user_id,)
         ).fetchone()
 
@@ -3374,7 +3861,7 @@ def admin_accounts():
                COALESCE((SELECT SUM(p.amount_cents)
                          FROM payments p WHERE p.user_id = u.id), 0) AS paid
         FROM users u
-        WHERE u.is_admin = 0
+        WHERE u.is_admin = 0 AND COALESCE(u.is_guest,0)=0
         ORDER BY u.name COLLATE NOCASE
     """).fetchall()
     db.close()
@@ -3411,6 +3898,96 @@ def admin_stock():
     db.close()
     return render_template("stock.html", products=products)
 
+
+@app.route("/admin/invites")
+@admin_required
+def admin_guests():
+    db = get_db()
+    guests = db.execute("""
+        SELECT
+            u.id,
+            u.name,
+            u.created_at,
+            u.guest_last_seen,
+            COALESCE((SELECT SUM(c.price_cents) FROM consumptions c WHERE c.user_id=u.id),0) AS spent,
+            COALESCE((SELECT SUM(md.amount_cents) FROM manual_debts md WHERE md.user_id=u.id),0) AS manual_debts,
+            COALESCE((SELECT SUM(p.amount_cents) FROM payments p
+                      WHERE p.user_id=u.id AND p.status='completed'),0) AS paid,
+            COALESCE((SELECT COUNT(*) FROM consumptions c WHERE c.user_id=u.id),0) AS consumption_count,
+            (SELECT MAX(c.created_at) FROM consumptions c WHERE c.user_id=u.id) AS last_consumption
+        FROM users u
+        WHERE u.is_guest=1 AND u.active=1
+        ORDER BY
+            (spent + manual_debts - paid) DESC,
+            u.name COLLATE NOCASE
+    """).fetchall()
+    db.close()
+
+    rows = []
+    for guest in guests:
+        item = dict(guest)
+        item["balance"] = max(0, int(guest["spent"] or 0) + int(guest["manual_debts"] or 0) - int(guest["paid"] or 0))
+        rows.append(item)
+
+    return render_template(
+        "admin_guests.html",
+        guests=rows,
+        total_due=sum(row["balance"] for row in rows),
+    )
+
+
+@app.post("/admin/invites/<int:user_id>/mark-paid")
+@admin_required
+def admin_guest_mark_paid(user_id):
+    db = get_db()
+    guest = db.execute("""
+        SELECT id,name
+        FROM users
+        WHERE id=? AND is_guest=1 AND active=1
+    """, (user_id,)).fetchone()
+
+    if not guest:
+        db.close()
+        flash("Compte invité introuvable.", "error")
+        return redirect(url_for("admin_guests"))
+
+    spent = db.execute(
+        "SELECT COALESCE(SUM(price_cents),0) total FROM consumptions WHERE user_id=?",
+        (user_id,)
+    ).fetchone()["total"]
+    debts = db.execute(
+        "SELECT COALESCE(SUM(amount_cents),0) total FROM manual_debts WHERE user_id=?",
+        (user_id,)
+    ).fetchone()["total"]
+    paid = db.execute(
+        "SELECT COALESCE(SUM(amount_cents),0) total FROM payments WHERE user_id=? AND status='completed'",
+        (user_id,)
+    ).fetchone()["total"]
+
+    balance = max(0, int(spent or 0) + int(debts or 0) - int(paid or 0))
+    if balance <= 0:
+        db.close()
+        flash(f"{guest['name']} n'a rien à régler.", "info")
+        return redirect(url_for("admin_guests"))
+
+    db.execute("""
+        INSERT INTO payments (user_id,amount_cents,note,method,status)
+        VALUES (?, ?, ?, 'guest_manual', 'completed')
+    """, (
+        user_id,
+        balance,
+        "Ardoise invité marquée payée par le Popotier",
+    ))
+    db.commit()
+    db.close()
+
+    flash(
+        f"Ardoise de {guest['name']} soldée : {balance/100:.2f} €.".replace(".", ","),
+        "success"
+    )
+    return redirect(url_for("admin_guests"))
+
+
 @app.route("/admin")
 @admin_required
 def admin():
@@ -3425,7 +4002,7 @@ def admin():
                COALESCE((SELECT SUM(p.amount_cents)
                          FROM payments p WHERE p.user_id = u.id), 0) AS paid
         FROM users u
-        WHERE u.is_admin = 0
+        WHERE u.is_admin = 0 AND COALESCE(u.is_guest,0)=0
         ORDER BY u.name COLLATE NOCASE
     """).fetchall()
 
@@ -3453,12 +4030,27 @@ def admin():
         SELECT COUNT(DISTINCT ps.user_id) AS total
         FROM push_subscriptions ps
         JOIN users u ON u.id = ps.user_id
-        WHERE u.active = 1
+        WHERE u.active = 1 AND COALESCE(u.is_guest,0)=0
     """).fetchone()["total"]
+
+    guest_summary = db.execute("""
+        SELECT
+            COUNT(*) AS guest_count,
+            COALESCE(SUM(
+                COALESCE((SELECT SUM(c.price_cents) FROM consumptions c WHERE c.user_id=u.id),0)
+                + COALESCE((SELECT SUM(md.amount_cents) FROM manual_debts md WHERE md.user_id=u.id),0)
+                - COALESCE((SELECT SUM(p.amount_cents) FROM payments p WHERE p.user_id=u.id AND p.status='completed'),0)
+            ),0) AS guest_due
+        FROM users u
+        WHERE u.is_guest=1 AND u.active=1
+    """).fetchone()
 
     db.close()
 
-    total_due = sum((m["spent"] - m["paid"]) for m in members)
+    member_due = sum((m["spent"] - m["paid"]) for m in members)
+    guest_count = int(guest_summary["guest_count"] or 0)
+    guest_due = int(guest_summary["guest_due"] or 0)
+    total_due = member_due + guest_due
 
     return render_template(
         "admin.html",
@@ -3469,6 +4061,8 @@ def admin():
         consumptions_24h=consumptions_24h,
         low_stock_count=low_stock_count,
         push_subscriber_count=push_subscriber_count,
+        guest_count=guest_count,
+        guest_due=guest_due,
     )
 
 
@@ -3496,7 +4090,7 @@ def admin_broadcast_notification():
     recipients = db.execute("""
         SELECT id, name
         FROM users
-        WHERE active = 1
+        WHERE active = 1 AND COALESCE(is_guest,0)=0
         ORDER BY id
     """).fetchall()
 
@@ -3863,7 +4457,7 @@ def add_payment(user_id):
 
     db = get_db()
     user = db.execute(
-        "SELECT id, name FROM users WHERE id = ? AND is_admin = 0 AND active = 1",
+        "SELECT id, name FROM users WHERE id = ? AND is_admin = 0 AND COALESCE(is_guest,0)=0 AND active = 1",
         (user_id,)
     ).fetchone()
 
@@ -3905,7 +4499,7 @@ def add_payment_global():
 
     db = get_db()
     user = db.execute(
-        "SELECT id, name FROM users WHERE id = ? AND is_admin = 0 AND active = 1",
+        "SELECT id, name FROM users WHERE id = ? AND is_admin = 0 AND COALESCE(is_guest,0)=0 AND active = 1",
         (user_id,)
     ).fetchone()
 
@@ -3935,7 +4529,7 @@ def delete_member(user_id):
 
     db = get_db()
     user = db.execute(
-        "SELECT id, name FROM users WHERE id = ? AND is_admin = 0",
+        "SELECT id, name FROM users WHERE id = ? AND is_admin = 0 AND COALESCE(is_guest,0)=0",
         (user_id,)
     ).fetchone()
     if not user:
@@ -3966,7 +4560,7 @@ def update_member(user_id):
     db = get_db()
     try:
         db.execute(
-            "UPDATE users SET name = ?, active = ? WHERE id = ? AND is_admin = 0",
+            "UPDATE users SET name = ?, active = ? WHERE id = ? AND is_admin = 0 AND COALESCE(is_guest,0)=0",
             (name, active, user_id)
         )
         db.commit()
@@ -3985,7 +4579,7 @@ def reset_member_password(user_id):
         return redirect(request.referrer or url_for("admin_accounts"))
 
     db = get_db()
-    user = db.execute("SELECT id FROM users WHERE id = ? AND is_admin = 0", (user_id,)).fetchone()
+    user = db.execute("SELECT id FROM users WHERE id = ? AND is_admin = 0 AND COALESCE(is_guest,0)=0", (user_id,)).fetchone()
     if not user:
         db.close()
         flash("Membre introuvable.", "error")
@@ -4019,7 +4613,7 @@ def add_member_debt(user_id):
 
     db = get_db()
     user = db.execute(
-        "SELECT id, name FROM users WHERE id = ? AND is_admin = 0",
+        "SELECT id, name FROM users WHERE id = ? AND is_admin = 0 AND COALESCE(is_guest,0)=0",
         (user_id,)
     ).fetchone()
     if not user:
@@ -4057,7 +4651,7 @@ def add_member_debt(user_id):
 @admin_required
 def member_detail(user_id):
     db = get_db()
-    user = db.execute("SELECT * FROM users WHERE id = ? AND is_admin = 0", (user_id,)).fetchone()
+    user = db.execute("SELECT * FROM users WHERE id = ? AND is_admin = 0 AND COALESCE(is_guest,0)=0", (user_id,)).fetchone()
     if not user:
         db.close()
         flash("Membre introuvable.", "error")

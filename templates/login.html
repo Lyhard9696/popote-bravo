@@ -8,6 +8,13 @@
   <button type="button" id="passkey-login" class="passkey-button">🔐 Se connecter avec Face ID / Passkey</button>
   <p id="passkey-login-status" class="passkey-status"></p>
   <p class="muted">Pas encore de compte ? <a href="{{ url_for('register') }}">Créer un compte</a></p>
+
+  <div class="guest-login-divider"><span>visiteur d'un autre peloton ?</span></div>
+  <a class="guest-entry-button" href="{{ url_for('guest_access') }}">
+    <span class="guest-entry-icon">👋</span>
+    <span><strong>Compte invité</strong><small>Nom + prénom uniquement</small></span>
+    <b>→</b>
+  </a>
 </div>
 <script>
 const b64ToBufLogin=(v)=>{v=v.replace(/-/g,'+').replace(/_/g,'/');while(v.length%4)v+='=';const s=atob(v);return Uint8Array.from(s,c=>c.charCodeAt(0)).buffer};

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Invités — Popote Bravo{% endblock %}
+{% block content %}
+<div class="guest-admin-page">
+  <div class="hero guest-admin-hero">
+    <div>
+      <p class="eyebrow">Espace Popotier</p>
+      <h1>👋 Comptes invités</h1>
+      <p class="muted">Le montant affiché correspond à l'ardoise réellement due actuellement.</p>
+    </div>
+    <div class="balance">{{ format_eur(total_due) }}<small>Total invités</small></div>
+  </div>
+
+  <div class="guest-admin-list">
+    {% for guest in guests %}
+      <article class="card guest-debt-row {% if guest['balance'] <= 0 %}paid{% endif %}">
+        <div class="guest-debt-main">
+          <div class="guest-avatar">{{ guest["name"][:1]|upper }}</div>
+          <div>
+            <strong>{{ guest["name"] }}</strong>
+            <span>{{ guest["consumption_count"] }} consommation(s){% if guest["last_consumption"] %} · dernière : {{ guest["last_consumption"] }}{% endif %}</span>
+          </div>
+        </div>
+
+        <div class="guest-debt-side">
+          <strong>{{ format_eur(guest["balance"]) }}</strong>
+          {% if guest["balance"] > 0 %}
+          <form method="post"
+                action="{{ url_for('admin_guest_mark_paid', user_id=guest['id']) }}"
+                onsubmit="return confirm('Confirmer que {{ guest['name'] }} a payé {{ format_eur(guest['balance']) }} ?');">
+            <button type="submit" class="guest-paid-button">✓ Marquer payé</button>
+          </form>
+          {% else %}
+            <span class="guest-paid-state">✓ À jour</span>
+          {% endif %}
+        </div>
+      </article>
+    {% else %}
+      <div class="card guest-empty">
+        Aucun compte invité pour le moment.
+      </div>
+    {% endfor %}
+  </div>
+
+  <a class="profiles-return" href="{{ url_for('admin') }}">← Retour à la gestion</a>
+</div>
+{% endblock %}

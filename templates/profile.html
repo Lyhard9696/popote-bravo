@@ -33,8 +33,13 @@
         <span class="level-title">{{ profile['level_title'] }}</span>
       </div>
       <div class="equipped-frame-label">
-        Cadre : <strong>{{ profile['selected_frame']['name'] }}</strong>
-        {% if profile['selected_frame'].get('subtitle') %} · {{ profile['selected_frame']['subtitle'] }}{% endif %}
+        <span>
+          Cadre : <strong>{{ profile['selected_frame']['name'] }}</strong>
+          {% if profile['selected_frame'].get('subtitle') %} · {{ profile['selected_frame']['subtitle'] }}{% endif %}
+        </span>
+        {% if is_owner %}
+          <a class="compact-frame-link" href="{{ url_for('profile_frames') }}">Changer mon cadre →</a>
+        {% endif %}
       </div>
     </div>
     <div class="level-progress"><span style="width:{{ profile['level_progress'] }}%"></span></div>
@@ -85,43 +90,6 @@
       <div><span>Boisson signature</span><strong>{{ profile['top_drink'] or 'À découvrir' }}</strong></div>
       <div><span>Produit signature</span><strong>{{ profile['top_product'] or 'À découvrir' }}</strong></div>
       <div><span>Côté nourriture</span><strong>{{ profile['top_food'] or 'À découvrir' }}</strong></div>
-    </div>
-  </section>
-
-  <section class="profile-section badge-section">
-    <div class="section-head"><div><p class="eyebrow">Collection</p><h2>🏅 Badges</h2></div><span>{{ profile['badges']|length }} débloqué(s)</span></div>
-    <div class="badge-grid">
-      {% for badge in profile['badges'] %}<article class="badge-card rarity-{{ badge['rarity']|lower|replace('é','e') }}"><div class="badge-icon">{{ badge['icon'] }}</div><span class="badge-rarity">{{ badge['rarity'] }}</span><strong>{{ badge['name'] }}</strong>{% if badge['subtitle'] %}<b>{{ badge['subtitle'] }}</b>{% endif %}<small>{{ badge['description'] }}</small></article>
-      {% else %}<div class="badge-empty">Les premiers badges arriveront avec ta participation à la Popote ✨</div>{% endfor %}
-    </div>
-  </section>
-
-  {% if is_owner %}
-  <section class="profile-section frame-collection-teaser">
-    <div class="section-head">
-      <div><p class="eyebrow">Personnalisation</p><h2>🎨 Cadres de profil</h2></div>
-      <span>{{ profile['unlocked_frames']|length }} / {{ profile['frames']|length }} débloqués</span>
-    </div>
-    <div class="frame-teaser-row">
-      {% for frame in profile['frames'] if frame['unlocked'] %}
-        {% if loop.index <= 4 %}
-          <span class="mini-frame-orb frame-{{ frame['style'] }}">{{ frame['icon'] }}</span>
-        {% endif %}
-      {% endfor %}
-    </div>
-    <a href="{{ url_for('profile_frames') }}" class="community-gold-button frame-gallery-link">
-      Voir toute ma collection →
-    </a>
-  </section>
-  {% endif %}
-
-  <section class="profile-section profile-reaction-card" id="profile-reactions">
-    <div class="section-head"><div><p class="eyebrow">La Popote réagit</p><h2>👀 Réactions au profil</h2></div></div>
-    <div class="reaction-strip profile-reactions">
-      {% for emoji in ['🔥','😂','🍻','👀'] %}
-        {% if is_owner %}<span class="reaction-readonly">{{ emoji }} <b>{{ profile['reactions'][emoji] }}</b></span>
-        {% else %}<form method="post" action="{{ url_for('profile_reaction', user_id=profile['user']['id']) }}"><input type="hidden" name="reaction" value="{{ emoji }}"><button class="{% if profile['my_reaction']==emoji %}selected{% endif %}">{{ emoji }} <span>{{ profile['reactions'][emoji] }}</span></button></form>{% endif %}
-      {% endfor %}
     </div>
   </section>
 

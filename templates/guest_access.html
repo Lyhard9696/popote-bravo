@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Compte invité — Popote Bravo{% endblock %}
+{% block content %}
+<div class="guest-access-page">
+  <div class="card narrow guest-access-card">
+    <div class="guest-access-icon">👋</div>
+    <p class="eyebrow">Autre peloton</p>
+    <h1>Compte invité</h1>
+    <p class="guest-access-copy">
+      Entre ton nom et ton prénom. Popote Bravo mémorisera ce téléphone
+      et te reconnectera automatiquement les prochaines fois.
+    </p>
+
+    <form method="post" class="guest-access-form">
+      <label for="guest-name">Nom et prénom</label>
+      <input
+        id="guest-name"
+        name="name"
+        required
+        maxlength="60"
+        autocomplete="name"
+        placeholder="Ex. Thomas Dupont"
+        autofocus
+      >
+      <button type="submit">Entrer dans la Popote →</button>
+    </form>
+
+    <div class="guest-access-info">
+      <strong>Accès simplifié</strong>
+      <span>Ardoise · Boissons / nourriture · Classement</span>
+    </div>
+
+    <p class="guest-access-footnote">
+      Si ta connexion disparaît un jour, retape exactement le même nom pour retrouver ton ardoise.
+    </p>
+
+    <a class="guest-back-link" href="{{ url_for('login') }}">← Retour à la connexion membre</a>
+  </div>
+</div>
+{% endblock %}

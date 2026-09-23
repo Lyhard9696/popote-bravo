@@ -21,6 +21,15 @@
       <b>›</b>
     </a>
 
+    <a class="management-hub-card guest-hub-card" href="{{ url_for('admin_guests') }}">
+      <span class="hub-icon">👋</span>
+      <div>
+        <strong>Comptes invités</strong>
+        <span>{{ guest_count }} invité(s) · {{ format_eur(guest_due) }} à récupérer</span>
+      </div>
+      <b>›</b>
+    </a>
+
     <a class="management-hub-card" href="{{ url_for('admin_consumptions') }}">
       <span class="hub-icon">🥤</span>
       <div>
@@ -54,6 +63,7 @@
     <div class="stat-card"><span>Consommations / 24 h</span><strong>{{ consumptions_24h }}</strong></div>
     <div class="stat-card"><span>Paiements à vérifier</span><strong>{{ pending_claims_count }}</strong></div>
     <div class="stat-card"><span>Stocks faibles / ruptures</span><strong>{{ low_stock_count }}</strong></div>
+    <div class="stat-card"><span>Invités actifs</span><strong>{{ guest_count }}</strong></div>
   </div>
 
 
