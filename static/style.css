@@ -7604,3 +7604,40 @@ a.balance.admin-balance-link {
     font-size: 8px !important;
   }
 }
+
+
+/* ============================================================
+   V6.20.9 — DÉCONNEXION DES COMPTES INVITÉS
+   ============================================================ */
+
+.mobile-tabbar.guest-tabbar {
+  width: min(340px, calc(100% - 28px)) !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.mobile-tabbar.guest-tabbar .guest-logout-tab {
+  color: #c9c2b8 !important;
+}
+
+.mobile-tabbar.guest-tabbar .guest-logout-tab::after {
+  display: none !important;
+}
+
+.mobile-tabbar.guest-tabbar .guest-logout-tab:active {
+  color: #e4b443 !important;
+  background: rgba(255,255,255,.055) !important;
+}
+
+.desktop-nav .guest-logout-link {
+  color: #c9a955 !important;
+}
+
+@media (max-width: 390px) {
+  .mobile-tabbar.guest-tabbar {
+    width: calc(100% - 22px) !important;
+  }
+
+  .mobile-tabbar.guest-tabbar a {
+    font-size: 9px !important;
+  }
+}

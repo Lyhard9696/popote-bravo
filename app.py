@@ -2883,8 +2883,25 @@ def change_password():
 @app.route("/logout")
 def logout():
     user = current_user()
+
     if user and user["is_guest"]:
-        return redirect(url_for("guest_dashboard"))
+        db = get_db()
+        db.execute("""
+            UPDATE users
+            SET guest_device_token=NULL,
+                guest_last_seen=CURRENT_TIMESTAMP
+            WHERE id=? AND is_guest=1
+        """, (user["id"],))
+        db.commit()
+        db.close()
+
+        session.clear()
+        flash("Tu es déconnecté du compte invité.", "success")
+
+        response = redirect(url_for("guest_access"))
+        response.delete_cookie(GUEST_DEVICE_COOKIE, path="/")
+        return response
+
     session.clear()
     return redirect(url_for("login"))
 
