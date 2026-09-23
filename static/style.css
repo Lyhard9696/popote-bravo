@@ -7237,3 +7237,71 @@ html {
     padding: 6px 9px !important;
   }
 }
+
+
+/* ============================================================
+   V6.20.5 — FIX MONTANT ARDOISE + ICÔNES BARRE POPOTIER
+   ============================================================ */
+
+/* Le lien Ardoise restante est posé sur un fond noir :
+   on force explicitement le montant en blanc. */
+.admin-balance-link,
+.hero .admin-balance-link,
+a.balance.admin-balance-link {
+  color: #ffffff !important;
+}
+
+.admin-balance-link small,
+.hero .admin-balance-link small {
+  color: rgba(255,255,255,.68) !important;
+  opacity: 1 !important;
+}
+
+.admin-balance-link:visited,
+.admin-balance-link:hover,
+.admin-balance-link:active {
+  color: #ffffff !important;
+}
+
+/* Les SVG de Classement / QR / Profil doivent fonctionner aussi
+   dans la barre du compte Popotier (.admin-tabbar). */
+.mobile-tabbar .tab-icon-svg {
+  display: grid !important;
+  place-items: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+  margin: 0 auto !important;
+  color: currentColor !important;
+}
+
+.mobile-tabbar .tab-icon-svg svg {
+  display: block !important;
+  width: 22px !important;
+  height: 22px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.75 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+  overflow: visible !important;
+}
+
+.mobile-tabbar .qr-nav-icon svg {
+  stroke-width: 1.55 !important;
+}
+
+/* Contraste explicite sur la navigation Popotier. */
+.mobile-tabbar.admin-tabbar a {
+  color: #bfc1c3 !important;
+}
+
+.mobile-tabbar.admin-tabbar a.active {
+  color: #e9b427 !important;
+}
+
+.mobile-tabbar.admin-tabbar a .tab-icon,
+.mobile-tabbar.admin-tabbar a .tab-icon-svg {
+  color: currentColor !important;
+}
