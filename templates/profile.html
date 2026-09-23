@@ -84,15 +84,6 @@
     <div><span>✅</span><strong>{{ profile['stats']['validated'] }}</strong><small>validées</small></div>
   </section>
 
-  <section class="profile-section taste-profile-card">
-    <div class="section-head"><div><p class="eyebrow">Signature</p><h2>🍹 Profil gustatif</h2></div></div>
-    <div class="taste-lines">
-      <div><span>Boisson signature</span><strong>{{ profile['top_drink'] or 'À découvrir' }}</strong></div>
-      <div><span>Produit signature</span><strong>{{ profile['top_product'] or 'À découvrir' }}</strong></div>
-      <div><span>Côté nourriture</span><strong>{{ profile['top_food'] or 'À découvrir' }}</strong></div>
-    </div>
-  </section>
-
   {% if is_owner %}
   <section class="profile-section security-hub">
     <div class="section-head"><div><p class="eyebrow">Sécurité</p><h2>🔐 Face ID / Passkey</h2></div></div>
