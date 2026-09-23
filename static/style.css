@@ -7558,3 +7558,49 @@ a.balance.admin-balance-link {
     padding-right: 7px !important;
   }
 }
+
+
+/* ============================================================
+   V6.20.8 — SUPPRESSION SÉCURISÉE DES COMPTES INVITÉS
+   ============================================================ */
+
+.guest-delete-form {
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.guest-delete-button {
+  width: 100% !important;
+  min-height: 30px !important;
+  margin: 0 !important;
+  padding: 5px 8px !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  color: #a94b44 !important;
+  border: 1px solid rgba(169,75,68,.24) !important;
+  box-shadow: none !important;
+  font-size: 8px !important;
+  font-weight: 850 !important;
+}
+
+.guest-delete-button:active {
+  transform: scale(.97) !important;
+  background: rgba(169,75,68,.07) !important;
+}
+
+.guest-delete-locked {
+  display: block !important;
+  max-width: 110px !important;
+  color: #999 !important;
+  font-size: 7.5px !important;
+  line-height: 1.2 !important;
+  text-align: right !important;
+}
+
+@media (max-width:680px) {
+  .guest-delete-button {
+    min-height: 29px !important;
+    padding: 4px 6px !important;
+    font-size: 8px !important;
+  }
+}

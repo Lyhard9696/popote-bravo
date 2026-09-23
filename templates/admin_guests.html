@@ -24,6 +24,7 @@
 
         <div class="guest-debt-side">
           <strong>{{ format_eur(guest["balance"]) }}</strong>
+
           {% if guest["balance"] > 0 %}
           <form method="post"
                 action="{{ url_for('admin_guest_mark_paid', user_id=guest['id']) }}"
@@ -32,6 +33,19 @@
           </form>
           {% else %}
             <span class="guest-paid-state">✓ À jour</span>
+          {% endif %}
+
+          {% if guest["can_delete"] %}
+          <form method="post"
+                class="guest-delete-form"
+                action="{{ url_for('admin_guest_delete', user_id=guest['id']) }}"
+                onsubmit="return confirm('Supprimer le compte invité {{ guest['name'] }} ? Le même nom pourra ensuite être recréé.');">
+            <button type="submit" class="guest-delete-button">🗑 Supprimer</button>
+          </form>
+          {% else %}
+            <span class="guest-delete-locked" title="Le compte possède déjà un historique">
+              Historique conservé
+            </span>
           {% endif %}
         </div>
       </article>

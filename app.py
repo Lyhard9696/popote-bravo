@@ -6,7 +6,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 from datetime import datetime, timedelta
-import base64
 import math
 from io import BytesIO
 import os
@@ -19,29 +18,6 @@ import json
 import unicodedata
 import secrets
 from pywebpush import webpush, WebPushException
-
-
-# Passkeys / Face ID / empreinte. Le try/except évite de bloquer l'application
-# si la dépendance n'est pas encore installée pendant un test local.
-try:
-    from webauthn import (
-        generate_registration_options,
-        verify_registration_response,
-        generate_authentication_options,
-        verify_authentication_response,
-        options_to_json,
-        base64url_to_bytes,
-    )
-    from webauthn.helpers.structs import (
-        AuthenticatorAttachment,
-        AuthenticatorSelectionCriteria,
-        PublicKeyCredentialDescriptor,
-        ResidentKeyRequirement,
-        UserVerificationRequirement,
-    )
-    WEBAUTHN_AVAILABLE = True
-except ImportError:
-    WEBAUTHN_AVAILABLE = False
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -268,18 +244,6 @@ def init_db():
         FOREIGN KEY(actor_user_id) REFERENCES users(id)
     );
 
-    CREATE TABLE IF NOT EXISTS passkey_credentials (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        credential_id BLOB NOT NULL UNIQUE,
-        public_key BLOB NOT NULL,
-        sign_count INTEGER NOT NULL DEFAULT 0,
-        transports TEXT,
-        label TEXT NOT NULL DEFAULT 'Passkey',
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(user_id) REFERENCES users(id)
-    );
-
     CREATE INDEX IF NOT EXISTS idx_ideas_created_at ON community_ideas(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_idea_votes_idea ON community_idea_votes(idea_id);
     CREATE INDEX IF NOT EXISTS idx_express_status ON express_polls(status, expires_at);
@@ -293,9 +257,6 @@ def init_db():
         db.commit()
 
     user_cols = {row["name"] for row in db.execute("PRAGMA table_info(users)").fetchall()}
-    if "passkey_user_handle" not in user_cols:
-        db.execute("ALTER TABLE users ADD COLUMN passkey_user_handle BLOB")
-        db.commit()
     if "is_guest" not in user_cols:
         db.execute("ALTER TABLE users ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 0")
         db.commit()
@@ -376,6 +337,9 @@ def guest_required(view):
             return redirect(url_for("guest_access"))
         user = current_user()
         if not user:
+            session.clear()
+            return redirect(url_for("guest_access"))
+        if user["is_guest"] and not user["active"]:
             session.clear()
             return redirect(url_for("guest_access"))
         if not user["is_guest"]:
@@ -797,10 +761,6 @@ BADGE_DEFINITIONS = {
         "name": "Apprécié de la Popote", "icon": "🔥", "rarity": "Rare",
         "description": "20 réactions reçues sur son profil.",
     },
-    "passkey_user": {
-        "name": "Accès Premium", "icon": "🔐", "rarity": "Rare",
-        "description": "Face ID / Passkey activé.",
-    },
     "idea_month": {
         "name": "Idée du mois", "icon": "🏆", "rarity": "Épique",
         "description": "Idée la plus soutenue du mois.",
@@ -837,24 +797,6 @@ def _previous_month_key():
     if now.month == 1:
         return f"{now.year - 1}-12"
     return f"{now.year}-{now.month - 1:02d}"
-
-
-def _b64url_encode(raw):
-    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode("ascii")
-
-
-def _b64url_decode(value):
-    value = value.encode("ascii") if isinstance(value, str) else value
-    return base64.urlsafe_b64decode(value + b"=" * (-len(value) % 4))
-
-
-def webauthn_rp_id():
-    return request.host.split(":", 1)[0]
-
-
-def webauthn_origin():
-    proto = request.headers.get("X-Forwarded-Proto", request.scheme).split(",")[0].strip()
-    return f"{proto}://{request.host}"
 
 
 def notify_all_active(title, message, link, tag, exclude_user_id=None):
@@ -981,13 +923,6 @@ def award_badges(user_id):
     ).fetchone()["total"]
     if received_reactions >= 20:
         _insert_badge(db, user_id, "social_20")
-
-    passkeys = db.execute(
-        "SELECT COUNT(*) total FROM passkey_credentials WHERE user_id=?",
-        (user_id,)
-    ).fetchone()["total"]
-    if passkeys >= 1:
-        _insert_badge(db, user_id, "passkey_user")
 
     # Palmarès du mois précédent.
     prev_key = _previous_month_key()
@@ -1225,10 +1160,6 @@ def profile_metrics(db, user_id, user, badges):
         FROM consumptions c LEFT JOIN products p ON p.id=c.product_id
         WHERE c.user_id=? AND COALESCE(p.category,'')='Boisson'
     """, (user_id,)).fetchone()["total"] or 0)
-    passkey_count = int(db.execute(
-        "SELECT COUNT(*) total FROM passkey_credentials WHERE user_id=?",
-        (user_id,)
-    ).fetchone()["total"] or 0)
     total_consumptions = int(db.execute(
         "SELECT COUNT(*) total FROM consumptions WHERE user_id=?",
         (user_id,)
@@ -1292,7 +1223,6 @@ def profile_metrics(db, user_id, user, badges):
         "distinct_products": distinct_products,
         "food_distinct": food_distinct,
         "drink_distinct": drink_distinct,
-        "passkeys": passkey_count,
         "total_consumptions": total_consumptions,
         "food_consumptions": food_consumptions,
         "drink_consumptions": drink_consumptions,
@@ -1391,7 +1321,6 @@ SPECIAL_FRAMES = [
     ("collector", "Collectionneur", "Rare", "🏅", "collector", "◆", ("#24475d","#4c8baa","#c4e1ed")),
     ("master-collector", "Maître collectionneur", "Légendaire", "🏆", "master-collector", "◆", ("#291a3f","#8651bd","#e7b840")),
     ("all-rounder", "Pilier communautaire", "Légendaire", "✪", "all-rounder", "✪", ("#1f443e","#4f9d82","#f0c94f")),
-    ("passkey", "Accès Premium", "Rare", "🔐", "passkey", "⌁", ("#202834","#4f708b","#ccd9e4")),
     ("regular-months", "Présent chaque mois", "Rare", "📅", "regular-months", "M", ("#685318","#c49c32","#efe0a1")),
     ("hall-of-fame", "Hall of Fame", "Légendaire", "🏆", "hall-of-fame", "H", ("#111111","#d6a11f","#ffffff")),
 ]
@@ -1442,7 +1371,6 @@ def _special_unlock(key, m, badge_keys):
             min(m["validated"],1)+min(m["payments"],3)+min(total_votes,10), 14,
             "1 idée validée + 3 paiements + 10 votes"
         ),
-        "passkey": (m["passkeys"] >= 1, m["passkeys"], 1, "Activer Face ID / Passkey"),
         "regular-months": (m["active_months"] >= 3, m["active_months"], 3, "Être actif sur 3 mois"),
         "hall-of-fame": (
             m["level"] >= 20 and m["badge_count"] >= 10 and bool({"consumer_month","pinch_month","idea_month","top3_month"} & badge_keys),
@@ -1930,7 +1858,6 @@ def inject_helpers():
         "unread_notifications": unread_notifications,
         "vapid_public_key": VAPID_PUBLIC_KEY,
         "push_configured": push_configured(),
-        "webauthn_available": WEBAUTHN_AVAILABLE,
         "community_status_label": community_status_label,
     }
 
@@ -2441,12 +2368,11 @@ def public_profile(user_id):
     if not profile_data or not profile_data["user"]["active"]:
         flash("Profil introuvable.", "error")
         return redirect(url_for("profiles"))
-    db = get_db()
-    passkeys = []
-    if viewer["id"] == user_id:
-        passkeys = db.execute("SELECT id,label,created_at FROM passkey_credentials WHERE user_id=? ORDER BY id DESC", (user_id,)).fetchall()
-    db.close()
-    return render_template("profile.html", profile=profile_data, is_owner=viewer["id"] == user_id, passkeys=passkeys)
+    return render_template(
+        "profile.html",
+        profile=profile_data,
+        is_owner=viewer["id"] == user_id,
+    )
 
 
 @app.route("/profils")
@@ -2507,108 +2433,6 @@ def profile_frame():
     flash("Cadre de profil appliqué ✨", "success")
     return redirect(url_for("profile_frames"))
 
-
-@app.post("/passkeys/register/options")
-@login_required
-def passkey_register_options():
-    if not WEBAUTHN_AVAILABLE:
-        return {"ok": False, "error": "Passkeys indisponibles sur ce serveur."}, 503
-    user = current_user(); db = get_db()
-    handle = user["passkey_user_handle"] if "passkey_user_handle" in user.keys() else None
-    if not handle:
-        handle = os.urandom(32); db.execute("UPDATE users SET passkey_user_handle=? WHERE id=?", (sqlite3.Binary(handle), user["id"])); db.commit()
-    creds = db.execute("SELECT credential_id FROM passkey_credentials WHERE user_id=?", (user["id"],)).fetchall(); db.close()
-    options = generate_registration_options(
-        rp_id=webauthn_rp_id(), rp_name="Popote Bravo", user_id=bytes(handle),
-        user_name=user["name"], user_display_name=user["name"],
-        exclude_credentials=[PublicKeyCredentialDescriptor(id=bytes(c["credential_id"])) for c in creds],
-        authenticator_selection=AuthenticatorSelectionCriteria(
-            authenticator_attachment=AuthenticatorAttachment.PLATFORM,
-            resident_key=ResidentKeyRequirement.PREFERRED,
-            user_verification=UserVerificationRequirement.REQUIRED,
-        ),
-    )
-    session["webauthn_reg_challenge"] = _b64url_encode(options.challenge)
-    return app.response_class(options_to_json(options), mimetype="application/json")
-
-
-@app.post("/passkeys/register/verify")
-@login_required
-def passkey_register_verify():
-    if not WEBAUTHN_AVAILABLE:
-        return {"ok": False, "error": "Passkeys indisponibles."}, 503
-    user = current_user(); data = request.get_json(silent=True) or {}; challenge = session.pop("webauthn_reg_challenge", None)
-    if not challenge:
-        return {"ok": False, "error": "Session de création expirée."}, 400
-    try:
-        verification = verify_registration_response(
-            credential=data,
-            expected_challenge=_b64url_decode(challenge),
-            expected_origin=webauthn_origin(), expected_rp_id=webauthn_rp_id(), require_user_verification=True,
-        )
-    except Exception as exc:
-        return {"ok": False, "error": f"Impossible d'enregistrer Face ID / passkey : {exc}"}, 400
-    transports = ((data.get("response") or {}).get("transports") or [])
-    db = get_db(); db.execute("""
-        INSERT OR REPLACE INTO passkey_credentials(user_id,credential_id,public_key,sign_count,transports,label)
-        VALUES(?,?,?,?,?,?)
-    """, (user["id"], sqlite3.Binary(verification.credential_id), sqlite3.Binary(verification.credential_public_key), verification.sign_count, json.dumps(transports), "Face ID / Passkey")); db.commit(); db.close()
-    return {"ok": True}
-
-
-@app.post("/passkeys/auth/options")
-def passkey_auth_options():
-    if not WEBAUTHN_AVAILABLE:
-        return {"ok": False, "error": "Passkeys indisponibles."}, 503
-    data = request.get_json(silent=True) or {}; name = (data.get("name") or "").strip()
-    db = get_db(); user = db.execute("SELECT id,name,is_admin FROM users WHERE name=? AND active=1 AND COALESCE(is_guest,0)=0", (name,)).fetchone()
-    if not user:
-        db.close(); return {"ok": False, "error": "Aucune passkey disponible pour ce compte."}, 404
-    creds = db.execute("SELECT credential_id FROM passkey_credentials WHERE user_id=?", (user["id"],)).fetchall(); db.close()
-    if not creds:
-        return {"ok": False, "error": "Aucune passkey enregistrée pour ce compte."}, 404
-    options = generate_authentication_options(
-        rp_id=webauthn_rp_id(),
-        allow_credentials=[PublicKeyCredentialDescriptor(id=bytes(c["credential_id"])) for c in creds],
-        user_verification=UserVerificationRequirement.REQUIRED,
-    )
-    session["webauthn_auth_challenge"] = _b64url_encode(options.challenge); session["webauthn_auth_user_id"] = user["id"]
-    return app.response_class(options_to_json(options), mimetype="application/json")
-
-
-@app.post("/passkeys/auth/verify")
-def passkey_auth_verify():
-    if not WEBAUTHN_AVAILABLE:
-        return {"ok": False, "error": "Passkeys indisponibles."}, 503
-    data = request.get_json(silent=True) or {}; challenge = session.pop("webauthn_auth_challenge", None); user_id = session.pop("webauthn_auth_user_id", None)
-    if not challenge or not user_id:
-        return {"ok": False, "error": "Session Face ID expirée."}, 400
-    try:
-        credential_id = base64url_to_bytes(data.get("id", ""))
-    except Exception:
-        return {"ok": False, "error": "Passkey invalide."}, 400
-    db = get_db(); cred = db.execute("SELECT * FROM passkey_credentials WHERE user_id=? AND credential_id=?", (user_id, sqlite3.Binary(credential_id))).fetchone(); user = db.execute("SELECT id,is_admin,active FROM users WHERE id=?", (user_id,)).fetchone()
-    if not cred or not user or not user["active"]:
-        db.close(); return {"ok": False, "error": "Passkey inconnue."}, 400
-    try:
-        verification = verify_authentication_response(
-            credential=data, expected_challenge=_b64url_decode(challenge), expected_origin=webauthn_origin(),
-            expected_rp_id=webauthn_rp_id(), credential_public_key=bytes(cred["public_key"]),
-            credential_current_sign_count=cred["sign_count"], require_user_verification=True,
-        )
-    except Exception as exc:
-        db.close(); return {"ok": False, "error": f"Authentification refusée : {exc}"}, 400
-    db.execute("UPDATE passkey_credentials SET sign_count=? WHERE id=?", (verification.new_sign_count, cred["id"])); db.commit(); db.close()
-    session.clear(); session["user_id"] = user["id"]
-    return {"ok": True, "redirect": url_for("admin" if user["is_admin"] else "dashboard")}
-
-
-@app.post("/passkeys/<int:credential_id>/delete")
-@login_required
-def passkey_delete(credential_id):
-    user = current_user(); db = get_db(); db.execute("DELETE FROM passkey_credentials WHERE id=? AND user_id=?", (credential_id, user["id"])); db.commit(); db.close()
-    flash("Passkey supprimée.", "success")
-    return redirect(url_for("profile"))
 
 @app.route("/qr")
 def qr_page():
@@ -3914,6 +3738,9 @@ def admin_guests():
             COALESCE((SELECT SUM(p.amount_cents) FROM payments p
                       WHERE p.user_id=u.id AND p.status='completed'),0) AS paid,
             COALESCE((SELECT COUNT(*) FROM consumptions c WHERE c.user_id=u.id),0) AS consumption_count,
+            COALESCE((SELECT COUNT(*) FROM manual_debts md WHERE md.user_id=u.id),0) AS debt_count,
+            COALESCE((SELECT COUNT(*) FROM payments p WHERE p.user_id=u.id),0) AS payment_count,
+            COALESCE((SELECT COUNT(*) FROM payment_claims pc WHERE pc.user_id=u.id),0) AS claim_count,
             (SELECT MAX(c.created_at) FROM consumptions c WHERE c.user_id=u.id) AS last_consumption
         FROM users u
         WHERE u.is_guest=1 AND u.active=1
@@ -3926,7 +3753,18 @@ def admin_guests():
     rows = []
     for guest in guests:
         item = dict(guest)
-        item["balance"] = max(0, int(guest["spent"] or 0) + int(guest["manual_debts"] or 0) - int(guest["paid"] or 0))
+        item["balance"] = max(
+            0,
+            int(guest["spent"] or 0)
+            + int(guest["manual_debts"] or 0)
+            - int(guest["paid"] or 0)
+        )
+        item["can_delete"] = (
+            int(guest["consumption_count"] or 0) == 0
+            and int(guest["debt_count"] or 0) == 0
+            and int(guest["payment_count"] or 0) == 0
+            and int(guest["claim_count"] or 0) == 0
+        )
         rows.append(item)
 
     return render_template(
@@ -3934,6 +3772,65 @@ def admin_guests():
         guests=rows,
         total_due=sum(row["balance"] for row in rows),
     )
+
+
+@app.post("/admin/invites/<int:user_id>/delete")
+@admin_required
+def admin_guest_delete(user_id):
+    db = get_db()
+
+    guest = db.execute("""
+        SELECT id,name
+        FROM users
+        WHERE id=? AND is_guest=1 AND active=1
+    """, (user_id,)).fetchone()
+
+    if not guest:
+        db.close()
+        flash("Compte invité introuvable.", "error")
+        return redirect(url_for("admin_guests"))
+
+    activity = db.execute("""
+        SELECT
+            (SELECT COUNT(*) FROM consumptions WHERE user_id=?) AS consumptions,
+            (SELECT COUNT(*) FROM manual_debts WHERE user_id=?) AS debts,
+            (SELECT COUNT(*) FROM payments WHERE user_id=?) AS payments,
+            (SELECT COUNT(*) FROM payment_claims WHERE user_id=?) AS claims
+    """, (user_id, user_id, user_id, user_id)).fetchone()
+
+    has_history = any(int(activity[key] or 0) > 0 for key in ("consumptions", "debts", "payments", "claims"))
+
+    if has_history:
+        db.close()
+        flash(
+            f"Impossible de supprimer {guest['name']} : ce compte possède déjà un historique. "
+            "Son historique comptable est conservé pour éviter toute erreur.",
+            "error"
+        )
+        return redirect(url_for("admin_guests"))
+
+    # Soft archive instead of hard DELETE:
+    # - frees the visible name so it can immediately be recreated;
+    # - invalidates automatic reconnection on the old phone;
+    # - avoids breaking future foreign-key/history assumptions.
+    archived_name = f"{guest['name']} · supprimé #{user_id}"
+    db.execute("""
+        UPDATE users
+        SET name=?,
+            active=0,
+            guest_device_token=NULL,
+            guest_last_seen=CURRENT_TIMESTAMP
+        WHERE id=? AND is_guest=1
+    """, (archived_name, user_id))
+
+    db.commit()
+    db.close()
+
+    flash(
+        f"Compte invité « {guest['name']} » supprimé. Ce nom peut maintenant être recréé.",
+        "success"
+    )
+    return redirect(url_for("admin_guests"))
 
 
 @app.post("/admin/invites/<int:user_id>/mark-paid")
