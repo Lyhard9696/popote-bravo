@@ -7305,3 +7305,256 @@ a.balance.admin-balance-link {
 .mobile-tabbar.admin-tabbar a .tab-icon-svg {
   color: currentColor !important;
 }
+
+
+/* ============================================================
+   V6.20.6 — VALIDATION PAIEMENTS GRANDES ZONES TACTILES
+   Refuser à gauche · informations au centre · Valider à droite
+   ============================================================ */
+
+.payment-review-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.payment-review-card {
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: 92px minmax(0,1fr) 92px !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+  border-radius: 19px !important;
+  background: rgba(255,255,255,.97) !important;
+  border: 1px solid rgba(82,68,40,.10) !important;
+  box-shadow: 0 9px 24px rgba(38,32,23,.055) !important;
+}
+
+.payment-review-info {
+  min-width: 0 !important;
+  display: grid !important;
+  align-content: center !important;
+  gap: 8px !important;
+  padding: 13px 15px !important;
+  border-left: 1px solid rgba(0,0,0,.055) !important;
+  border-right: 1px solid rgba(0,0,0,.055) !important;
+}
+
+.payment-review-name-line {
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.payment-review-name-line > strong {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: #151515 !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+}
+
+.payment-review-amount {
+  flex: 0 0 auto !important;
+  color: #9d7010 !important;
+  font-size: 17px !important;
+  font-weight: 950 !important;
+  white-space: nowrap !important;
+}
+
+.payment-review-meta {
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px 14px !important;
+  flex-wrap: wrap !important;
+  color: #777c83 !important;
+  font-size: 9px !important;
+  line-height: 1.35 !important;
+}
+
+.payment-review-meta > span {
+  min-width: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+.payment-review-meta b {
+  color: #4f5155 !important;
+  font-size: 8px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .04em !important;
+}
+
+.payment-review-note {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  max-width: 100% !important;
+}
+
+.payment-review-action {
+  display: flex !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+}
+
+.payment-review-action button {
+  width: 100% !important;
+  min-height: 82px !important;
+  margin: 0 !important;
+  padding: 9px 5px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+  letter-spacing: .01em !important;
+  box-shadow: none !important;
+  touch-action: manipulation !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.payment-review-action-icon {
+  width: 31px !important;
+  height: 31px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  font-size: 18px !important;
+  line-height: 1 !important;
+}
+
+.payment-review-reject button {
+  background: linear-gradient(145deg,#fff4f3,#fbe2df) !important;
+  color: #a63d35 !important;
+}
+
+.payment-review-reject .payment-review-action-icon {
+  background: #b94a40 !important;
+  color: #fff !important;
+  box-shadow: 0 5px 12px rgba(185,74,64,.18) !important;
+}
+
+.payment-review-approve button {
+  background: linear-gradient(145deg,#eff8f0,#dff0e2) !important;
+  color: #327148 !important;
+}
+
+.payment-review-approve .payment-review-action-icon {
+  background: #43865a !important;
+  color: #fff !important;
+  box-shadow: 0 5px 12px rgba(67,134,90,.18) !important;
+}
+
+.payment-review-empty {
+  min-height: 100px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 9px !important;
+  color: #647268 !important;
+}
+
+.payment-review-empty > span {
+  width: 31px !important;
+  height: 31px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  background: #e1efe4 !important;
+  color: #3f7650 !important;
+  font-weight: 950 !important;
+}
+
+@media (hover:hover) {
+  .payment-review-action button {
+    transition: filter .14s ease, transform .14s ease !important;
+  }
+
+  .payment-review-action button:hover {
+    filter: brightness(.975) !important;
+  }
+}
+
+.payment-review-action button:active {
+  transform: scale(.96) !important;
+}
+
+@media (max-width:680px) {
+  .payment-review-card {
+    grid-template-columns: 76px minmax(0,1fr) 76px !important;
+    border-radius: 17px !important;
+  }
+
+  .payment-review-action button {
+    min-height: 92px !important;
+    padding: 8px 3px !important;
+    font-size: 9px !important;
+  }
+
+  .payment-review-action-icon {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 19px !important;
+  }
+
+  .payment-review-info {
+    padding: 11px 10px !important;
+    gap: 6px !important;
+  }
+
+  .payment-review-name-line {
+    display: grid !important;
+    justify-content: stretch !important;
+    gap: 2px !important;
+  }
+
+  .payment-review-name-line > strong {
+    font-size: 12px !important;
+  }
+
+  .payment-review-amount {
+    font-size: 16px !important;
+  }
+
+  .payment-review-meta {
+    display: grid !important;
+    gap: 3px !important;
+    font-size: 8px !important;
+  }
+
+  .payment-review-meta > span {
+    display: block !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .payment-review-meta b {
+    margin-right: 4px !important;
+  }
+}
+
+@media (max-width:360px) {
+  .payment-review-card {
+    grid-template-columns: 67px minmax(0,1fr) 67px !important;
+  }
+
+  .payment-review-action button {
+    font-size: 8px !important;
+  }
+
+  .payment-review-info {
+    padding-left: 7px !important;
+    padding-right: 7px !important;
+  }
+}

@@ -174,26 +174,55 @@
         <span class="pending-review-count">{{ pending_claims_count }} en attente</span>
       {% endif %}
     </div>
-  <div class="card table-wrap">
-    <table>
-      <thead><tr><th>Membre</th><th>Montant</th><th>Note</th><th>Date</th><th>Action</th></tr></thead>
-      <tbody>
-      {% for c in pending_claims %}
-        <tr>
-          <td><strong>{{ c["user_name"] }}</strong></td>
-          <td>{{ format_eur(c["amount_cents"]) }}</td>
-          <td>{{ c["note"] or "—" }}</td>
-          <td>{{ c["created_at"] }}</td>
-          <td class="claim-actions">
-            <form method="post" action="{{ url_for('approve_payment_claim', claim_id=c['id']) }}"><button class="approve-btn">Valider</button></form>
-            <form method="post" action="{{ url_for('reject_payment_claim', claim_id=c['id']) }}"><button class="reject-btn">Refuser</button></form>
-          </td>
-        </tr>
-      {% else %}
-        <tr><td colspan="5">Aucun paiement en attente.</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
+  <div class="payment-review-list">
+    {% for c in pending_claims %}
+      <article class="payment-review-card">
+        <form class="payment-review-action payment-review-reject"
+              method="post"
+              action="{{ url_for('reject_payment_claim', claim_id=c['id']) }}"
+              onsubmit="return confirm('Refuser le paiement de {{ c['user_name'] }} de {{ format_eur(c['amount_cents']) }} ?');">
+          <button type="submit" aria-label="Refuser le paiement de {{ c['user_name'] }}">
+            <span class="payment-review-action-icon">✕</span>
+            <span>Refuser</span>
+          </button>
+        </form>
+
+        <div class="payment-review-info">
+          <div class="payment-review-name-line">
+            <strong>{{ c["user_name"] }}</strong>
+            <span class="payment-review-amount">{{ format_eur(c["amount_cents"]) }}</span>
+          </div>
+
+          <div class="payment-review-meta">
+            <span class="payment-review-date">
+              <b>Date</b>
+              {{ c["created_at"] }}
+            </span>
+            {% if c["note"] %}
+              <span class="payment-review-note">
+                <b>Note</b>
+                {{ c["note"] }}
+              </span>
+            {% endif %}
+          </div>
+        </div>
+
+        <form class="payment-review-action payment-review-approve"
+              method="post"
+              action="{{ url_for('approve_payment_claim', claim_id=c['id']) }}"
+              onsubmit="return confirm('Valider le paiement de {{ c['user_name'] }} de {{ format_eur(c['amount_cents']) }} ?');">
+          <button type="submit" aria-label="Valider le paiement de {{ c['user_name'] }}">
+            <span class="payment-review-action-icon">✓</span>
+            <span>Valider</span>
+          </button>
+        </form>
+      </article>
+    {% else %}
+      <div class="card payment-review-empty">
+        <span>✓</span>
+        <strong>Aucun paiement en attente</strong>
+      </div>
+    {% endfor %}
   </div>
   </section>
 
