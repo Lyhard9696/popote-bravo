@@ -6844,3 +6844,396 @@ body {
     font-size: 9px !important;
   }
 }
+
+
+/* ============================================================
+   V6.20.3 — ARDOISES RESTANTES POPOTIER
+   ============================================================ */
+
+.admin-balance-link {
+  color: inherit !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  transition: transform .14s ease, box-shadow .14s ease !important;
+}
+
+.admin-balance-link small {
+  display: block !important;
+  margin-top: 3px !important;
+}
+
+.admin-balance-stat {
+  color: inherit !important;
+  text-decoration: none !important;
+  position: relative !important;
+  cursor: pointer !important;
+}
+
+.admin-balance-stat small {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #a27312 !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+}
+
+.admin-balance-link:active,
+.admin-balance-stat:active {
+  transform: scale(.985) !important;
+}
+
+.admin-balances-page {
+  width: min(100%, 820px) !important;
+  margin: 0 auto !important;
+  padding-bottom: 120px !important;
+}
+
+.admin-balances-hero {
+  margin-bottom: 15px !important;
+}
+
+.admin-balance-summary {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+  margin-bottom: 18px !important;
+}
+
+.admin-balance-summary > div {
+  min-width: 0 !important;
+  padding: 12px !important;
+  border-radius: 15px !important;
+  background: rgba(255,255,255,.94) !important;
+  border: 1px solid rgba(96,75,32,.09) !important;
+  box-shadow: 0 7px 20px rgba(40,33,22,.045) !important;
+  display: grid !important;
+  gap: 3px !important;
+}
+
+.admin-balance-summary span {
+  color: #777d84 !important;
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: .03em !important;
+}
+
+.admin-balance-summary strong {
+  color: #171717 !important;
+  font-size: 18px !important;
+}
+
+.admin-balance-list {
+  display: grid !important;
+  gap: 9px !important;
+}
+
+.admin-balance-row {
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 12px 14px !important;
+  border-radius: 17px !important;
+  background: rgba(255,255,255,.96) !important;
+  border: 1px solid rgba(94,75,39,.09) !important;
+  box-shadow: 0 8px 21px rgba(43,35,22,.045) !important;
+}
+
+.admin-balance-rank {
+  width: 30px !important;
+  height: 30px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 10px !important;
+  background: #f4f0e6 !important;
+  color: #9a7118 !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+}
+
+.admin-balance-person {
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.admin-balance-avatar {
+  width: 38px !important;
+  height: 38px !important;
+  flex: 0 0 38px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  background: #171717 !important;
+  color: #d9a323 !important;
+  border: 2px solid #c8951d !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.admin-balance-person > div:last-child {
+  min-width: 0 !important;
+  display: grid !important;
+  gap: 3px !important;
+}
+
+.admin-balance-person strong {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: #151515 !important;
+  font-size: 13px !important;
+}
+
+.admin-balance-person span {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: #83868b !important;
+  font-size: 9px !important;
+}
+
+.admin-balance-guest {
+  display: inline-flex !important;
+  padding: 2px 6px !important;
+  border-radius: 999px !important;
+  background: #f0e6ca !important;
+  color: #866313 !important;
+  font-size: 8px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .04em !important;
+}
+
+.admin-balance-amount {
+  color: #171717 !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+}
+
+.admin-balances-empty {
+  min-height: 180px !important;
+  display: grid !important;
+  place-items: center !important;
+  align-content: center !important;
+  gap: 5px !important;
+  text-align: center !important;
+}
+
+.admin-balances-empty > span {
+  width: 45px !important;
+  height: 45px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  background: #e7f2e9 !important;
+  color: #427650 !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+}
+
+.admin-balances-empty p {
+  margin: 0 !important;
+  color: #777 !important;
+  font-size: 11px !important;
+}
+
+@media (hover:hover) {
+  .admin-balance-link:hover,
+  .admin-balance-stat:hover {
+    transform: translateY(-2px) !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .admin-balance-row {
+    grid-template-columns: 28px minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+    padding: 11px 10px !important;
+  }
+
+  .admin-balance-rank {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .admin-balance-avatar {
+    width: 34px !important;
+    height: 34px !important;
+    flex-basis: 34px !important;
+  }
+
+  .admin-balance-amount {
+    font-size: 15px !important;
+  }
+}
+
+
+/* ============================================================
+   V6.20.4 — ALERTE PRIORITAIRE PAIEMENTS POPOTIER
+   ============================================================ */
+
+html {
+  scroll-behavior: smooth !important;
+}
+
+.admin-payment-priority-alert {
+  position: relative !important;
+  overflow: hidden !important;
+  display: grid !important;
+  grid-template-columns: 48px minmax(0,1fr) auto !important;
+  align-items: center !important;
+  gap: 13px !important;
+  margin: 0 0 15px !important;
+  padding: 14px 15px !important;
+  border-radius: 20px !important;
+  color: inherit !important;
+  text-decoration: none !important;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(244,191,55,.22), transparent 35%),
+    linear-gradient(135deg,#201a0e,#11110f) !important;
+  border: 1px solid rgba(223,170,39,.55) !important;
+  box-shadow:
+    0 12px 30px rgba(47,35,10,.16),
+    inset 0 0 0 1px rgba(255,255,255,.025) !important;
+}
+
+.admin-payment-priority-alert::after {
+  content:"" !important;
+  position:absolute !important;
+  left:0 !important;
+  top:0 !important;
+  bottom:0 !important;
+  width:4px !important;
+  background:linear-gradient(#ffd45a,#c78b12) !important;
+}
+
+.admin-payment-priority-icon {
+  width: 46px !important;
+  height: 46px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 15px !important;
+  background: linear-gradient(145deg,#f3c443,#c8890b) !important;
+  color: #15120a !important;
+  font-size: 23px !important;
+  font-weight: 950 !important;
+  box-shadow: 0 7px 18px rgba(218,160,27,.20) !important;
+}
+
+.admin-payment-priority-copy {
+  min-width: 0 !important;
+  display: grid !important;
+  gap: 3px !important;
+}
+
+.admin-payment-priority-copy .eyebrow {
+  margin: 0 !important;
+  color: #dba932 !important;
+  font-size: 8px !important;
+}
+
+.admin-payment-priority-copy strong {
+  color: #fff !important;
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+}
+
+.admin-payment-priority-copy span {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: rgba(255,255,255,.64) !important;
+  font-size: 10px !important;
+}
+
+.admin-payment-priority-action {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 8px 10px !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,.07) !important;
+  color: #e9ba48 !important;
+  white-space: nowrap !important;
+}
+
+.admin-payment-priority-action span {
+  font-size: 9px !important;
+  font-weight: 850 !important;
+}
+
+.admin-payment-priority-action b {
+  font-size: 15px !important;
+}
+
+.payment-claims-review-section {
+  scroll-margin-top: 88px !important;
+  margin-top: 22px !important;
+}
+
+.payment-claims-review-head {
+  display:flex !important;
+  align-items:flex-end !important;
+  justify-content:space-between !important;
+  gap:12px !important;
+  margin-bottom:8px !important;
+}
+
+.payment-claims-review-head h2 {
+  margin: 1px 0 0 !important;
+}
+
+.pending-review-count {
+  flex:0 0 auto !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  padding:5px 8px !important;
+  border-radius:999px !important;
+  background:#f2e2b8 !important;
+  color:#806012 !important;
+  font-size:9px !important;
+  font-weight:900 !important;
+}
+
+@media (hover:hover) {
+  .admin-payment-priority-alert {
+    transition: transform .15s ease, box-shadow .15s ease !important;
+  }
+  .admin-payment-priority-alert:hover {
+    transform: translateY(-2px) !important;
+    box-shadow:
+      0 16px 34px rgba(47,35,10,.20),
+      inset 0 0 0 1px rgba(255,255,255,.03) !important;
+  }
+}
+
+@media (max-width:680px) {
+  .admin-payment-priority-alert {
+    grid-template-columns: 42px minmax(0,1fr) !important;
+    gap: 10px !important;
+    padding: 12px !important;
+    border-radius: 18px !important;
+  }
+
+  .admin-payment-priority-icon {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 13px !important;
+    font-size: 20px !important;
+  }
+
+  .admin-payment-priority-copy strong {
+    font-size: 13px !important;
+  }
+
+  .admin-payment-priority-action {
+    grid-column: 1 / -1 !important;
+    justify-content: center !important;
+    min-height: 34px !important;
+    padding: 6px 9px !important;
+  }
+}

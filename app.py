@@ -3988,6 +3988,69 @@ def admin_guest_mark_paid(user_id):
     return redirect(url_for("admin_guests"))
 
 
+
+@app.route("/admin/ardoises")
+@admin_required
+def admin_balances():
+    db = get_db()
+
+    rows = db.execute("""
+        SELECT
+            u.id,
+            u.name,
+            COALESCE(u.is_guest,0) AS is_guest,
+            u.active,
+            COALESCE((
+                SELECT SUM(c.price_cents)
+                FROM consumptions c
+                WHERE c.user_id=u.id
+            ),0)
+            +
+            COALESCE((
+                SELECT SUM(md.amount_cents)
+                FROM manual_debts md
+                WHERE md.user_id=u.id
+            ),0) AS spent,
+            COALESCE((
+                SELECT SUM(p.amount_cents)
+                FROM payments p
+                WHERE p.user_id=u.id
+                  AND p.status='completed'
+            ),0) AS paid,
+            (
+                SELECT MAX(c.created_at)
+                FROM consumptions c
+                WHERE c.user_id=u.id
+            ) AS last_consumption
+        FROM users u
+        WHERE u.is_admin=0
+          AND u.active=1
+        ORDER BY u.name COLLATE NOCASE
+    """).fetchall()
+
+    db.close()
+
+    balances = []
+    for row in rows:
+        balance = max(0, int(row["spent"] or 0) - int(row["paid"] or 0))
+        if balance <= 0:
+            continue
+
+        item = dict(row)
+        item["balance"] = balance
+        balances.append(item)
+
+    balances.sort(key=lambda item: (-item["balance"], item["name"].lower()))
+
+    return render_template(
+        "admin_balances.html",
+        balances=balances,
+        total_due=sum(item["balance"] for item in balances),
+        member_count=sum(1 for item in balances if not item["is_guest"]),
+        guest_count=sum(1 for item in balances if item["is_guest"]),
+    )
+
+
 @app.route("/admin")
 @admin_required
 def admin():
@@ -4058,6 +4121,7 @@ def admin():
         total_due=total_due,
         pending_claims=pending_claims,
         pending_claims_count=len(pending_claims),
+        pending_claims_total=sum(int(c["amount_cents"] or 0) for c in pending_claims),
         consumptions_24h=consumptions_24h,
         low_stock_count=low_stock_count,
         push_subscriber_count=push_subscriber_count,

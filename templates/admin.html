@@ -2,13 +2,44 @@
 {% block title %}Gestion — Popote Bravo{% endblock %}
 {% block content %}
 <div class="management-hub">
+  {% if pending_claims_count > 0 %}
+  <a class="admin-payment-priority-alert" href="#payment-claims-review">
+    <div class="admin-payment-priority-icon" aria-hidden="true">!</div>
+
+    <div class="admin-payment-priority-copy">
+      <p class="eyebrow">Action requise</p>
+      <strong>
+        {{ pending_claims_count }} paiement{% if pending_claims_count > 1 %}s{% endif %} à vérifier
+      </strong>
+      <span>
+        {{ format_eur(pending_claims_total) }} au total
+        {% if pending_claims %}
+          ·
+          {% for c in pending_claims[:3] %}
+            {{ c["user_name"] }}{% if not loop.last %}, {% endif %}
+          {% endfor %}
+          {% if pending_claims_count > 3 %} +{{ pending_claims_count - 3 }}{% endif %}
+        {% endif %}
+      </span>
+    </div>
+
+    <div class="admin-payment-priority-action">
+      <span>Vérifier maintenant</span>
+      <b>↓</b>
+    </div>
+  </a>
+  {% endif %}
+
   <div class="hero">
     <div>
       <p class="eyebrow">Espace Popotier</p>
       <h1>Gestion</h1>
       <p class="muted">Les comptes et les produits sont séparés pour aller plus vite.</p>
     </div>
-    <div class="balance">{{ format_eur(total_due) }}<small>Ardoises totales</small></div>
+    <a class="balance admin-balance-link" href="{{ url_for('admin_balances') }}">
+      {{ format_eur(total_due) }}
+      <small>Ardoise restante · voir le détail →</small>
+    </a>
   </div>
 
   <div class="management-hub-grid">
@@ -59,7 +90,11 @@
   </div>
 
   <div class="stats-grid">
-    <div class="stat-card"><span>Ardoises totales</span><strong>{{ format_eur(total_due) }}</strong></div>
+    <a class="stat-card admin-balance-stat" href="{{ url_for('admin_balances') }}">
+      <span>Ardoise restante</span>
+      <strong>{{ format_eur(total_due) }}</strong>
+      <small>Voir qui doit quoi →</small>
+    </a>
     <div class="stat-card"><span>Consommations / 24 h</span><strong>{{ consumptions_24h }}</strong></div>
     <div class="stat-card"><span>Paiements à vérifier</span><strong>{{ pending_claims_count }}</strong></div>
     <div class="stat-card"><span>Stocks faibles / ruptures</span><strong>{{ low_stock_count }}</strong></div>
@@ -129,7 +164,16 @@
     </form>
   </section>
 
-  <h2>Paiements déclarés à vérifier</h2>
+  <section id="payment-claims-review" class="payment-claims-review-section">
+    <div class="payment-claims-review-head">
+      <div>
+        <p class="eyebrow">Validation</p>
+        <h2>Paiements déclarés à vérifier</h2>
+      </div>
+      {% if pending_claims_count > 0 %}
+        <span class="pending-review-count">{{ pending_claims_count }} en attente</span>
+      {% endif %}
+    </div>
   <div class="card table-wrap">
     <table>
       <thead><tr><th>Membre</th><th>Montant</th><th>Note</th><th>Date</th><th>Action</th></tr></thead>
@@ -151,6 +195,7 @@
       </tbody>
     </table>
   </div>
+  </section>
 
   <h2>Enregistrer un paiement</h2>
   <div class="card">

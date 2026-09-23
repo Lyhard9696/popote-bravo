@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Ardoises restantes — Popote Bravo{% endblock %}
+
+{% block content %}
+<div class="admin-balances-page">
+  <div class="hero admin-balances-hero">
+    <div>
+      <p class="eyebrow">Espace Popotier</p>
+      <h1>💶 Ardoises restantes</h1>
+      <p class="muted">Uniquement les personnes qui ont encore un montant à régler.</p>
+    </div>
+    <div class="balance">
+      {{ format_eur(total_due) }}
+      <small>Total restant</small>
+    </div>
+  </div>
+
+  <div class="admin-balance-summary">
+    <div>
+      <span>Personnes à relancer</span>
+      <strong>{{ balances|length }}</strong>
+    </div>
+    <div>
+      <span>Membres</span>
+      <strong>{{ member_count }}</strong>
+    </div>
+    <div>
+      <span>Invités</span>
+      <strong>{{ guest_count }}</strong>
+    </div>
+  </div>
+
+  <section class="admin-balance-list">
+    {% for person in balances %}
+      <article class="admin-balance-row">
+        <div class="admin-balance-rank">{{ loop.index }}</div>
+
+        <div class="admin-balance-person">
+          <div class="admin-balance-avatar">{{ person["name"][:1]|upper }}</div>
+          <div>
+            <strong>{{ person["name"] }}</strong>
+            <span>
+              {% if person["is_guest"] %}
+                <b class="admin-balance-guest">Invité</b>
+              {% else %}
+                Membre
+              {% endif %}
+              {% if person["last_consumption"] %}
+                · dernière conso {{ person["last_consumption"] }}
+              {% endif %}
+            </span>
+          </div>
+        </div>
+
+        <div class="admin-balance-amount">
+          {{ format_eur(person["balance"]) }}
+        </div>
+      </article>
+    {% else %}
+      <div class="card admin-balances-empty">
+        <span>✓</span>
+        <strong>Tout le monde est à jour</strong>
+        <p>Aucune ardoise restante pour le moment.</p>
+      </div>
+    {% endfor %}
+  </section>
+
+  <a class="profiles-return" href="{{ url_for('admin') }}">← Retour à la gestion</a>
+</div>
+{% endblock %}
