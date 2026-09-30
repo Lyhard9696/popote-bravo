@@ -11,28 +11,80 @@
     </div>
   </div>
 
-  <div class="member-summary">
-    <div class="member-summary-card summary-balance">
-      <span class="summary-icon" aria-hidden="true">▣</span>
-      <span>Ardoise actuelle</span>
-      <strong>{{ format_eur(balance) }}</strong>
+  <div class="member-summary premium-finance-summary">
+    <div class="member-summary-card summary-balance premium-balance-card">
+      <div class="premium-summary-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <ellipse cx="8" cy="7" rx="4" ry="2"></ellipse>
+          <path d="M4 7v4c0 1.1 1.8 2 4 2s4-.9 4-2V7"></path>
+          <path d="M4 11v4c0 1.1 1.8 2 4 2 1.1 0 2.1-.2 2.8-.6"></path>
+          <ellipse cx="15.5" cy="12" rx="4.5" ry="2.2"></ellipse>
+          <path d="M11 12v4.5c0 1.2 2 2.2 4.5 2.2s4.5-1 4.5-2.2V12"></path>
+          <path d="M11 16.5V20c0 1.2 2 2.2 4.5 2.2s4.5-1 4.5-2.2v-3.5"></path>
+        </svg>
+      </div>
+      <div class="premium-summary-copy">
+        <span class="premium-summary-title">Ardoise actuelle</span>
+        <small>Montant à régler</small>
+        <strong>{{ format_eur(balance) }}</strong>
+      </div>
+      <span class="premium-summary-chevron" aria-hidden="true">›</span>
     </div>
-    <div class="member-summary-card summary-month">
-      <span class="summary-icon" aria-hidden="true">♧</span>
-      <span>Dépensé ce mois</span>
-      <strong>{{ format_eur(month_spent) }}</strong>
+
+    <div class="member-summary-card summary-month premium-secondary-card">
+      <div class="premium-summary-icon compact" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M5 20V11"></path>
+          <path d="M10 20V7"></path>
+          <path d="M15 20V13"></path>
+          <path d="M20 20V4"></path>
+          <path d="M18 6l2-2 2 2"></path>
+        </svg>
+      </div>
+      <div class="premium-summary-copy">
+        <span class="premium-summary-title">Dépensé ce mois</span>
+        <small>Total des consommations</small>
+        <strong>{{ format_eur(month_spent) }}</strong>
+      </div>
     </div>
+
     {% if guest_mode %}
-    <div class="member-summary-card summary-pending">
-      <span class="summary-icon" aria-hidden="true">#</span>
-      <span>Consommations</span>
-      <strong>{{ total_consumptions }}</strong>
+    <div class="member-summary-card summary-pending premium-secondary-card">
+      <div class="premium-summary-icon compact" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M6 3h9l3 3v15H6z"></path>
+          <path d="M15 3v4h4"></path>
+          <path d="M9 12h6"></path>
+          <path d="M9 16h5"></path>
+        </svg>
+      </div>
+      <div class="premium-summary-copy">
+        <span class="premium-summary-title">Consommations</span>
+        <small>Total enregistré</small>
+        <strong>{{ total_consumptions }}</strong>
+      </div>
     </div>
     {% else %}
-    <div class="member-summary-card summary-pending {% if pending_claims %}pending{% endif %}">
-      <span class="summary-icon" aria-hidden="true">◷</span>
-      <span>Paiements en attente</span>
-      <strong>{{ format_eur(pending_claims) }}</strong>
+    <div class="member-summary-card summary-pending premium-secondary-card {% if pending_claims %}pending{% endif %}">
+      <div class="premium-summary-icon compact" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M6 3h9l3 3v15H6z"></path>
+          <path d="M15 3v4h4"></path>
+          <circle cx="16.5" cy="16.5" r="4"></circle>
+          <path d="M16.5 14.5v2.3l1.6 1"></path>
+        </svg>
+      </div>
+      <div class="premium-summary-copy">
+        <span class="premium-summary-title">Paiements en attente</span>
+        <small>
+          {% if pending_claim_count %}
+            {{ pending_claim_count }} règlement{% if pending_claim_count > 1 %}s{% endif %} à valider
+          {% else %}
+            Aucun règlement en attente
+          {% endif %}
+        </small>
+        <strong>{{ format_eur(pending_claims) }}</strong>
+      </div>
     </div>
     {% endif %}
   </div>
