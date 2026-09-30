@@ -1,18 +1,33 @@
-# Popote Bravo — V6.20.9
+# Popote Bravo V6.21.0 — Nouvelle DA P3
 
-Correctif à appliquer par-dessus la V6.20.8.
+Cette version applique la nouvelle direction artistique validée :
 
-## Déconnexion compte invité
-- ajout de « Quitter » dans la barre mobile du compte invité ;
-- ajout de « Déconnexion » sur la navigation desktop ;
-- confirmation avant déconnexion ;
-- la session invité est supprimée ;
-- le cookie de reconnexion automatique est supprimé ;
-- le token appareil stocké pour cet invité est réinitialisé ;
-- le compte et son historique restent conservés ;
-- l'invité peut reprendre son compte plus tard en retapant exactement le même nom.
+## Connexion
+- page desktop plein écran noir / or ;
+- vrai logo P3 existant de l'application ;
+- ambiance dorée / fumée réalisée en CSS ;
+- carte de connexion ivoire ;
+- bouton Se connecter noir / or ;
+- bouton Créer un compte ;
+- accès Compte invité conservé ;
+- responsive téléphone.
+
+## Application une fois connectée
+- fond ivoire / champagne ;
+- grand logo P3 discret en filigrane ;
+- touches et diagonales dorées ;
+- header noir / or ;
+- cartes blanches bordées d'or ;
+- bouton PayPal noir / or dans le même style que Se connecter ;
+- catégories et boutons Ajouter en or ;
+- classement harmonisé avec la même DA ;
+- barre de navigation noire avec onglet actif doré.
+
+## Important
+Aucune logique métier n'est modifiée.
+Les comptes invités, paiements, classement, stocks, notifications et autres fonctions restent inchangés.
 
 ## Fichiers à remplacer
-- app.py
 - static/style.css
 - templates/base.html
+- templates/login.html

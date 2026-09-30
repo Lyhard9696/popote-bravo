@@ -1,17 +1,97 @@
 {% extends "base.html" %}
-{% block title %}Connexion{% endblock %}
+{% block title %}Connexion — Popote Bravo{% endblock %}
 {% block content %}
-<div class="card narrow login-premium-card">
-  <p class="eyebrow">Popote Bravo</p><h1>Connexion</h1>
-  <form method="post"><label>Nom / pseudo</label><input id="login-name" name="name" required autocomplete="username"><label>Mot de passe</label><input name="password" type="password" required autocomplete="current-password"><button type="submit">Se connecter</button></form>
-  <p class="muted">Pas encore de compte ? <a href="{{ url_for('register') }}">Créer un compte</a></p>
 
-  <div class="guest-login-divider"><span>visiteur d'un autre peloton ?</span></div>
-  <a class="guest-entry-button" href="{{ url_for('guest_access') }}">
-    <span class="guest-entry-icon">👋</span>
-    <span><strong>Compte invité</strong><small>Nom + prénom uniquement</small></span>
-    <b>→</b>
-  </a>
-</div>
+<section class="p3-auth-layout">
+  <div class="p3-auth-brand">
+    <div class="p3-auth-brand-ghost" aria-hidden="true"></div>
 
+    <img
+      src="{{ url_for('static', filename='insigne-bravo-rond.png') }}"
+      alt="P3 44/2 Bellac"
+      class="p3-auth-logo"
+    >
+
+    <div class="p3-auth-brand-copy">
+      <h1>Popote <span>Bravo</span></h1>
+      <div class="p3-auth-brand-rule" aria-hidden="true"></div>
+      <p>Escadron de Bellac 44/2</p>
+      <p>Peloton P3</p>
+    </div>
+  </div>
+
+  <div class="p3-auth-card">
+    <div class="p3-auth-card-head">
+      <h2>Connexion</h2>
+      <p>Accédez à vos consommations, dettes et paiements.</p>
+    </div>
+
+    <form method="post" class="p3-auth-form">
+      <label for="login-name">Pseudo ou e-mail</label>
+      <div class="p3-auth-field">
+        <span class="p3-auth-field-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>
+        </span>
+        <input id="login-name"
+               name="name"
+               required
+               autocomplete="username"
+               placeholder="Votre nom / pseudo">
+      </div>
+
+      <label for="login-password">Mot de passe</label>
+      <div class="p3-auth-field">
+        <span class="p3-auth-field-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        </span>
+        <input id="login-password"
+               name="password"
+               type="password"
+               required
+               autocomplete="current-password"
+               placeholder="••••••••">
+        <button type="button"
+                class="p3-password-toggle"
+                id="p3-password-toggle"
+                aria-label="Afficher ou masquer le mot de passe">
+          <svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+        </button>
+      </div>
+
+      <button type="submit" class="p3-auth-submit">
+        <span class="p3-auth-submit-icon">↪</span>
+        <span>Se connecter</span>
+      </button>
+    </form>
+
+    <a href="{{ url_for('register') }}" class="p3-create-account">
+      <span class="p3-create-icon" aria-hidden="true">♙+</span>
+      <span>Créer un compte</span>
+    </a>
+
+    <div class="p3-guest-divider">
+      <span>visiteur d'un autre peloton ?</span>
+    </div>
+
+    <a class="p3-guest-entry" href="{{ url_for('guest_access') }}">
+      <span class="p3-guest-entry-icon">👋</span>
+      <span class="p3-guest-entry-copy">
+        <strong>Compte invité</strong>
+        <small>Nom + prénom uniquement</small>
+      </span>
+      <b>→</b>
+    </a>
+  </div>
+</section>
+
+<script>
+(() => {
+  const toggle = document.getElementById("p3-password-toggle");
+  const input = document.getElementById("login-password");
+  if (!toggle || !input) return;
+  toggle.addEventListener("click", () => {
+    input.type = input.type === "password" ? "text" : "password";
+  });
+})();
+</script>
 {% endblock %}

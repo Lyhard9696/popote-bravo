@@ -15,7 +15,7 @@
   <meta name="theme-color" content="#f6c515">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="page-{{ request.endpoint or 'unknown' }} {% if current_user %}app-authenticated{% else %}app-anonymous{% endif %}">
 <header class="topbar">
   <div class="wrap nav">
     <a class="brand" href="{% if current_user and current_user['is_guest'] %}{{ url_for('guest_dashboard') }}{% elif current_user %}{{ url_for('admin' if current_user['is_admin'] else 'dashboard') }}{% else %}{{ url_for('login') }}{% endif %}">
