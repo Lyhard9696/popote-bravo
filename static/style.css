@@ -8740,3 +8740,277 @@ body.app-authenticated .premium-finance-summary .summary-pending strong {
     font-size: 23px !important;
   }
 }
+
+
+/* ============================================================
+   V6.21.2 — HERO CONNECTÉ PREMIUM P3
+   Le header noir/or se prolonge dans Bonjour + Nom + avatar.
+   ============================================================ */
+
+body.page-dashboard.app-authenticated .topbar,
+body.page-guest_dashboard.app-authenticated .topbar {
+  margin-bottom: 0 !important;
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+  background:
+    radial-gradient(circle at 82% 20%, rgba(231,177,44,.19), transparent 27%),
+    radial-gradient(circle at 28% 110%, rgba(177,103,8,.11), transparent 34%),
+    linear-gradient(110deg, #0a0a0a 0%, #17120b 54%, #0b0b0b 100%) !important;
+}
+
+body.page-dashboard.app-authenticated .app-main,
+body.page-guest_dashboard.app-authenticated .app-main {
+  padding-top: 0 !important;
+}
+
+/* Suppression de l'ancien grand espace blanc du haut */
+body.page-dashboard.app-authenticated .member-home,
+body.page-guest_dashboard.app-authenticated .member-home {
+  padding-top: 0 !important;
+}
+
+/* Hero full-bleed sous la topbar */
+body.page-dashboard.app-authenticated .premium-account-hero,
+body.page-guest_dashboard.app-authenticated .premium-account-hero {
+  position: relative !important;
+  width: 100vw !important;
+  max-width: none !important;
+  min-height: 232px !important;
+  margin:
+    0
+    calc((100vw - 100%) / -2)
+    22px !important;
+  padding: 30px max(24px, calc((100vw - 900px) / 2 + 24px)) 31px !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: end !important;
+  gap: 22px !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  background:
+    radial-gradient(circle at 83% 46%, rgba(229,176,42,.18), transparent 25%),
+    radial-gradient(circle at 21% 115%, rgba(176,102,8,.14), transparent 35%),
+    linear-gradient(114deg, #090909 0%, #17120b 53%, #0c0c0c 100%) !important;
+  box-shadow: none !important;
+}
+
+/* Fine ligne or entre hero et cartes */
+body.page-dashboard.app-authenticated .premium-account-hero::after,
+body.page-guest_dashboard.app-authenticated .premium-account-hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(207,148,19,.40) 14%,
+      #e7b73a 37%,
+      #f5d36d 50%,
+      #e7b73a 63%,
+      rgba(207,148,19,.40) 86%,
+      transparent
+    );
+  box-shadow: 0 0 17px rgba(229,180,52,.23);
+}
+
+/* Gros P3 / taureau très discret à droite */
+body.page-dashboard.app-authenticated .premium-account-hero-bg,
+body.page-guest_dashboard.app-authenticated .premium-account-hero-bg {
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+body.page-dashboard.app-authenticated .premium-account-hero-bg::before,
+body.page-guest_dashboard.app-authenticated .premium-account-hero-bg::before {
+  content: "";
+  position: absolute;
+  width: 390px;
+  height: 390px;
+  right: -65px;
+  top: -95px;
+  background: url("/static/insigne-bravo-rond.png") center / contain no-repeat;
+  opacity: .16;
+  filter: sepia(1) saturate(.85) brightness(.72) contrast(1.15);
+}
+
+body.page-dashboard.app-authenticated .premium-account-hero-bg::after,
+body.page-guest_dashboard.app-authenticated .premium-account-hero-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 80% 85%, rgba(232,183,48,.13), transparent 25%),
+    linear-gradient(128deg, transparent 0 12%, rgba(232,178,45,.07) 12.4% 13%, transparent 13.4%);
+}
+
+/* Texte */
+body.page-dashboard.app-authenticated .premium-account-hero-copy,
+body.page-guest_dashboard.app-authenticated .premium-account-hero-copy {
+  position: relative !important;
+  z-index: 2 !important;
+  min-width: 0 !important;
+}
+
+body.page-dashboard.app-authenticated .premium-account-kicker,
+body.page-guest_dashboard.app-authenticated .premium-account-kicker {
+  margin: 0 0 5px !important;
+  color: #e7b63b !important;
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-size: clamp(21px, 4vw, 29px) !important;
+  line-height: 1 !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+body.page-dashboard.app-authenticated .premium-account-hero h1,
+body.page-guest_dashboard.app-authenticated .premium-account-hero h1 {
+  margin: 0 !important;
+  color: #fff !important;
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-size: clamp(40px, 8vw, 64px) !important;
+  line-height: .97 !important;
+  letter-spacing: -.035em !important;
+  font-weight: 700 !important;
+  text-shadow: 0 4px 18px rgba(0,0,0,.28);
+}
+
+body.page-dashboard.app-authenticated .premium-account-hero h1::after,
+body.page-guest_dashboard.app-authenticated .premium-account-hero h1::after {
+  display: none !important;
+}
+
+body.page-dashboard.app-authenticated .premium-account-unit,
+body.page-guest_dashboard.app-authenticated .premium-account-unit {
+  margin: 10px 0 0 !important;
+  color: rgba(255,255,255,.88) !important;
+  font-size: clamp(13px, 2.3vw, 17px) !important;
+  line-height: 1.25 !important;
+  font-weight: 500 !important;
+}
+
+/* Avatar rond */
+body.page-dashboard.app-authenticated .premium-account-avatar,
+body.page-guest_dashboard.app-authenticated .premium-account-avatar {
+  position: relative !important;
+  z-index: 2 !important;
+  width: 70px !important;
+  height: 70px !important;
+  margin-bottom: 4px !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  color: #f6eedb !important;
+  background:
+    radial-gradient(circle at 36% 23%, rgba(246,200,80,.16), transparent 40%),
+    rgba(16,16,16,.96) !important;
+  border: 2px solid rgba(232,184,58,.78) !important;
+  box-shadow:
+    0 0 0 5px rgba(230,178,46,.06),
+    0 0 18px rgba(232,183,57,.14),
+    0 11px 25px rgba(0,0,0,.25) !important;
+}
+
+body.page-dashboard.app-authenticated .premium-account-avatar svg,
+body.page-guest_dashboard.app-authenticated .premium-account-avatar svg {
+  width: 32px !important;
+  height: 32px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.7 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+/* Cartes V6.21.1 collées proprement sous le hero */
+body.page-dashboard.app-authenticated .premium-finance-summary,
+body.page-guest_dashboard.app-authenticated .premium-finance-summary {
+  margin-top: 0 !important;
+}
+
+/* iPhone */
+@media (max-width: 680px) {
+  body.page-dashboard.app-authenticated .premium-account-hero,
+  body.page-guest_dashboard.app-authenticated .premium-account-hero {
+    min-height: 210px !important;
+    padding: 27px 21px 27px !important;
+    margin-bottom: 18px !important;
+    grid-template-columns: minmax(0, 1fr) 58px !important;
+    gap: 12px !important;
+  }
+
+  body.page-dashboard.app-authenticated .premium-account-hero-bg::before,
+  body.page-guest_dashboard.app-authenticated .premium-account-hero-bg::before {
+    width: 315px;
+    height: 315px;
+    right: -105px;
+    top: -47px;
+    opacity: .17;
+  }
+
+  body.page-dashboard.app-authenticated .premium-account-kicker,
+  body.page-guest_dashboard.app-authenticated .premium-account-kicker {
+    font-size: 22px !important;
+  }
+
+  body.page-dashboard.app-authenticated .premium-account-hero h1,
+  body.page-guest_dashboard.app-authenticated .premium-account-hero h1 {
+    font-size: clamp(36px, 10.2vw, 49px) !important;
+  }
+
+  body.page-dashboard.app-authenticated .premium-account-unit,
+  body.page-guest_dashboard.app-authenticated .premium-account-unit {
+    margin-top: 8px !important;
+    font-size: 12px !important;
+  }
+
+  body.page-dashboard.app-authenticated .premium-account-avatar,
+  body.page-guest_dashboard.app-authenticated .premium-account-avatar {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  body.page-dashboard.app-authenticated .premium-account-avatar svg,
+  body.page-guest_dashboard.app-authenticated .premium-account-avatar svg {
+    width: 27px !important;
+    height: 27px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  body.page-dashboard.app-authenticated .premium-account-hero,
+  body.page-guest_dashboard.app-authenticated .premium-account-hero {
+    min-height: 193px !important;
+    padding: 23px 17px 24px !important;
+    grid-template-columns: minmax(0, 1fr) 49px !important;
+  }
+
+  body.page-dashboard.app-authenticated .premium-account-kicker,
+  body.page-guest_dashboard.app-authenticated .premium-account-kicker {
+    font-size: 19px !important;
+  }
+
+  body.page-dashboard.app-authenticated .premium-account-hero h1,
+  body.page-guest_dashboard.app-authenticated .premium-account-hero h1 {
+    font-size: 35px !important;
+  }
+
+  body.page-dashboard.app-authenticated .premium-account-unit,
+  body.page-guest_dashboard.app-authenticated .premium-account-unit {
+    font-size: 10.5px !important;
+  }
+
+  body.page-dashboard.app-authenticated .premium-account-avatar,
+  body.page-guest_dashboard.app-authenticated .premium-account-avatar {
+    width: 48px !important;
+    height: 48px !important;
+  }
+}

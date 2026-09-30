@@ -3,13 +3,31 @@
 {% block content %}
 <div class="member-home premium-gold-home">
   <div class="p3-gold-watermark" aria-hidden="true"></div>
-<div class="hero member-hero">
-    <div>
-      <p class="eyebrow">{% if guest_mode %}Compte invité{% else %}Mon compte{% endif %}</p>
-      <h1>{{ current_user["name"] }}{% if guest_mode %}<span class="guest-title-badge">Invité</span>{% endif %}</h1>
-      <p class="muted">{% if guest_mode %}Choisis tes consommations. Ton ardoise se met à jour automatiquement.{% else %}Prépare ton panier puis ajoute tout en une seule fois.{% endif %}</p>
+<section class="hero member-hero premium-account-hero">
+    <div class="premium-account-hero-bg" aria-hidden="true"></div>
+
+    <div class="premium-account-hero-copy">
+      <p class="premium-account-kicker">{% if guest_mode %}Compte invité{% else %}Bonjour{% endif %}</p>
+      <h1>
+        {{ current_user["name"] }}
+        {% if guest_mode %}<span class="guest-title-badge">Invité</span>{% endif %}
+      </h1>
+      <p class="premium-account-unit">
+        {% if guest_mode %}
+          Accès visiteur · Peloton P3
+        {% else %}
+          Escadron de Bellac 44/2 – Peloton P3
+        {% endif %}
+      </p>
     </div>
-  </div>
+
+    <div class="premium-account-avatar" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path>
+      </svg>
+    </div>
+  </section>
 
   <div class="member-summary premium-finance-summary">
     <div class="member-summary-card summary-balance premium-balance-card">
